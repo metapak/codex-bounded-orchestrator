@@ -20,6 +20,8 @@ Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirme
 - Her implementasyon kapsamında aynı anda yalnız bir writer çalışır.
 - İnceleme, implementasyon, doğrulama ve review birbirinden ayrılır.
 - Aday review öncesi dondurulur; sonraki dosya değişiklikleri tespit edilir.
+- Review öncesinde tanımlanmış zorunlu işler yerel ve yalnız metadata tutan bir ledger ile izlenir.
+- Yetkiyi genişletmeden isteğe bağlı UI tasarımı veya güvenlik review rehberliği eklenir.
 - Deneme, writer turu, repair ve re-review sayıları sınırlandırılır.
 - Kurulum önceden görüntülenir ve mevcut proje config'i varsayılan olarak korunur.
 
@@ -31,6 +33,7 @@ flowchart TD
     O --> E["Terra medium<br/>keşif ve araştırma<br/>salt okunur"]
     O --> I["Sol high<br/>implementasyon<br/>tek writer"]
     O --> V["Terra high<br/>doğrulama<br/>yalnız kanıt"]
+    O --> L["Yerel görev ledger'ı<br/>yalnız tanımlı metadata"]
     E --> O
     I --> V
     V --> F[Adayı dondur]
@@ -90,6 +93,8 @@ Installer yalnız Python standart kütüphanesini kullanır. Varsayılan `astra`
 - `.codex/agents/` altında açık rol kayıtları ve her rol için ayrı profil.
 - `$bounded-orchestrator` skill'i ile görev, review ve escalation sözleşmeleri.
 - Candidate hash'leri ve Git kimliği için `.codex/tools/candidate.py`.
+- Ignore edilen yerel görev metadata'sı ve tamamlanma kontrolleri için `.codex/tools/ledger.py`.
+- İsteğe bağlı iki uzmanlık paketi: UI tasarımı ve güvenlik review.
 - Hedef projenin `AGENTS.md` dosyasında işaretli ve güncellenebilir bir blok.
 - Güvenli güncelleme ve uninstall için yerel kurulum manifest'i ile ignore edilen yedek dizini.
 
@@ -105,7 +110,14 @@ python3 scripts/install.py /projenin/yolu --uninstall
 # Kurulu projede adayı dondur ve daha sonra doğrula.
 python3 .codex/tools/candidate.py freeze --label pre-review
 python3 .codex/tools/candidate.py verify
+
+# Prompt, kaynak veya log saklamadan tanımlanmış zorunlu işleri izle.
+python3 .codex/tools/ledger.py start ozellik-123 --title "Kısa hedef etiketi"
+python3 .codex/tools/ledger.py add uygula --title "Değişikliği uygula"
+python3 .codex/tools/ledger.py status
 ```
+
+Ayrıntılar için [görev ledger'ı rehberine](docs/task-ledger.tr.md) ve [uzmanlık paketleri rehberine](docs/expertise-packs.tr.md) bak. Ledger tanımlanmış ve çözülmemiş işi tespit edebilir; gereken her işin tanımlandığını kanıtlayamaz. Uzmanlık paketleri talimattır; ek yetki veya teknik enforcement sağlamaz.
 
 ## Guardrail'ler ve sınırları
 
@@ -116,6 +128,8 @@ python3 .codex/tools/candidate.py verify
 | Salt okunur reviewer | Reviewer sandbox varsayılanı ve yalnız bulgu talimatı | Gerçek izinler istemciye, trust durumuna ve parent politikasına göre değişebilir |
 | Sonlu review döngüsü | Skill state machine'i ve açık bütçeler | Root akışı izlemelidir; prompt'lar global scheduler uygulamaz |
 | Candidate bütünlüğü | Yerel araç hash kaydeder ve dondurulmuş dosya kümesini doğrular | Değişikliği tespit eder; düzenlemeyi engellemez veya kod doğruluğunu kanıtlamaz |
+| Tanımlanmış iş kontrolü | Yerel ledger review/tamamlama öncesinde görev durumlarını ve bağımlılıkları doğrular | Tanımlanmış çözülmemiş işi bulur; hiç tanımlanmayan işi keşfedemez |
+| İsteğe bağlı uzmanlık | Ayrı UI tasarımı ve güvenlik review skill paketleri | Yalnız talimat ekler; izinleri, rolleri veya enforcement'ı değiştirmez |
 | Daha güvenli kurulum | Kod çakışmaları korur, dry-run sunar, zorlanan değişimleri yedekler ve sahip olunan dosyaları izler | Ön izleme ve yedekler incelenmelidir; sürüm kontrolünün yerine geçmez |
 
 Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo korumaları ve insan yetkilendirmesidir. İstemci güncellemelerinden sonra smoke testi tekrar çalıştır; gözlemlenemeyen metadata'yı bilinmiyor olarak raporla.
@@ -127,7 +141,8 @@ Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo kor
 - [Yol haritası](docs/roadmap.tr.md)
 - [Mimari ayrıntıları](docs/architecture.md)
 - [Runtime smoke testi](docs/runtime-smoke-test.md)
-- [v0.2.0 sürüm notları](docs/release-v0.2.0.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [Görev ledger'ı](docs/task-ledger.tr.md) ve [uzmanlık paketleri](docs/expertise-packs.tr.md)
+- [v0.3.0 sürüm notları](docs/release-v0.3.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Kaynak kökeni](docs/provenance.md)
 
 ## Geliştirme

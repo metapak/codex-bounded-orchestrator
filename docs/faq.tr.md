@@ -18,6 +18,14 @@ Hedefteki dosya sunulan dosyadan farklıdır. Önce farkı incele. `--force`, ç
 
 Hayır. Hash'leri ve Git kimliğini kaydeder; `verify` daha sonra dondurulmuş adayın değişip değişmediğini tespit eder. Dosyaları kilitlemez, doğruluğu kanıtlamaz, test ve review'ın yerine geçmez.
 
+## Görev ledger'ı hiçbir işin unutulmadığını kanıtlayabilir mi?
+
+Hayır. Tanımlanmış zorunlu görevler arasındaki çözülmemiş işleri gösterir. Owner yine de doğru işleri tanımlamalı, sonucu incelemeli, testleri çalıştırmalı ve bağımsız review'ı tamamlamalıdır. Ledger etiketlerine ve nedenlerine prompt, kaynak, log, kişisel veri, kullanıcı bilgisi veya secret yazma.
+
+## Uzmanlık paketleri ek izin verir mi?
+
+Hayır. Bunlar isteğe bağlı talimat kümeleridir. Agent oluşturmaz, sandbox değiştirmez, kullanıcı bilgisi sağlamaz veya dış eylemleri yetkilendirmez.
+
 ## Uninstall bir dosyayı neden tuttu?
 
 Uninstall yalnız installer-owned olarak kaydedilen ve kurulumdan sonra değişmemiş dosyaları kaldırır. Kullanıcı işini silmemek için önceden var olan veya değiştirilmiş dosyaları korur. `AGENTS.md` içinden de yalnız işaretli bounded-orchestrator bloğunu kaldırır.

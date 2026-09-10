@@ -20,6 +20,8 @@ It is designed to make multi-agent work easier to inspect and stop. The reposito
 - Give each implementation scope to one writer at a time.
 - Separate investigation, implementation, verification, and review.
 - Freeze a candidate before independent review and detect later file changes.
+- Track declared required work in a local metadata-only ledger before review.
+- Add opt-in UI design or security review guidance without expanding authority.
 - Cap retries, writer turns, repair cycles, and re-reviews.
 - Preview installation and preserve existing project configuration by default.
 
@@ -31,6 +33,7 @@ flowchart TD
     O --> E["Terra medium<br/>explore and research<br/>read-only"]
     O --> I["Sol high<br/>implement<br/>single writer"]
     O --> V["Terra high<br/>verify<br/>evidence only"]
+    O --> L["Local task ledger<br/>declared metadata only"]
     E --> O
     I --> V
     V --> F[Freeze candidate]
@@ -90,6 +93,8 @@ The installer uses only the Python standard library. The default `astra` profile
 - Explicit role registrations and one profile file per role under `.codex/agents/`.
 - The `$bounded-orchestrator` skill and its task, review, and escalation contracts.
 - `.codex/tools/candidate.py` for candidate hashes and Git identity.
+- `.codex/tools/ledger.py` for ignored local task metadata and completion gates.
+- Two opt-in expertise packs: UI design and security review.
 - A marked, updateable block in the target project's `AGENTS.md`.
 - A local install manifest and ignored backup directory for safe updates and uninstall.
 
@@ -107,7 +112,14 @@ python3 scripts/install.py /path/to/project --uninstall
 # Freeze and later verify the candidate from the installed project.
 python3 .codex/tools/candidate.py freeze --label pre-review
 python3 .codex/tools/candidate.py verify
+
+# Track declared required work without storing prompts, source, or logs.
+python3 .codex/tools/ledger.py start feature-123 --title "Short goal label"
+python3 .codex/tools/ledger.py add implement --title "Implement the change"
+python3 .codex/tools/ledger.py status
 ```
+
+See the [task ledger guide](docs/task-ledger.md) and [expertise pack guide](docs/expertise-packs.md). The ledger can detect unresolved declared work, but it cannot prove that every necessary task was declared. Expertise packs are instructions, not enforcement or additional permission.
 
 ## Guardrails and their limits
 
@@ -118,6 +130,8 @@ python3 .codex/tools/candidate.py verify
 | Read-only reviewer | Reviewer sandbox default plus findings-only instructions | Live permissions can vary by client, trust state, and parent policy |
 | Finite review loop | Skill state machine and explicit budgets | The root must follow the workflow; prompts do not enforce a global scheduler |
 | Candidate integrity | Local tool records hashes and verifies the frozen file set | Detects changes; it does not prevent edits or prove code correctness |
+| Declared-work gate | Local ledger validates task states and dependencies before review/completion | Finds unresolved declared work; it cannot discover work that was never declared |
+| Opt-in expertise | Separate UI design and security review skill packs | Adds instructions only; it does not change permissions, roles, or enforcement |
 | Safer installation | Code preserves conflicts, supports dry-run, backs up forced replacements, and tracks owned files | Review the preview and backups; it is not a substitute for version control |
 
 The underlying Codex sandbox, operating-system permissions, repository protections, and human authorization remain the enforcement layers. After client upgrades, rerun the smoke test and report unobservable metadata as unknown.
@@ -129,7 +143,8 @@ The underlying Codex sandbox, operating-system permissions, repository protectio
 - [Roadmap](docs/roadmap.md)
 - [Architecture details](docs/architecture.md)
 - [Runtime smoke test](docs/runtime-smoke-test.md)
-- [v0.2.0 release notes](docs/release-v0.2.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [Task ledger](docs/task-ledger.md) and [expertise packs](docs/expertise-packs.md)
+- [v0.3.0 release notes](docs/release-v0.3.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Source provenance](docs/provenance.md)
 
 ## Development

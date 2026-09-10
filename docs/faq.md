@@ -18,6 +18,14 @@ The destination differs from the supplied file. Review the difference first. `--
 
 No. It records hashes and Git identity, then `verify` detects whether the frozen candidate changed. It does not lock files, prove correctness, or replace tests and review.
 
+## Can the task ledger prove that no work was forgotten?
+
+No. It flags unresolved required tasks that were declared. The owner must still declare the right work, inspect the result, run tests, and complete independent review. Keep prompts, source, logs, personal data, credentials, and secrets out of ledger labels and reasons.
+
+## Do expertise packs grant extra permissions?
+
+No. They are opt-in instruction sets. They do not create agents, change sandboxes, provide credentials, or authorize external actions.
+
 ## Why did uninstall keep a file?
 
 Uninstall removes only files recorded as installer-owned and unchanged since installation. It keeps pre-existing or modified files to avoid deleting user work. It also removes only the marked bounded-orchestrator block from `AGENTS.md`.

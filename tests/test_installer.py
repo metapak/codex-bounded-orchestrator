@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "scripts/install.py"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 START_MARKER = "<!-- codex-bounded-orchestrator:start -->"
 MANIFEST = Path(".codex/.bounded-orchestrator/install.json")
 
@@ -101,11 +103,28 @@ class InstallerTests(unittest.TestCase):
             (self.target / ".agents/skills/bounded-orchestrator/SKILL.md").is_file()
         )
         self.assertTrue((self.target / ".codex/tools/candidate.py").is_file())
+        self.assertTrue((self.target / ".codex/tools/ledger.py").is_file())
+        if os.name != "nt":
+            self.assertTrue(
+                (self.target / ".codex/tools/ledger.py").stat().st_mode & 0o111
+            )
+        self.assertTrue(
+            (
+                self.target
+                / ".agents/skills/bounded-orchestrator-ui-design/SKILL.md"
+            ).is_file()
+        )
+        self.assertTrue(
+            (
+                self.target
+                / ".agents/skills/bounded-orchestrator-security-review/SKILL.md"
+            ).is_file()
+        )
         self.assertIn(START_MARKER, (self.target / "AGENTS.md").read_text())
 
         manifest = json.loads((self.target / MANIFEST).read_text())
         self.assertEqual(manifest["profile"], "astra")
-        self.assertEqual(manifest["tool_version"], "0.2.0")
+        self.assertEqual(manifest["tool_version"], VERSION)
         self.assertTrue(manifest["files"][".codex/config.toml"]["owned"])
 
     def test_sol_fallback_profile_keeps_terra_sol_astra_routing(self) -> None:
@@ -220,6 +239,19 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((self.target / ".codex/config.toml").exists())
         self.assertFalse((self.target / ".codex/agents/reviewer.toml").exists())
         self.assertFalse((self.target / ".codex/agents/fast-lookup.toml").exists())
+        self.assertFalse((self.target / ".codex/tools/ledger.py").exists())
+        self.assertFalse(
+            (
+                self.target
+                / ".agents/skills/bounded-orchestrator-ui-design/SKILL.md"
+            ).exists()
+        )
+        self.assertFalse(
+            (
+                self.target
+                / ".agents/skills/bounded-orchestrator-security-review/SKILL.md"
+            ).exists()
+        )
         self.assertEqual((self.target / "AGENTS.md").read_text(), "# Keep me\n")
         self.assertFalse((self.target / MANIFEST).exists())
 

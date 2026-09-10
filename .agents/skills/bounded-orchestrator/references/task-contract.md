@@ -27,6 +27,9 @@ Acceptance criteria:
 1.
 2.
 
+Declared ledger task IDs, when the local ledger is used:
+- Short IDs only; never include prompts, source, logs, personal data, credentials, or secrets:
+
 Stop conditions:
 - Ambiguous requirement with materially different outcomes
 - Required write outside ownership

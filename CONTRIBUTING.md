@@ -40,7 +40,7 @@ Treat role prompts and project config as guardrails. Do not describe them as a s
 
 1. Keep the change focused on one problem.
 2. Follow existing patterns and avoid new dependencies unless the benefit and maintenance cost are clear.
-3. Add targeted tests for behavior changes in the installer, candidate tool, release builder, or validation rules.
+3. Add targeted tests for behavior changes in the installer, candidate tool, task ledger, release builder, or validation rules.
 4. Update both `README.md` and `README.tr.md` when user-visible behavior changes. Update paired English and Turkish files under `docs/` together.
 5. Update `CHANGELOG.md` when the change is notable to users.
 6. Run the validation commands below.

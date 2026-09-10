@@ -2,6 +2,26 @@
 
 All notable changes to the public project are documented here. This repository begins a new publication history from the recovered v0.2.0 source archive; see [source provenance](docs/provenance.md).
 
+## [0.3.0] - 2026-09-10
+
+### Added
+
+- A standard-library local task ledger with validated IDs, dependencies, state transitions, human and JSON status, and review/completion gates.
+- Atomic, restrictive storage for metadata-only run state under the existing ignored runtime directory.
+- Opt-in UI design and security review expertise packs that preserve the base authority and bounded-workflow rules.
+- English and Turkish guides for the ledger, expertise packs, and v0.3.0 release.
+
+### Changed
+
+- The base skill and managed `AGENTS.md` block now describe ledger use and expertise-pack boundaries.
+- Install, uninstall, validation, and release packaging include the ledger and both expertise packs.
+- Release tests derive artifact names from `VERSION`.
+
+### Limits
+
+- The ledger detects unresolved declared work; it cannot prove that all necessary work was declared or that completed work is correct.
+- Expertise packs provide instructions, not enforcement, permissions, credentials, or external-action authority.
+
 ## [0.2.0] - 2026-09-10
 
 ### Added
@@ -28,6 +48,7 @@ All notable changes to the public project are documented here. This repository b
 - Preserved Apache-2.0 licensing and attribution to [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator) in [LICENSE](LICENSE), [NOTICE](NOTICE), and the [design comparison](docs/from-astra-luna-orchestrator.md).
 
 [0.2.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.2.0
+[0.3.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.3.0
 
 ### Publication validation repair / Yayın doğrulama düzeltmesi
 

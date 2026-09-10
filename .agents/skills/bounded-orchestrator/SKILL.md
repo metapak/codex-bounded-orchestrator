@@ -9,7 +9,7 @@ The user's explicit instructions take precedence over this skill.
 
 ## 1. Goal
 
-Deliver complex repository work with one accountable owner, bounded subagent contracts, one writer per scope, independent verification, a frozen review candidate, and a finite stopping rule.
+Deliver complex repository work with one accountable owner, bounded subagent contracts, one writer per scope, independent verification, a frozen review candidate, a finite stopping rule, and an optional local ledger for declared work.
 
 Default topology:
 
@@ -46,6 +46,13 @@ Optional roles:
 - `failure_analyst`: Sol high for one concrete evidence-backed blocker
 - `qa_operator`: Sol high for direct browser/device/runtime QA
 - `advisor`: Astra xhigh for one high-risk owner decision
+
+Optional expertise packs, activated only when the user explicitly selects them or asks for that expertise:
+
+- `bounded-orchestrator-ui-design`: UI and UX design guidance
+- `bounded-orchestrator-security-review`: security-focused analysis
+
+Expertise packs add instructions. They do not grant authority, change role permissions, create agents, or weaken any rule in this skill.
 
 ## 2. Delegation gate
 
@@ -98,6 +105,23 @@ INTAKE
 ```
 
 The only backward edge is one bounded repair cycle after triage.
+
+### Local task ledger
+
+For delegated work with several acceptance steps, use the metadata-only ledger to make declared work visible:
+
+```bash
+python .codex/tools/ledger.py start feature-123 --title "Short goal label"
+python .codex/tools/ledger.py add map --title "Map affected flow"
+python .codex/tools/ledger.py add implement --title "Implement bounded change" --depends-on map
+python .codex/tools/ledger.py begin map
+python .codex/tools/ledger.py complete map
+python .codex/tools/ledger.py status
+```
+
+Declare required tasks before implementation, update their states at real transitions, and run `ready-for-review` before freezing. Run `complete-run` only after the workflow completion gate. A justified required skip may pass the ledger gate; record the owner decision in its short reason.
+
+The ledger stores only short IDs, short labels, dependencies, states, reasons, and timestamps in an ignored local directory. Never put prompts, source, diffs, logs, personal data, credentials, or secrets in it. It detects unresolved **declared** required work. It cannot prove that every necessary task was declared or that completed work is correct.
 
 ## 5. Contract every delegated task
 
@@ -206,6 +230,7 @@ Before freezing:
 3. targeted verification completed
 4. accidental non-ignored artifacts were removed
 5. root recorded commit or fingerprint
+6. `ledger.py ready-for-review` passed when a ledger is in use
 
 During review, source writes are prohibited. After review:
 
@@ -282,6 +307,7 @@ Before claiming success, confirm:
 - highest-value tests ran
 - final diff contains no unintended changes
 - no external action was implied or performed without authority
+- the active ledger run was completed when a ledger is in use
 
 Final response states:
 

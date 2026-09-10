@@ -32,12 +32,15 @@ MANAGED_RELATIVE_FILES = (
     Path(".codex/agents/reviewer.toml"),
     Path(".codex/agents/advisor.toml"),
     Path(".codex/tools/candidate.py"),
+    Path(".codex/tools/ledger.py"),
     Path(".codex/.candidate/.gitignore"),
     Path(".codex/.bounded-orchestrator/.gitignore"),
     Path(".agents/skills/bounded-orchestrator/SKILL.md"),
     Path(".agents/skills/bounded-orchestrator/references/task-contract.md"),
     Path(".agents/skills/bounded-orchestrator/references/review-protocol.md"),
     Path(".agents/skills/bounded-orchestrator/references/escalation.md"),
+    Path(".agents/skills/bounded-orchestrator-ui-design/SKILL.md"),
+    Path(".agents/skills/bounded-orchestrator-security-review/SKILL.md"),
 )
 
 

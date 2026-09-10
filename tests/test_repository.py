@@ -32,7 +32,7 @@ class RepositoryTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("bounded_validate_modes", ROOT / "scripts/validate.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        for platform, expected_errors in (("win32", 0), ("linux", 5), ("darwin", 5)):
+        for platform, expected_errors in (("win32", 0), ("linux", 6), ("darwin", 6)):
             with self.subTest(platform=platform):
                 errors = []
                 with patch.object(module.sys, "platform", platform), patch.object(
@@ -44,6 +44,7 @@ class RepositoryTests(unittest.TestCase):
     def test_python_files_compile(self) -> None:
         files = [
             ROOT / ".codex/tools/candidate.py",
+            ROOT / ".codex/tools/ledger.py",
             ROOT / "scripts/install.py",
             ROOT / "scripts/validate.py",
             ROOT / "scripts/build_release.py",
@@ -73,6 +74,13 @@ class RepositoryTests(unittest.TestCase):
         self.assertIn('[string]$Profile = "astra"', install_ps1)
         self.assertIn("-ExecutionPolicy Bypass", setup_cmd)
         self.assertNotIn("force-config", setup_cmd.lower())
+
+    def test_versioned_docs_and_language_pairs_exist(self) -> None:
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        self.assertEqual(version, "0.3.0")
+        for stem in ("task-ledger", "expertise-packs", f"release-v{version}"):
+            self.assertTrue((ROOT / "docs" / f"{stem}.md").is_file())
+            self.assertTrue((ROOT / "docs" / f"{stem}.tr.md").is_file())
 
 
 if __name__ == "__main__":

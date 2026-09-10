@@ -71,12 +71,15 @@ REQUIRED_FILES = (
     ".codex/config.toml",
     "presets/sol-owner.config.toml",
     ".codex/tools/candidate.py",
+    ".codex/tools/ledger.py",
     ".codex/.candidate/.gitignore",
     ".codex/.bounded-orchestrator/.gitignore",
     ".agents/skills/bounded-orchestrator/SKILL.md",
     ".agents/skills/bounded-orchestrator/references/task-contract.md",
     ".agents/skills/bounded-orchestrator/references/review-protocol.md",
     ".agents/skills/bounded-orchestrator/references/escalation.md",
+    ".agents/skills/bounded-orchestrator-ui-design/SKILL.md",
+    ".agents/skills/bounded-orchestrator-security-review/SKILL.md",
     "templates/AGENTS.block.md",
     "scripts/install.py",
     "scripts/install.sh",
@@ -91,6 +94,12 @@ REQUIRED_FILES = (
     "docs/architecture.md",
     "docs/from-astra-luna-orchestrator.md",
     "docs/runtime-smoke-test.md",
+    "docs/task-ledger.md",
+    "docs/task-ledger.tr.md",
+    "docs/expertise-packs.md",
+    "docs/expertise-packs.tr.md",
+    "docs/release-v0.3.0.md",
+    "docs/release-v0.3.0.tr.md",
     "AGENTS.md",
     "LICENSE",
     "NOTICE",
@@ -263,6 +272,27 @@ def validate_skill(errors: list[str]) -> None:
             errors.append(f"SKILL.md: missing invariant phrase {phrase!r}")
 
 
+def validate_expertise_packs(errors: list[str]) -> None:
+    packs = {
+        ".agents/skills/bounded-orchestrator-ui-design/SKILL.md": (
+            "name: bounded-orchestrator-ui-design",
+            ("opt-in", "grants no", "one writer", "accessibility"),
+        ),
+        ".agents/skills/bounded-orchestrator-security-review/SKILL.md": (
+            "name: bounded-orchestrator-security-review",
+            ("opt-in", "grants no", "one writer", "trust boundaries"),
+        ),
+    }
+    for relative, (name, phrases) in packs.items():
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        if not text.startswith("---\n") or name not in text.split("---", 2)[1]:
+            errors.append(f"{relative}: invalid skill front matter")
+        lowered = text.lower()
+        for phrase in phrases:
+            if phrase not in lowered:
+                errors.append(f"{relative}: missing bounded phrase {phrase!r}")
+
+
 def validate_markers(errors: list[str]) -> None:
     path = ROOT / "templates/AGENTS.block.md"
     text = path.read_text(encoding="utf-8")
@@ -295,6 +325,7 @@ def validate_wrapper_modes(errors: list[str]) -> None:
         Path("scripts/install.py"),
         Path("scripts/validate.py"),
         Path("scripts/build_release.py"),
+        Path(".codex/tools/ledger.py"),
     ):
         if not ((ROOT / relative).stat().st_mode & 0o111):
             errors.append(f"{relative}: expected executable bit")
@@ -319,6 +350,7 @@ def main() -> int:
         )
         validate_agents(errors)
         validate_skill(errors)
+        validate_expertise_packs(errors)
         validate_markers(errors)
         validate_runtime_ignores(errors)
         validate_wrapper_modes(errors)

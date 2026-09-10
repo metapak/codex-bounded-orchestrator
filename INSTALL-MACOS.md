@@ -30,5 +30,5 @@ Preview:
 ./scripts/install.sh /absolute/path/to/project --profile astra --dry-run
 ```
 
-Python 3.11 or newer is required by the installer and candidate fingerprint tool.
+Python 3.11 or newer is required by the installer, candidate fingerprint tool, and local task ledger.
 After installation, restart Codex and run the read-only checklist in [docs/runtime-smoke-test.md](docs/runtime-smoke-test.md).

@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / "scripts/build_release.py"
 PREFIX = "codex-bounded-orchestrator/"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 class ReleaseBuilderTests(unittest.TestCase):
@@ -27,15 +28,26 @@ class ReleaseBuilderTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
 
-            source = output / "codex-bounded-orchestrator-v0.2.0-source.zip"
-            macos = output / "codex-bounded-orchestrator-v0.2.0-macos.zip"
-            windows = output / "codex-bounded-orchestrator-v0.2.0-windows.zip"
+            source = output / f"codex-bounded-orchestrator-v{VERSION}-source.zip"
+            macos = output / f"codex-bounded-orchestrator-v{VERSION}-macos.zip"
+            windows = output / f"codex-bounded-orchestrator-v{VERSION}-windows.zip"
             for path in (source, macos, windows):
                 self.assertTrue(path.is_file())
 
             with zipfile.ZipFile(source) as archive:
                 names = set(archive.namelist())
                 self.assertIn(PREFIX + ".codex/config.toml", names)
+                self.assertIn(PREFIX + ".codex/tools/ledger.py", names)
+                self.assertIn(
+                    PREFIX
+                    + ".agents/skills/bounded-orchestrator-ui-design/SKILL.md",
+                    names,
+                )
+                self.assertIn(
+                    PREFIX
+                    + ".agents/skills/bounded-orchestrator-security-review/SKILL.md",
+                    names,
+                )
                 self.assertIn(PREFIX + "setup.command", names)
                 self.assertIn(PREFIX + "setup.cmd", names)
                 self.assertFalse(any("/.git/" in name for name in names))

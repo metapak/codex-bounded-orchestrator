@@ -52,8 +52,9 @@ Every role is both stored under `.codex/agents/` and explicitly registered throu
 - TOML pins intended model, effort, role, and sandbox defaults.
 - The skill defines authority, ownership, and finite state transitions.
 - The candidate tool detects mutation.
+- The local task ledger reports unresolved declared required work.
 - The installer preserves existing configuration and backs up forced replacements.
 - Final diff inspection remains mandatory.
 - External effects require exact user authority.
 
-Agent sandbox settings are workflow defaults, not a substitute for live platform permissions or human review. One-writer ownership, finite review budgets, and communication boundaries are instruction-level rules. The candidate tool detects changes when invoked; it does not lock files or automatically block a merge. The verifier has workspace-write configuration to run checks; its prohibition on editing source is an instruction, not a read-only sandbox.
+Agent sandbox settings are workflow defaults, not a substitute for live platform permissions or human review. One-writer ownership, finite review budgets, and communication boundaries are instruction-level rules. The candidate tool detects changes when invoked; it does not lock files or automatically block a merge. The task ledger catches unresolved work only when that work was declared; it cannot discover missing tasks or prove correctness. Expertise packs add opt-in instructions and do not grant permissions or enforce behavior. The verifier has workspace-write configuration to run checks; its prohibition on editing source is an instruction, not a read-only sandbox.

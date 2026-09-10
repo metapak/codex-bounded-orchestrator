@@ -24,6 +24,7 @@ EXECUTABLE_PATHS = {
     "scripts/validate.py",
     "scripts/build_release.py",
     ".codex/tools/candidate.py",
+    ".codex/tools/ledger.py",
 }
 SKIP_NAMES = {
     ".git",
