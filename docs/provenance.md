@@ -29,3 +29,10 @@ contains the standard Apache license, and has no root NOTICE file. The supplied
 No upstream endorsement or transfer of trademark rights is implied.
 
 See [architectural differences](from-astra-luna-orchestrator.md).
+
+## Hosted Windows validation repair
+
+The first hosted Windows run exposed a POSIX executable-bit assumption in
+`scripts/validate.py`. Publication adds a Windows-specific skip for that
+filesystem-only check and a regression test in `tests/test_repository.py`.
+POSIX mode validation and ZIP executable-mode tests remain active.

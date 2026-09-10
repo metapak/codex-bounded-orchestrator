@@ -285,6 +285,10 @@ def validate_runtime_ignores(errors: list[str]) -> None:
 
 
 def validate_wrapper_modes(errors: list[str]) -> None:
+    # Publication fix: Windows does not expose POSIX executable permission bits.
+    # Archive permissions remain checked by the release-package tests.
+    if sys.platform == "win32":
+        return
     for relative in (
         Path("setup.command"),
         Path("scripts/install.sh"),

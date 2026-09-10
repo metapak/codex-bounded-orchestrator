@@ -8,6 +8,7 @@ import py_compile
 import subprocess
 import sys
 import unittest
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +27,19 @@ class RepositoryTests(unittest.TestCase):
             result = module.main()
         self.assertEqual(result, 0)
         self.assertIn("Repository validation passed", output.getvalue())
+
+    def test_wrapper_modes_respect_platform_semantics(self) -> None:
+        spec = importlib.util.spec_from_file_location("bounded_validate_modes", ROOT / "scripts/validate.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for platform, expected_errors in (("win32", 0), ("linux", 5), ("darwin", 5)):
+            with self.subTest(platform=platform):
+                errors = []
+                with patch.object(module.sys, "platform", platform), patch.object(
+                    module.Path, "stat", return_value=Mock(st_mode=0)
+                ):
+                    module.validate_wrapper_modes(errors)
+                self.assertEqual(len(errors), expected_errors)
 
     def test_python_files_compile(self) -> None:
         files = [

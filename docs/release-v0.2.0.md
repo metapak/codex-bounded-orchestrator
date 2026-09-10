@@ -24,13 +24,16 @@ README and preview the installation before applying it to a separate project.
 
 ## Verification and limits
 
-The recovered source passes 22 local automated tests on macOS with Python 3.14.7.
+The recovered source passes 23 local automated tests on macOS with Python 3.14.7.
 The repository includes CI for Ubuntu, macOS, and Windows with Python 3.11.
 Check the workflow run for this release commit for the actual hosted results.
 These checks do not establish an end-to-end live Codex model session or graphical
 installer execution. Model access and client behavior must be checked with the
 included runtime smoke test. Instruction-level review and ownership rules are
 not a security sandbox, cost cap, or guarantee of correct output.
+
+The hosted Windows validation repair skips a POSIX-only filesystem permission
+check on Windows and adds a regression test. ZIP permission checks remain active.
 
 ## Provenance
 
@@ -45,6 +48,6 @@ Tek sorumlu yönetici, açık görev sahipliği, ayrı doğrulama ve sınırlı 
 süreci sunan, proje bazlı Codex kurulumu. macOS veya Windows ZIP dosyasını açıp
 `README.tr.md` ile başlayın. Git ve Python 3.11+ gereklidir.
 
-Yerel macOS ortamında 22 otomatik test geçti. Canlı Codex model yönlendirmesi
+Yerel macOS ortamında 23 otomatik test geçti. Canlı Codex model yönlendirmesi
 ve grafik arayüzden kurulum bu sonuçlara dahil değildir. Destek sınırlarını ve
 kurulum önizlemesini okuyun. Apache-2.0 lisansı ve kaynak atıfları korunmuştur.

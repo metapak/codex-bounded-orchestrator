@@ -28,3 +28,8 @@ All notable changes to the public project are documented here. This repository b
 - Preserved Apache-2.0 licensing and attribution to [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator) in [LICENSE](LICENSE), [NOTICE](NOTICE), and the [design comparison](docs/from-astra-luna-orchestrator.md).
 
 [0.2.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.2.0
+
+### Publication validation repair / Yayın doğrulama düzeltmesi
+
+- Windows skips the POSIX-only filesystem executable-bit check; regression coverage preserves macOS/Linux checks and ZIP mode checks.
+- Windows, yalnızca POSIX dosya sistemine ait çalıştırma izni kontrolünü atlar; macOS/Linux ve ZIP izin kontrolleri korunur.
