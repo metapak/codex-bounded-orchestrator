@@ -1,0 +1,51 @@
+name: Feature request
+description: Propose a focused improvement with observable value and boundaries.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What concrete workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed outcome
+      description: Describe observable behavior rather than a broad redesign.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include current workarounds when available.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Orchestration workflow
+        - Installer
+        - Candidate tool
+        - Agent profile or routing
+        - Platform support
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Safety and compatibility impact
+      description: Note effects on permissions, one-writer ownership, review limits, dependencies, or supported environments.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List checks that would demonstrate the request is complete.
+    validations:
+      required: true

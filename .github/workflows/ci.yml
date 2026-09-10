@@ -1,0 +1,69 @@
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cross-platform:
+    name: ${{ matrix.os }} / Python 3.11
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate repository contracts
+        run: python scripts/validate.py
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile Python entry points
+        run: python -m py_compile .codex/tools/candidate.py scripts/install.py scripts/validate.py
+
+      - name: Parse shell launchers
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          sh -n scripts/install.sh
+          sh -n setup.command
+
+      - name: Parse PowerShell launchers
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/install.ps1'), [ref]$null, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error; exit 1 }
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'setup.ps1'), [ref]$null, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error; exit 1 }
+
+      - name: Wrapper dry run
+        shell: bash
+        if: runner.os != 'Windows'
+        run: |
+          mkdir wrapper-target
+          ./scripts/install.sh wrapper-target --profile astra --dry-run
+
+      - name: Windows wrapper dry run
+        shell: pwsh
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Path wrapper-target | Out-Null
+          .\scripts\install.ps1 -Target (Resolve-Path wrapper-target) -Profile astra -DryRun
