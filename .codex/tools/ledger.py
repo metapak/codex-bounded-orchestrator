@@ -99,13 +99,15 @@ def atomic_write_json(path: Path, value: dict[str, Any]) -> None:
     temporary = Path(temporary_name)
     try:
         try:
-            os.fchmod(descriptor, 0o600)
-        except OSError:
-            pass
-        data = (
-            json.dumps(value, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
-        ).encode("utf-8")
-        try:
+            permission_setter = getattr(os, "fchmod", None)
+            if permission_setter is not None:
+                try:
+                    permission_setter(descriptor, 0o600)
+                except OSError:
+                    pass
+            data = (
+                json.dumps(value, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
+            ).encode("utf-8")
             view = memoryview(data)
             while view:
                 written = os.write(descriptor, view)
@@ -114,8 +116,8 @@ def atomic_write_json(path: Path, value: dict[str, Any]) -> None:
                 view = view[written:]
             os.fsync(descriptor)
         finally:
-            # Windows refuses to replace a file while its descriptor is open.
-            # Close the low-level descriptor explicitly before os.replace.
+            # Close on every permission or write failure path. Windows refuses
+            # to replace or remove a file while its descriptor is open.
             os.close(descriptor)
         os.replace(temporary, path)
         try:

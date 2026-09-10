@@ -249,6 +249,37 @@ class LedgerTests(unittest.TestCase):
             {"state": "closed-before-replace"},
         )
 
+    def test_atomic_write_without_fchmod_leaks_no_descriptor_or_temporary_file(self) -> None:
+        module = load_ledger_module()
+        destination = self.repository / "without-fchmod.json"
+        original_mkstemp = module.tempfile.mkstemp
+        captured: dict[str, int] = {}
+
+        def recording_mkstemp(*args, **kwargs):
+            descriptor, name = original_mkstemp(*args, **kwargs)
+            captured["descriptor"] = descriptor
+            return descriptor, name
+
+        sentinel = object()
+        original_fchmod = getattr(module.os, "fchmod", sentinel)
+        if original_fchmod is not sentinel:
+            delattr(module.os, "fchmod")
+        try:
+            with patch.object(
+                module.tempfile, "mkstemp", side_effect=recording_mkstemp
+            ):
+                module.atomic_write_json(destination, {"portable": True})
+        finally:
+            if original_fchmod is not sentinel:
+                setattr(module.os, "fchmod", original_fchmod)
+
+        with self.assertRaises(OSError):
+            os.fstat(captured["descriptor"])
+        self.assertEqual(list(self.repository.glob(".without-fchmod.json.*")), [])
+        self.assertEqual(
+            json.loads(destination.read_text(encoding="utf-8")), {"portable": True}
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
