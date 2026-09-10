@@ -27,6 +27,10 @@ It is designed to make multi-agent work easier to inspect and stop. The reposito
 
 ## Architecture
 
+![Codex Bounded Orchestrator role tree showing the owner, models, and responsibilities](docs/assets/codex-bounded-orchestrator-roles-tr.png)
+
+The visual overview uses short Turkish labels; the diagram below shows the same core workflow in English.
+
 ```mermaid
 flowchart TD
     U[User goal] --> O["Astra medium<br/>root owner"]

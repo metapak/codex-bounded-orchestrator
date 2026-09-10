@@ -27,6 +27,10 @@ Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirme
 
 ## Mimari
 
+![Codex Bounded Orchestrator orkestra şefi, modeller ve görev dağılımı](docs/assets/codex-bounded-orchestrator-roles-tr.png)
+
+Görsel, ana yöneticinin işi hangi modellere ve rollere dağıttığını özetler. Aşağıdaki şema ise işin uygulama ve kontrol adımlarındaki ilerleyişini gösterir.
+
 ```mermaid
 flowchart TD
     U[Kullanıcı hedefi] --> O["Astra medium<br/>root owner"]
