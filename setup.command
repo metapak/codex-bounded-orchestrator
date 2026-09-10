@@ -13,7 +13,7 @@ fi
 
 cat <<'BANNER'
 ============================================================
- Codex Bounded Orchestrator 0.4.0 - macOS installer
+ Codex Bounded Orchestrator 0.4.1 - macOS installer
  Astra owns | Terra maps/verifies | Sol builds/diagnoses
 ============================================================
 BANNER

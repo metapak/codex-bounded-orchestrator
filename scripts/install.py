@@ -103,6 +103,20 @@ class InstallError(RuntimeError):
     """Expected installer failure."""
 
 
+def configure_console_output() -> None:
+    """Keep the active encoding but replace characters it cannot represent."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(errors="replace")
+        except (AttributeError, OSError, ValueError):
+            # Captured/custom streams may not be reconfigurable. They retain their
+            # existing behavior; normal TextIOWrapper consoles use the safe mode.
+            pass
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -970,6 +984,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_console_output()
     if sys.version_info < (3, 11):
         print("install error: Python 3.11 or newer is required.", file=sys.stderr)
         return 2

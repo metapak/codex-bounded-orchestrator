@@ -44,6 +44,8 @@ REQUIRED_SOURCE_FILES = {
     "docs/external-providers.tr.md",
     "docs/release-v0.4.0.md",
     "docs/release-v0.4.0.tr.md",
+    "docs/release-v0.4.1.md",
+    "docs/release-v0.4.1.tr.md",
     "docs/profiles.md",
     "docs/profiles.tr.md",
     "tests/test_anthropic_bridge.py",

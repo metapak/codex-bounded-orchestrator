@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host "============================================================"
-Write-Host " Codex Bounded Orchestrator 0.4.0 - Windows installer"
+Write-Host " Codex Bounded Orchestrator 0.4.1 - Windows installer"
 Write-Host " Astra owns | Terra maps/verifies | Sol builds/diagnoses"
 Write-Host "============================================================"
 

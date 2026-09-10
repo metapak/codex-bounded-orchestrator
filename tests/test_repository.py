@@ -121,7 +121,7 @@ class RepositoryTests(unittest.TestCase):
 
     def test_versioned_docs_and_language_pairs_exist(self) -> None:
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-        self.assertEqual(version, "0.4.0")
+        self.assertEqual(version, "0.4.1")
         for stem in ("task-ledger", "expertise-packs", "external-providers", "profiles", f"release-v{version}"):
             self.assertTrue((ROOT / "docs" / f"{stem}.md").is_file())
             self.assertTrue((ROOT / "docs" / f"{stem}.tr.md").is_file())

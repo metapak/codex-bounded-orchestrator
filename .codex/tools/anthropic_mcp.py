@@ -13,7 +13,7 @@ from pathlib import PurePosixPath
 from typing import Any, TextIO
 
 SERVER_NAME = "codex-bounded-anthropic-bridge"
-SERVER_VERSION = "0.4.0"
+SERVER_VERSION = "0.4.1"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_ENDPOINT = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = "claude-sonnet-5"

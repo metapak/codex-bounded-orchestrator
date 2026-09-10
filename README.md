@@ -171,7 +171,7 @@ The underlying Codex sandbox, operating-system permissions, repository protectio
 - [Runtime smoke test](docs/runtime-smoke-test.md)
 - [Task ledger](docs/task-ledger.md) and [expertise packs](docs/expertise-packs.md)
 - [Routing profiles](docs/profiles.md) and [external provider bridge](docs/external-providers.md)
-- [v0.4.0 release notes](docs/release-v0.4.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.4.1 release notes](docs/release-v0.4.1.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Source provenance](docs/provenance.md)
 
 ## Development

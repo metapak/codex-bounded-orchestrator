@@ -107,6 +107,8 @@ REQUIRED_FILES = (
     "docs/release-v0.3.0.tr.md",
     "docs/release-v0.4.0.md",
     "docs/release-v0.4.0.tr.md",
+    "docs/release-v0.4.1.md",
+    "docs/release-v0.4.1.tr.md",
     "AGENTS.md",
     "LICENSE",
     "NOTICE",

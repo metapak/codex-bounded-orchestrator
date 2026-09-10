@@ -2,6 +2,13 @@
 
 All notable changes to the public project are documented here. This repository begins a new publication history from the recovered v0.2.0 source archive; see [source provenance](docs/provenance.md).
 
+## [0.4.1] - 2026-09-10
+
+### Fixed
+
+- Interactive Turkish installer output no longer crashes Windows consoles that use restrictive encodings such as cp1252. Standard output and error keep their active encoding and replace only unsupported characters; UTF-8 consoles preserve the original Turkish text.
+- Added a regression test that runs the interactive flow with strict cp1252 output streams.
+
 ## [0.4.0] - 2026-09-10
 
 ### Added
@@ -67,6 +74,7 @@ All notable changes to the public project are documented here. This repository b
 [0.2.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.2.0
 [0.3.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.3.0
 [0.4.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.4.0
+[0.4.1]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.4.1
 
 ### Publication validation repair / Yayın doğrulama düzeltmesi
 

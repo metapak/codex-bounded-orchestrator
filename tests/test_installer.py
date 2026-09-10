@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -8,6 +10,7 @@ import sys
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +54,14 @@ def digest(path: Path) -> str:
 def read_toml(path: Path) -> dict:
     with path.open("rb") as handle:
         return tomllib.load(handle)
+
+
+def load_installer_module():
+    spec = importlib.util.spec_from_file_location("bounded_install", INSTALLER)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 class InstallerTests(unittest.TestCase):
@@ -307,6 +318,46 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Kurulum profili", result.stdout)
         self.assertEqual(read_toml(self.target / ".codex/config.toml")["model"], "gpt-owner")
+
+    def test_interactive_output_survives_restrictive_cp1252_console(self) -> None:
+        environment = dict(os.environ)
+        environment.pop("ANTHROPIC_API_KEY", None)
+        environment["PYTHONIOENCODING"] = "cp1252:strict"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(INSTALLER),
+                str(self.target),
+                "--interactive",
+                "--dry-run",
+            ],
+            input=b"1\nn\n",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=30,
+            env=environment,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode("cp1252"))
+        self.assertIn(b"Installation profile", result.stdout)
+        self.assertEqual(list(self.target.iterdir()), [])
+
+    def test_console_fallback_configures_stdout_and_stderr(self) -> None:
+        module = load_installer_module()
+        stdout_bytes = io.BytesIO()
+        stderr_bytes = io.BytesIO()
+        stdout = io.TextIOWrapper(stdout_bytes, encoding="cp1252", errors="strict")
+        stderr = io.TextIOWrapper(stderr_bytes, encoding="cp1252", errors="strict")
+        with patch.object(module.sys, "stdout", stdout), patch.object(
+            module.sys, "stderr", stderr
+        ):
+            module.configure_console_output()
+            stdout.write("ş")
+            stderr.write("ı")
+            stdout.flush()
+            stderr.flush()
+        self.assertEqual(stdout_bytes.getvalue(), b"?")
+        self.assertEqual(stderr_bytes.getvalue(), b"?")
 
     def test_external_anthropic_bridge_is_opt_in_and_never_persists_key(self) -> None:
         result = self.run_installer(

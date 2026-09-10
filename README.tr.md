@@ -169,7 +169,7 @@ Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo kor
 - [Runtime smoke testi](docs/runtime-smoke-test.md)
 - [Görev ledger'ı](docs/task-ledger.tr.md) ve [uzmanlık paketleri](docs/expertise-packs.tr.md)
 - [Yönlendirme profilleri](docs/profiles.tr.md) ve [haricî sağlayıcı köprüsü](docs/external-providers.tr.md)
-- [v0.4.0 sürüm notları](docs/release-v0.4.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.4.1 sürüm notları](docs/release-v0.4.1.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Kaynak kökeni](docs/provenance.md)
 
 ## Geliştirme
