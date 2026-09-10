@@ -36,3 +36,8 @@ The first hosted Windows run exposed a POSIX executable-bit assumption in
 `scripts/validate.py`. Publication adds a Windows-specific skip for that
 filesystem-only check and a regression test in `tests/test_repository.py`.
 POSIX mode validation and ZIP executable-mode tests remain active.
+
+The next Windows run confirmed installation preserves conflicting files, but
+its test expected Unix path separators in the status message. The assertion in
+`tests/test_installer.py` now uses the native path representation; installer
+behavior and file-preservation assertions are unchanged.

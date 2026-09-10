@@ -193,7 +193,7 @@ class InstallerTests(unittest.TestCase):
         result = self.run_installer()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(path.read_text(), "custom reviewer\n")
-        self.assertIn("SKIP .codex/agents/reviewer.toml", result.stdout)
+        self.assertIn(f"SKIP {Path('.codex/agents/reviewer.toml')}", result.stdout)
 
     def test_force_replaces_conflicting_agent_with_backup(self) -> None:
         path = self.target / ".codex/agents/reviewer.toml"
