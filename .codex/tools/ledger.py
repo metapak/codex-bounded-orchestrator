@@ -102,11 +102,21 @@ def atomic_write_json(path: Path, value: dict[str, Any]) -> None:
             os.fchmod(descriptor, 0o600)
         except OSError:
             pass
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
-            json.dump(value, handle, ensure_ascii=True, indent=2, sort_keys=True)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
+        data = (
+            json.dumps(value, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
+        ).encode("utf-8")
+        try:
+            view = memoryview(data)
+            while view:
+                written = os.write(descriptor, view)
+                if written == 0:
+                    raise OSError("Could not write ledger temporary file.")
+                view = view[written:]
+            os.fsync(descriptor)
+        finally:
+            # Windows refuses to replace a file while its descriptor is open.
+            # Close the low-level descriptor explicitly before os.replace.
+            os.close(descriptor)
         os.replace(temporary, path)
         try:
             os.chmod(path, 0o600)

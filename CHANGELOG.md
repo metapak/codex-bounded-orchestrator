@@ -16,6 +16,7 @@ All notable changes to the public project are documented here. This repository b
 - The base skill and managed `AGENTS.md` block now describe ledger use and expertise-pack boundaries.
 - Install, uninstall, validation, and release packaging include the ledger and both expertise packs.
 - Release tests derive artifact names from `VERSION`.
+- Ledger atomic writes explicitly close temporary file descriptors before replacement for Windows compatibility.
 
 ### Limits
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -7,9 +8,19 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / ".codex/tools/ledger.py"
+
+
+def load_ledger_module():
+    spec = importlib.util.spec_from_file_location("bounded_ledger", LEDGER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Cannot load ledger module.")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class LedgerTests(unittest.TestCase):
@@ -207,6 +218,36 @@ class LedgerTests(unittest.TestCase):
         result = self.run_ledger("start", "run-1", "--title", "No leak")
         self.assertEqual(result.returncode, 2)
         self.assertIn("runtime ignore", result.stderr)
+
+    def test_atomic_replace_happens_after_temporary_descriptor_closes(self) -> None:
+        module = load_ledger_module()
+        destination = self.repository / "atomic.json"
+        original_mkstemp = module.tempfile.mkstemp
+        original_replace = module.os.replace
+        captured: dict[str, int] = {}
+        checked: list[bool] = []
+
+        def recording_mkstemp(*args, **kwargs):
+            descriptor, name = original_mkstemp(*args, **kwargs)
+            captured["descriptor"] = descriptor
+            return descriptor, name
+
+        def checking_replace(source, target):
+            with self.assertRaises(OSError):
+                os.fstat(captured["descriptor"])
+            checked.append(True)
+            return original_replace(source, target)
+
+        with patch.object(
+            module.tempfile, "mkstemp", side_effect=recording_mkstemp
+        ), patch.object(module.os, "replace", side_effect=checking_replace):
+            module.atomic_write_json(destination, {"state": "closed-before-replace"})
+
+        self.assertEqual(checked, [True])
+        self.assertEqual(
+            json.loads(destination.read_text(encoding="utf-8")),
+            {"state": "closed-before-replace"},
+        )
 
 
 if __name__ == "__main__":
