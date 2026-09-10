@@ -1,11 +1,18 @@
-
 param(
     [Parameter(Mandatory = $true, Position = 0)]
     [string]$Target,
-
     [ValidateSet("astra", "sol")]
-    [string]$Profile = "astra",
-
+    [string]$Profile,
+    [ValidateSet("balanced", "quality", "economy", "custom")]
+    [string]$Preset,
+    [string[]]$RoleModel = @(),
+    [string[]]$RoleEffort = @(),
+    [ValidateSet("none", "anthropic")]
+    [string]$ExternalProvider,
+    [string]$ExternalModel = "claude-sonnet-5",
+    [ValidateSet("low", "medium", "high", "xhigh", "max")]
+    [string]$ExternalEffort = "high",
+    [switch]$Interactive,
     [switch]$Force,
     [switch]$ForceConfig,
     [switch]$DryRun,
@@ -14,7 +21,15 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$Arguments = @("$ScriptDir\install.py", $Target, "--profile", $Profile)
+$Arguments = @("$ScriptDir\install.py", $Target)
+if ($Profile) { $Arguments += @("--profile", $Profile) }
+if ($Preset) { $Arguments += @("--preset", $Preset) }
+foreach ($Value in $RoleModel) { $Arguments += @("--role-model", $Value) }
+foreach ($Value in $RoleEffort) { $Arguments += @("--role-effort", $Value) }
+if ($ExternalProvider) { $Arguments += @("--external-provider", $ExternalProvider) }
+if ($ExternalModel) { $Arguments += @("--external-model", $ExternalModel) }
+if ($ExternalEffort) { $Arguments += @("--external-effort", $ExternalEffort) }
+if ($Interactive) { $Arguments += "--interactive" }
 if ($Force) { $Arguments += "--force" }
 if ($ForceConfig) { $Arguments += "--force-config" }
 if ($DryRun) { $Arguments += "--dry-run" }

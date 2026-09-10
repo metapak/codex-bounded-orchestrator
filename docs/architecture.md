@@ -58,3 +58,7 @@ Every role is both stored under `.codex/agents/` and explicitly registered throu
 - External effects require exact user authority.
 
 Agent sandbox settings are workflow defaults, not a substitute for live platform permissions or human review. One-writer ownership, finite review budgets, and communication boundaries are instruction-level rules. The candidate tool detects changes when invoked; it does not lock files or automatically block a merge. The task ledger catches unresolved work only when that work was declared; it cannot discover missing tasks or prove correctness. Expertise packs add opt-in instructions and do not grant permissions or enforce behavior. The verifier has workspace-write configuration to run checks; its prohibition on editing source is an instruction, not a read-only sandbox.
+
+## Optional external proposal model
+
+When explicitly installed, a local stdio MCP server may call Anthropic's Messages API for a bounded patch proposal. It receives only context selected by the root and has no workspace access. This keeps the topology one level deep: Claude is a tool-backed proposal source, not a recursively delegating Codex agent. The native implementer remains the single writer and normal verification, freeze, and review steps still apply.

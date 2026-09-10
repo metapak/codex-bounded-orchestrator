@@ -1,15 +1,19 @@
-
 #!/bin/sh
 set -u
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 
-if [ "$#" -gt 0 ]; then
+if [ "$#" -eq 1 ]; then
+    case "$1" in
+        -*) exec "$SCRIPT_DIR/scripts/install.sh" "$@" ;;
+        *) exec "$SCRIPT_DIR/scripts/install.sh" "$1" --interactive ;;
+    esac
+elif [ "$#" -gt 1 ]; then
     exec "$SCRIPT_DIR/scripts/install.sh" "$@"
 fi
 
 cat <<'BANNER'
 ============================================================
- Codex Bounded Orchestrator 0.2.0 - macOS installer
+ Codex Bounded Orchestrator 0.4.0 - macOS installer
  Astra owns | Terra maps/verifies | Sol builds/diagnoses
 ============================================================
 BANNER
@@ -25,21 +29,12 @@ printf '\nAction:\n  1) Safe install/update\n  2) Dry run only\n  3) Uninstall m
 IFS= read -r ACTION || exit 1
 ACTION=${ACTION:-1}
 
-PROFILE=astra
-if [ "$ACTION" != 3 ]; then
-    printf '\nOwner profile:\n  1) Astra medium (recommended)\n  2) Sol high fallback\nSelect [1]: '
-    IFS= read -r PROFILE_CHOICE || exit 1
-    case "${PROFILE_CHOICE:-1}" in
-        2) PROFILE=sol ;;
-        *) PROFILE=astra ;;
-    esac
-fi
-
-set -- "$TARGET" --profile "$PROFILE"
+set -- "$TARGET"
 case "$ACTION" in
-    2) set -- "$@" --dry-run ;;
+    2) set -- "$@" --dry-run --interactive ;;
     3) set -- "$@" --uninstall ;;
     1|"")
+        set -- "$@" --interactive
         printf '\nReplace conflicting managed role/skill/tool files after backup? [y/N]: '
         IFS= read -r FORCE_CHOICE || exit 1
         case "$FORCE_CHOICE" in y|Y|yes|YES|Yes) set -- "$@" --force ;; esac

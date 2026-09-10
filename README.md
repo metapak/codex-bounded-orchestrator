@@ -62,11 +62,16 @@ git clone https://github.com/metapak/codex-bounded-orchestrator.git
 cd codex-bounded-orchestrator
 
 # Preview every planned action first.
-python3 scripts/install.py /absolute/path/to/your-project --profile astra --dry-run
+python3 scripts/install.py /absolute/path/to/your-project --preset balanced --dry-run
 
 # Install after reviewing the preview.
-python3 scripts/install.py /absolute/path/to/your-project --profile astra
+python3 scripts/install.py /absolute/path/to/your-project --preset balanced
+
+# Open the interactive profile/model/effort selector for a known target path.
+./setup.command /absolute/path/to/your-project
 ```
+
+When `setup.command` receives only a target path, it opens the interactive selector. Commands containing explicit options are passed through unchanged for advanced or automated use.
 
 Start a fresh Codex session in the target project, then invoke:
 
@@ -90,7 +95,24 @@ These entry points are supplied by the repository. Runtime behavior still depend
 | Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows installation](INSTALL-WINDOWS.md) |
 | Linux | `scripts/install.sh`, `scripts/install.py` | Use the [quick start](#quick-start) and `--help` |
 
-The installer uses only the Python standard library. The default `astra` profile uses GPT-6 Astra medium as root owner; `--profile sol` selects the supplied GPT-5.6 Sol high fallback profile while preserving the rest of the routing.
+The installer uses only the Python standard library. One-click setup offers `balanced`, `quality`, `economy`, and `custom` presets. These names describe routing intent, not benchmarked guarantees. Custom setup asks for a model and effort for every role. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.
+
+See the exact [profile routing table](docs/profiles.md).
+
+## Optional Claude API proposal role
+
+Codex can call Claude through a local stdio MCP bridge when you explicitly select `anthropic` during setup. The bridge uses Anthropic's Messages API with the chosen model and `output_config.effort`. It receives only the task, context, constraints, and allowed paths that Codex sends to it; it cannot read or write the workspace. Claude returns a patch proposal, and the native implementer remains the sole writer that reviews and applies accepted changes.
+
+Set `ANTHROPIC_API_KEY` in your shell before starting Codex. The installer stores only the environment-variable name and never stores the key. API use is billed by Anthropic. Prepared choices are `claude-sonnet-5` and `claude-opus-5`; a custom model ID is also accepted.
+
+```bash
+export ANTHROPIC_API_KEY="your-key"
+python3 scripts/install.py /absolute/path/to/your-project \
+  --preset balanced --external-provider anthropic \
+  --external-model claude-sonnet-5 --external-effort high
+```
+
+See [external provider setup and boundaries](docs/external-providers.md).
 
 ## What gets installed
 
@@ -148,7 +170,8 @@ The underlying Codex sandbox, operating-system permissions, repository protectio
 - [Architecture details](docs/architecture.md)
 - [Runtime smoke test](docs/runtime-smoke-test.md)
 - [Task ledger](docs/task-ledger.md) and [expertise packs](docs/expertise-packs.md)
-- [v0.3.0 release notes](docs/release-v0.3.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [Routing profiles](docs/profiles.md) and [external provider bridge](docs/external-providers.md)
+- [v0.4.0 release notes](docs/release-v0.4.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Source provenance](docs/provenance.md)
 
 ## Development

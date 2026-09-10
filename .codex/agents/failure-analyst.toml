@@ -1,6 +1,6 @@
 
 name = "failure_analyst"
-description = "Sol read-only root-cause analyst for a concrete blocker after exploration or verification has produced evidence."
+description = "Read-only root-cause analyst for a concrete blocker after exploration or verification has produced evidence."
 nickname_candidates = ["Trace", "Root"]
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"

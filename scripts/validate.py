@@ -72,6 +72,7 @@ REQUIRED_FILES = (
     "presets/sol-owner.config.toml",
     ".codex/tools/candidate.py",
     ".codex/tools/ledger.py",
+    ".codex/tools/anthropic_mcp.py",
     ".codex/.candidate/.gitignore",
     ".codex/.bounded-orchestrator/.gitignore",
     ".agents/skills/bounded-orchestrator/SKILL.md",
@@ -98,8 +99,14 @@ REQUIRED_FILES = (
     "docs/task-ledger.tr.md",
     "docs/expertise-packs.md",
     "docs/expertise-packs.tr.md",
+    "docs/external-providers.md",
+    "docs/external-providers.tr.md",
+    "docs/profiles.md",
+    "docs/profiles.tr.md",
     "docs/release-v0.3.0.md",
     "docs/release-v0.3.0.tr.md",
+    "docs/release-v0.4.0.md",
+    "docs/release-v0.4.0.tr.md",
     "AGENTS.md",
     "LICENSE",
     "NOTICE",
@@ -326,6 +333,7 @@ def validate_wrapper_modes(errors: list[str]) -> None:
         Path("scripts/validate.py"),
         Path("scripts/build_release.py"),
         Path(".codex/tools/ledger.py"),
+        Path(".codex/tools/anthropic_mcp.py"),
     ):
         if not ((ROOT / relative).stat().st_mode & 0o111):
             errors.append(f"{relative}: expected executable bit")

@@ -2,6 +2,22 @@
 
 All notable changes to the public project are documented here. This repository begins a new publication history from the recovered v0.2.0 source archive; see [source provenance](docs/provenance.md).
 
+## [0.4.0] - 2026-09-10
+
+### Added
+
+- Turkish-friendly one-click selection for `balanced`, `quality`, `economy`, and `custom` routing presets.
+- Per-role model and effort choices in custom setup, with equivalent non-interactive flags.
+- An opt-in, dependency-free stdio MCP bridge for bounded Claude implementation proposals through the Anthropic Messages API.
+- English and Turkish external-provider guidance and v0.4.0 release notes.
+
+### Safety
+
+- The Claude bridge cannot read or write the workspace; the native implementer remains the sole writer.
+- `ANTHROPIC_API_KEY` is inherited only from the environment and is never stored in config or install metadata.
+- Uninstall ignores manifest paths outside the fixed managed-file allowlist.
+- Tests cover the MCP handshake and a mocked provider HTTP request; no live paid API call is claimed.
+
 ## [0.3.0] - 2026-09-10
 
 ### Added
@@ -50,6 +66,7 @@ All notable changes to the public project are documented here. This repository b
 
 [0.2.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.2.0
 [0.3.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.3.0
+[0.4.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.4.0
 
 ### Publication validation repair / Yayın doğrulama düzeltmesi
 

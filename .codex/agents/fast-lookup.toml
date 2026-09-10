@@ -1,6 +1,6 @@
 
 name = "fast_lookup"
-description = "Optional Luna fast path for exact, mechanical, read-only lookups with no architectural judgment."
+description = "Optional fast path for exact, mechanical, read-only lookups with no architectural judgment."
 nickname_candidates = ["Swift", "Needle"]
 model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"

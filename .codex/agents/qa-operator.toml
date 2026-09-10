@@ -1,6 +1,6 @@
 
 name = "qa_operator"
-description = "Optional Sol runtime QA operator for browser, device, or computer-use flows that require direct observation and evidence."
+description = "Optional runtime QA operator for browser, device, or computer-use flows that require direct observation and evidence."
 nickname_candidates = ["Probe", "Lens"]
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"

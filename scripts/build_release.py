@@ -25,6 +25,7 @@ EXECUTABLE_PATHS = {
     "scripts/build_release.py",
     ".codex/tools/candidate.py",
     ".codex/tools/ledger.py",
+    ".codex/tools/anthropic_mcp.py",
 }
 SKIP_NAMES = {
     ".git",
@@ -37,10 +38,20 @@ SKIP_NAMES = {
 }
 SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle"}
 WINDOWS_CRLF_SUFFIXES = {".ps1", ".cmd"}
+REQUIRED_SOURCE_FILES = {
+    ".codex/tools/anthropic_mcp.py",
+    "docs/external-providers.md",
+    "docs/external-providers.tr.md",
+    "docs/release-v0.4.0.md",
+    "docs/release-v0.4.0.tr.md",
+    "docs/profiles.md",
+    "docs/profiles.tr.md",
+    "tests/test_anthropic_bridge.py",
+}
 
-MAC_START = """Codex Bounded Orchestrator {version} - macOS\n\n1. Extract this ZIP completely.\n2. Double-click setup.command.\n3. Drag the target Git repository folder into Terminal.\n4. Keep the recommended Astra medium owner profile.\n\nDetailed instructions: INSTALL-MACOS.md\n"""
+MAC_START = """Codex Bounded Orchestrator {version} - macOS\n\n1. Extract this ZIP completely.\n2. Double-click setup.command.\n3. Drag the target Git repository folder into Terminal.\n4. Choose balanced, quality, economy, or custom.\n5. Optionally configure the read-only Claude API proposal role.\n\nDetailed instructions: INSTALL-MACOS.md\n"""
 
-WINDOWS_START = """Codex Bounded Orchestrator {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click setup.cmd.\r\n3. Paste the target Git repository folder path.\r\n4. Keep the recommended Astra medium owner profile.\r\n\r\nDetailed instructions: INSTALL-WINDOWS.md\r\n"""
+WINDOWS_START = """Codex Bounded Orchestrator {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click setup.cmd.\r\n3. Paste the target Git repository folder path.\r\n4. Choose balanced, quality, economy, or custom.\r\n5. Optionally configure the read-only Claude API proposal role.\r\n\r\nDetailed instructions: INSTALL-WINDOWS.md\r\n"""
 
 
 class ReleaseError(RuntimeError):
@@ -85,7 +96,7 @@ def git_tracked_files() -> list[Path] | None:
 def source_files() -> list[Path]:
     tracked = git_tracked_files()
     if tracked is not None:
-        candidates = tracked
+        candidates = tracked + [Path(item) for item in REQUIRED_SOURCE_FILES]
     else:
         candidates = [
             path.relative_to(ROOT)

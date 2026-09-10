@@ -1,6 +1,6 @@
 
 name = "advisor"
-description = "Optional Astra xhigh read-only advisor for one high-risk architecture, security, or data-integrity decision owned by the root."
+description = "Optional read-only advisor for one high-risk architecture, security, or data-integrity decision owned by the root."
 nickname_candidates = ["Oracle", "Keystone"]
 model = "gpt-6-astra"
 model_reasoning_effort = "xhigh"

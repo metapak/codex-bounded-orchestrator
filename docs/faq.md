@@ -33,3 +33,11 @@ Uninstall removes only files recorded as installer-owned and unchanged since ins
 ## When should I use the Sol-owner profile?
 
 Use `--profile sol` when the supplied Astra root-owner model is unavailable or when you explicitly prefer Sol high as root. The other supplied role routes remain in place. Confirm actual model availability in your Codex plan or workspace.
+
+## Can Claude replace a native Codex subagent?
+
+The optional bridge exposes Claude as an API-backed MCP proposal tool, not a native Codex subagent. It cannot inspect or edit the repository. Codex must supply bounded context, and the native implementer reviews and applies accepted changes.
+
+## Why does the Claude tool say the API key is missing?
+
+Set `ANTHROPIC_API_KEY` in the same shell or application environment that starts Codex, then restart Codex. Do not add the key to `.codex/config.toml`, the repository, or an installer argument.

@@ -1,6 +1,6 @@
 
 name = "researcher"
-description = "Terra technical researcher for current, version-specific, or external facts that must be verified before implementation."
+description = "Technical researcher for current, version-specific, or external facts that must be verified before implementation."
 nickname_candidates = ["Sagan", "Turing"]
 model = "gpt-5.6-terra"
 model_reasoning_effort = "medium"

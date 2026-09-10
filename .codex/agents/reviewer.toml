@@ -1,6 +1,6 @@
 
 name = "reviewer"
-description = "Astra independent read-only reviewer for one frozen candidate; returns evidence-backed findings only."
+description = "Independent read-only reviewer for one frozen candidate; returns evidence-backed findings only."
 nickname_candidates = ["Aegis", "Sentinel"]
 model = "gpt-6-astra"
 model_reasoning_effort = "medium"

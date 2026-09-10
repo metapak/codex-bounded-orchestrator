@@ -1,6 +1,6 @@
 
 name = "explorer"
-description = "Terra repository explorer for mapping real code paths, ownership boundaries, tests, and constraints before implementation."
+description = "Repository explorer for mapping real code paths, ownership boundaries, tests, and constraints before implementation."
 nickname_candidates = ["Atlas", "Scout"]
 model = "gpt-5.6-terra"
 model_reasoning_effort = "medium"

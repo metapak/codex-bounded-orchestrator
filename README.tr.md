@@ -62,11 +62,16 @@ git clone https://github.com/metapak/codex-bounded-orchestrator.git
 cd codex-bounded-orchestrator
 
 # Önce yapılacak bütün işlemleri görüntüle.
-python3 scripts/install.py /projenin/tam/yolu --profile astra --dry-run
+python3 scripts/install.py /projenin/tam/yolu --preset balanced --dry-run
 
 # Ön izlemeyi inceledikten sonra kur.
-python3 scripts/install.py /projenin/tam/yolu --profile astra
+python3 scripts/install.py /projenin/tam/yolu --preset balanced
+
+# Bilinen proje yolu için profil/model/efor seçim ekranını aç.
+./setup.command /projenizin/tam/yolu
 ```
+
+`setup.command` yalnız bir proje yolu alırsa etkileşimli seçim ekranını açar. Açık komut seçenekleri verilen gelişmiş veya otomatik kullanımlar değiştirilmeden doğrudan aktarılır.
 
 Hedef projede yeni bir Codex oturumu aç ve şu biçimde çağır:
 
@@ -90,7 +95,24 @@ Aşağıdaki giriş noktaları repo içinde sunulur. Gerçek çalışma davranı
 | Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows kurulumu](INSTALL-WINDOWS.md) |
 | Linux | `scripts/install.sh`, `scripts/install.py` | [Hızlı başlangıcı](#hızlı-başlangıç) ve `--help` çıktısını kullan |
 
-Installer yalnız Python standart kütüphanesini kullanır. Varsayılan `astra` profili root owner olarak GPT-6 Astra medium kullanır. `--profile sol`, diğer yönlendirmeyi koruyarak sunulan GPT-5.6 Sol high fallback profilini seçer.
+Installer yalnız Python standart kütüphanesini kullanır. Tek tıklamalı kurulum `balanced`, `quality`, `economy` ve `custom` seçeneklerini sunar. Bu adlar yönlendirme amacını anlatır; ölçülmüş sonuç garantisi değildir. Özel kurulumda her rolün modeli ve eforu ayrı seçilir. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.
+
+Tam dağılım için [profil yönlendirme tablosuna](docs/profiles.tr.md) bak.
+
+## İsteğe bağlı Claude API öneri rolü
+
+Kurulumda açıkça `anthropic` seçilirse Codex, yerel bir stdio MCP köprüsü üzerinden Claude'dan öneri alabilir. Köprü Anthropic Messages API'yi seçilen model ve `output_config.effort` değeriyle çağırır. Yalnız Codex'in verdiği görev, bağlam, sınırlar ve izin verilen dosya yollarını görür; çalışma alanını okuyamaz veya yazamaz. Claude bir yama önerisi döndürür. Öneriyi inceleyip kabul edilen kısmı uygulayan tek writer yine yerel implementer'dır.
+
+Codex'i başlatmadan önce `ANTHROPIC_API_KEY` ortam değişkenini tanımla. Installer anahtarı kaydetmez; yalnız ortam değişkeninin adını config'e yazar. API kullanımı Anthropic tarafından ücretlendirilir. Hazır seçenekler `claude-sonnet-5` ve `claude-opus-5`; özel model kimliği de girilebilir.
+
+```bash
+export ANTHROPIC_API_KEY="anahtarın"
+python3 scripts/install.py /projenin/tam/yolu \
+  --preset balanced --external-provider anthropic \
+  --external-model claude-sonnet-5 --external-effort high
+```
+
+Ayrıntılar için [haricî sağlayıcı kurulumu ve sınırlarına](docs/external-providers.tr.md) bak.
 
 ## Neler kurulur?
 
@@ -146,7 +168,8 @@ Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo kor
 - [Mimari ayrıntıları](docs/architecture.md)
 - [Runtime smoke testi](docs/runtime-smoke-test.md)
 - [Görev ledger'ı](docs/task-ledger.tr.md) ve [uzmanlık paketleri](docs/expertise-packs.tr.md)
-- [v0.3.0 sürüm notları](docs/release-v0.3.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [Yönlendirme profilleri](docs/profiles.tr.md) ve [haricî sağlayıcı köprüsü](docs/external-providers.tr.md)
+- [v0.4.0 sürüm notları](docs/release-v0.4.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Kaynak kökeni](docs/provenance.md)
 
 ## Geliştirme

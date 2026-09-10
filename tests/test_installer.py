@@ -62,7 +62,9 @@ class InstallerTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
-    def run_installer(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_installer(self, *args: str, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
+        environment = dict(os.environ)
+        environment.pop("ANTHROPIC_API_KEY", None)
         return subprocess.run(
             [sys.executable, str(INSTALLER), str(self.target), *args],
             text=True,
@@ -70,6 +72,8 @@ class InstallerTests(unittest.TestCase):
             stderr=subprocess.PIPE,
             check=False,
             timeout=30,
+            input=input_text,
+            env=environment,
         )
 
     def test_fresh_astra_install_has_exact_routing(self) -> None:
@@ -268,6 +272,94 @@ class InstallerTests(unittest.TestCase):
         result = self.run_installer("--dry-run")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(list(self.target.iterdir()), [])
+
+    def test_quality_and_economy_presets_change_role_routing(self) -> None:
+        result = self.run_installer("--preset", "quality")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(read_toml(self.target / ".codex/config.toml")["model_reasoning_effort"], "high")
+        self.assertEqual(read_toml(self.target / ".codex/agents/implementer.toml")["model"], "gpt-6-astra")
+        result = self.run_installer("--preset", "economy", "--force")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(read_toml(self.target / ".codex/config.toml")["model"], "gpt-5.6-terra")
+        self.assertEqual(read_toml(self.target / ".codex/agents/fast-lookup.toml")["model_reasoning_effort"], "low")
+
+    def test_custom_role_model_and_effort_overrides(self) -> None:
+        result = self.run_installer(
+            "--preset", "custom",
+            "--role-model", "implementer=gpt-custom",
+            "--role-effort", "implementer=xhigh",
+            "--role-model", "owner=gpt-owner",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(read_toml(self.target / ".codex/config.toml")["model"], "gpt-owner")
+        role = read_toml(self.target / ".codex/agents/implementer.toml")
+        self.assertEqual((role["model"], role["model_reasoning_effort"]), ("gpt-custom", "xhigh"))
+
+    def test_interactive_custom_selection(self) -> None:
+        # custom, then model+effort for owner and nine roles, then no external provider
+        answers = ["4"]
+        for role, (_, model, effort, _) in [("owner", ("", "gpt-owner", "high", ""))]:
+            answers.extend([model, effort])
+        for role_name in EXPECTED_ROLES:
+            answers.extend(["", ""])
+        answers.append("n")
+        result = self.run_installer("--interactive", input_text="\n".join(answers) + "\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Kurulum profili", result.stdout)
+        self.assertEqual(read_toml(self.target / ".codex/config.toml")["model"], "gpt-owner")
+
+    def test_external_anthropic_bridge_is_opt_in_and_never_persists_key(self) -> None:
+        result = self.run_installer(
+            "--external-provider", "anthropic",
+            "--external-model", "claude-opus-5",
+            "--external-effort", "xhigh",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        bridge = self.target / ".codex/tools/anthropic_mcp.py"
+        self.assertTrue(bridge.is_file())
+        config_text = (self.target / ".codex/config.toml").read_text()
+        config = read_toml(self.target / ".codex/config.toml")
+        server = config["mcp_servers"]["anthropic_claude"]
+        self.assertEqual(server["env_vars"], ["ANTHROPIC_API_KEY"])
+        self.assertIn("claude-opus-5", server["args"])
+        manifest_text = (self.target / MANIFEST).read_text()
+        self.assertNotIn("test-only-key", config_text + manifest_text)
+        self.assertIn("ANTHROPIC_API_KEY is not set", result.stdout)
+
+    def test_uninstall_ignores_manifest_path_outside_allowlist(self) -> None:
+        self.assertEqual(self.run_installer().returncode, 0)
+        outside = self.target.parent / "outside.txt"
+        outside.write_text("keep", encoding="utf-8")
+        manifest_path = self.target / MANIFEST
+        manifest = json.loads(manifest_path.read_text())
+        manifest["files"]["../outside.txt"] = {
+            "owned": True,
+            "sha256": digest(outside),
+        }
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        result = self.run_installer("--uninstall")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(outside.read_text(), "keep")
+        self.assertIn("KEEP invalid manifest path", result.stdout)
+
+    def test_disabling_external_provider_removes_owned_bridge_and_mcp_config(self) -> None:
+        self.assertEqual(
+            self.run_installer("--external-provider", "anthropic").returncode, 0
+        )
+        self.assertTrue((self.target / ".codex/tools/anthropic_mcp.py").is_file())
+        result = self.run_installer("--external-provider", "none")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.target / ".codex/tools/anthropic_mcp.py").exists())
+        config = read_toml(self.target / ".codex/config.toml")
+        self.assertNotIn("mcp_servers", config)
+
+    def test_external_install_uninstall_removes_bridge(self) -> None:
+        self.assertEqual(
+            self.run_installer("--external-provider", "anthropic").returncode, 0
+        )
+        result = self.run_installer("--uninstall")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.target / ".codex/tools/anthropic_mcp.py").exists())
 
 
 if __name__ == "__main__":

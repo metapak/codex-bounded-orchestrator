@@ -33,3 +33,11 @@ Uninstall yalnız installer-owned olarak kaydedilen ve kurulumdan sonra değişm
 ## Sol-owner profili ne zaman kullanılmalı?
 
 Sunulan Astra root-owner modeli kullanılamıyorsa veya root olarak açıkça Sol high tercih ediyorsan `--profile sol` kullan. Sunulan diğer rol yönlendirmeleri korunur. Gerçek model erişimini Codex plan veya workspace'inde doğrula.
+
+## Claude yerel bir Codex alt agent'ının yerine geçebilir mi?
+
+İsteğe bağlı köprü Claude'u API ile çalışan bir MCP öneri aracı olarak sunar; yerel Codex alt agent'ı yapmaz. Repoyu inceleyemez veya düzenleyemez. Codex sınırlı bağlamı vermeli, yerel implementer da kabul edilen değişikliği inceleyip uygulamalıdır.
+
+## Claude aracı neden API anahtarının eksik olduğunu söylüyor?
+
+`ANTHROPIC_API_KEY` değerini Codex'i başlatan aynı terminal veya uygulama ortamında tanımlayıp Codex'i yeniden başlat. Anahtarı `.codex/config.toml`, repo veya installer argümanı içine yazma.

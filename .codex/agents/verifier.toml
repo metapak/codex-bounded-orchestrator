@@ -1,6 +1,6 @@
 
 name = "verifier"
-description = "Terra independent verifier that runs focused checks and classifies failures without repairing production code."
+description = "Independent verifier that runs focused checks and classifies failures without repairing production code."
 nickname_candidates = ["Gauge", "Proof"]
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"

@@ -38,6 +38,7 @@ class ReleaseBuilderTests(unittest.TestCase):
                 names = set(archive.namelist())
                 self.assertIn(PREFIX + ".codex/config.toml", names)
                 self.assertIn(PREFIX + ".codex/tools/ledger.py", names)
+                self.assertIn(PREFIX + ".codex/tools/anthropic_mcp.py", names)
                 self.assertIn(
                     PREFIX
                     + ".agents/skills/bounded-orchestrator-ui-design/SKILL.md",
