@@ -53,6 +53,8 @@ class RepositoryTests(unittest.TestCase):
         ]
         for path in files:
             py_compile.compile(str(path), doraise=True)
+        for path in (ROOT / "x_autopilot").glob("*.py"):
+            py_compile.compile(str(path), doraise=True)
 
     @unittest.skipIf(os.name == "nt", "POSIX shell parser is not required on Windows")
     def test_shell_launchers_parse(self) -> None:
@@ -125,6 +127,8 @@ class RepositoryTests(unittest.TestCase):
         for stem in ("task-ledger", "expertise-packs", "external-providers", "profiles", f"release-v{version}"):
             self.assertTrue((ROOT / "docs" / f"{stem}.md").is_file())
             self.assertTrue((ROOT / "docs" / f"{stem}.tr.md").is_file())
+        self.assertTrue((ROOT / "docs/x-autopilot.md").is_file())
+        self.assertTrue((ROOT / "docs/x-autopilot.tr.md").is_file())
 
 
 if __name__ == "__main__":

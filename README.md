@@ -14,6 +14,13 @@ It is designed to make multi-agent work easier to inspect and stop. The reposito
 > [!NOTE]
 > This is an unofficial community project. It is not affiliated with or endorsed by OpenAI.
 
+## X Autopilot Phase 2
+
+This repository also contains a Luna-only X bot with batched Turkish drafting, evidence and personal-context guards, authenticated review, durable scheduling, and official OAuth publishing restricted to human-approved content. Sol/Astra runtime is disabled. Local SQLite is preserved; cloud uses PostgreSQL. Docker/Railway configuration is included. Publishing starts disabled.
+
+See [the X Autopilot guide](docs/x-autopilot.md) for setup, states, credentials, tests, cost accounting and delivery limits.
+
+
 ## Why use it?
 
 - Keep one root owner responsible from task intake through final verification.

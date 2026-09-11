@@ -1,0 +1,76 @@
+[app]
+# Only add facts explicitly verified by the account owner.
+verified_user_context = []
+database_url_env = "DATABASE_URL"
+database_path = "var/x-autopilot.sqlite3"
+host = "0.0.0.0"
+cloud = true
+# PUBLIC_URL must be an HTTPS origin, supplied through the environment.
+port = 8765
+min_confidence = 0.65
+max_research_items = 8
+max_drafts = 4
+language = "tr"
+categories = [
+  "saas_discovery", "app_discovery", "business_model", "revenue_story",
+  "build_in_public", "ai_observation", "developer_observation", "useful_tool",
+  "research", "short_opinion", "developer_humor", "internet_culture",
+]
+
+[models.luna]
+provider = "openai"
+model = "gpt-5.6-luna"
+reasoning_effort = "low"
+max_output_tokens = 5000
+timeout_seconds = 45
+retries = 0
+
+[models.sol]
+enabled = false
+provider = "openai"
+model = "gpt-5.6-sol"
+reasoning_effort = "high"
+max_output_tokens = 2200
+timeout_seconds = 60
+retries = 0
+
+[models.astra]
+provider = "openai"
+model = "gpt-6-astra"
+reasoning_effort = "medium"
+max_output_tokens = 1800
+timeout_seconds = 60
+retries = 0
+enabled = false
+
+[sources.hacker_news]
+enabled = true
+feed = "topstories"
+timeout_seconds = 15
+
+[sources.feeds]
+enabled = true
+timeout_seconds = 15
+urls = [
+  "https://github.blog/feed/",
+  "https://stackoverflow.blog/feed/",
+]
+
+[sources.github]
+enabled = true
+token_env = "GITHUB_TOKEN"
+timeout_seconds = 15
+queries = ["topic:developer-tools stars:>100"]
+
+[scheduler]
+enabled = true
+timezone = "Europe/Istanbul"
+research_interval_seconds = 21600
+generation_time = "09:00"
+generation_every_days = 1
+publish_interval_seconds = 60
+tick_seconds = 15
+
+[publishing]
+# Even when enabled, only explicitly human-approved drafts can be sent.
+enabled = false

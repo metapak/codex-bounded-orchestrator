@@ -14,6 +14,13 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 class ReleaseBuilderTests(unittest.TestCase):
+    def test_runtime_paths_are_excluded(self) -> None:
+        import importlib.util
+        spec=importlib.util.spec_from_file_location("release_builder",BUILDER); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        self.assertTrue(module.should_skip(Path("config/x-autopilot.toml")))
+        self.assertTrue(module.should_skip(Path("var/research.sqlite3")))
+        self.assertFalse(module.should_skip(Path(".env.example")))
+
     def test_builds_source_macos_and_windows_packages(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary)
@@ -51,8 +58,17 @@ class ReleaseBuilderTests(unittest.TestCase):
                 )
                 self.assertIn(PREFIX + "setup.command", names)
                 self.assertIn(PREFIX + "setup.cmd", names)
+                self.assertIn(PREFIX + "x_autopilot/__main__.py", names)
+                self.assertIn(PREFIX + "x_autopilot/migrations/001_initial.sql", names)
+                self.assertIn(PREFIX + "x_autopilot/migrations/002_editorial_metadata.sql", names)
+                self.assertIn(PREFIX + "x_autopilot/migrations/003_research_claims.sql", names)
+                self.assertIn(PREFIX + "docs/x-autopilot.md", names)
+                self.assertIn(PREFIX + "docs/x-autopilot.tr.md", names)
+                self.assertIn(PREFIX + ".env.example", names)
                 self.assertFalse(any("/.git/" in name for name in names))
                 self.assertFalse(any(name.endswith(".pyc") for name in names))
+                self.assertFalse(any(name.startswith(PREFIX + "var/") for name in names))
+                self.assertFalse(any(name.endswith((".sqlite", ".sqlite3", ".db")) for name in names))
 
             with zipfile.ZipFile(macos) as archive:
                 self.assertIn(PREFIX + "START-HERE-MACOS.txt", archive.namelist())

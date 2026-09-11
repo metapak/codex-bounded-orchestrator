@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sys
 import tomllib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -114,7 +115,64 @@ REQUIRED_FILES = (
     "NOTICE",
     "VERSION",
     ".gitattributes",
+    ".env.example",
+    "config/x-autopilot.example.toml",
+    "x_autopilot/__init__.py",
+    "x_autopilot/__main__.py",
+    "x_autopilot/config.py",
+    "x_autopilot/domain.py",
+    "x_autopilot/model.py",
+    "x_autopilot/normalize.py",
+    "x_autopilot/pipeline.py",
+    "x_autopilot/ports.py",
+    "x_autopilot/review.py",
+    "x_autopilot/sources.py",
+    "x_autopilot/storage.py",
+    "x_autopilot/web.py",
+    "x_autopilot/migrations/001_initial.sql",
+    "x_autopilot/migrations/002_editorial_metadata.sql",
+    "x_autopilot/migrations/003_research_claims.sql",
+    "x_autopilot/prompts/luna_v1.md",
+    "x_autopilot/prompts/sol_v1.md",
+    "x_autopilot/prompts/verify_v1.md",
+    "x_autopilot/prompts/verify_edit_v1.md",
+    "x_autopilot/prompts/astra_v1.md",
+    "x_autopilot/schemas/luna_result_v1.json",
+    "x_autopilot/schemas/sol_draft_v1.json",
+    "x_autopilot/schemas/evidence_review_v1.json",
+    "x_autopilot/schemas/edited_draft_review_v1.json",
+    "docs/x-autopilot.md",
+    "docs/x-autopilot.tr.md",
 )
+
+
+def validate_x_autopilot(errors: list[str]) -> None:
+    config = load_toml(ROOT / "config/x-autopilot.example.toml", errors)
+    models = config.get("models", {})
+    for role in ("luna", "sol", "astra"):
+        route = models.get(role, {})
+        if not route.get("provider") or not route.get("model"):
+            errors.append(f"config/x-autopilot.example.toml: incomplete {role} route")
+    for role in ("sol", "astra"):
+        if models.get(role, {}).get("enabled") is not False:
+            errors.append(f"config/x-autopilot.example.toml: {role} runtime must default to disabled")
+    if models.get("luna", {}).get("model") != "gpt-5.6-luna":
+        errors.append("config/x-autopilot.example.toml: Luna must use the approved model")
+    if config.get("publishing", {}).get("enabled") is not False:
+        errors.append("config/x-autopilot.example.toml: publishing must default to disabled")
+    if config.get("app", {}).get("host") not in {"127.0.0.1", "localhost", "::1"}:
+        errors.append("config/x-autopilot.example.toml: review UI must use loopback")
+    required_categories = {"saas_discovery", "app_discovery", "business_model", "revenue_story", "build_in_public", "ai_observation", "developer_observation", "useful_tool", "research", "short_opinion", "developer_humor", "internet_culture"}
+    if not required_categories.issubset(set(config.get("app", {}).get("categories", []))):
+        errors.append("config/x-autopilot.example.toml: required content taxonomy is incomplete")
+    for path in (ROOT / "x_autopilot/schemas").glob("*.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"invalid X Autopilot schema {path.relative_to(ROOT)}: {exc}")
+            continue
+        if payload.get("type") != "object" or payload.get("additionalProperties") is not False:
+            errors.append(f"{path.relative_to(ROOT)}: root schema must be a strict object")
 
 
 def load_toml(path: Path, errors: list[str]) -> dict[str, Any]:
@@ -364,6 +422,7 @@ def main() -> int:
         validate_markers(errors)
         validate_runtime_ignores(errors)
         validate_wrapper_modes(errors)
+        validate_x_autopilot(errors)
 
     if errors:
         for error in errors:

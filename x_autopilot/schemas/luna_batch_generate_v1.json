@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidates"],
+  "properties": {
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["research_item_id", "accepted", "summary", "category", "confidence", "noise", "near_duplicate_key", "draft_text", "factual_risk", "hook_type", "post_structure", "claims", "rejection_reason"],
+        "properties": {
+          "research_item_id": {"type": "integer"},
+          "accepted": {"type": "boolean"},
+          "summary": {"type": "string"},
+          "category": {"type": "string"},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "noise": {"type": "boolean"},
+          "near_duplicate_key": {"type": ["string", "null"]},
+          "draft_text": {"type": "string"},
+          "factual_risk": {"type": "string", "enum": ["low", "medium", "high"]},
+          "hook_type": {"type": "string"},
+          "post_structure": {"type": "string"},
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text", "kind", "evidence_ids", "verified_context_indices"],
+              "properties": {
+                "text": {"type": "string"},
+                "kind": {"type": "string", "enum": ["factual", "numerical", "personal"]},
+                "evidence_ids": {"type": "array", "items": {"type": "integer"}},
+                "verified_context_indices": {"type": "array", "items": {"type": "integer"}}
+              }
+            }
+          },
+          "rejection_reason": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

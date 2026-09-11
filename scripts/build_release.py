@@ -36,7 +36,7 @@ SKIP_NAMES = {
     ".DS_Store",
     "Thumbs.db",
 }
-SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle"}
+SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle", ".sqlite", ".sqlite3", ".db"}
 WINDOWS_CRLF_SUFFIXES = {".ps1", ".cmd"}
 REQUIRED_SOURCE_FILES = {
     ".codex/tools/anthropic_mcp.py",
@@ -70,7 +70,11 @@ def version() -> str:
 def should_skip(relative: Path) -> bool:
     if any(part in SKIP_NAMES for part in relative.parts):
         return True
-    if relative.name == ".env" or relative.name.startswith(".env."):
+    if relative.name == ".env" or (relative.name.startswith(".env.") and relative.name != ".env.example"):
+        return True
+    if relative.parts and relative.parts[0] == "var":
+        return True
+    if relative.as_posix() == "config/x-autopilot.toml":
         return True
     if relative.suffix.lower() in SKIP_SUFFIXES:
         return True
