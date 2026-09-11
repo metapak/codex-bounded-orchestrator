@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import tempfile
+import threading
+import time
 import unittest
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -8,6 +10,8 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from x_autopilot.config import load_config
+from x_autopilot.domain import RawResearchItem
+from x_autopilot.publishing import PublishResult, PublishService
 from x_autopilot.scheduler import Scheduler
 from x_autopilot.storage import SQLiteRepository
 
@@ -69,6 +73,69 @@ class SchedulerTests(unittest.TestCase):
         self.pipeline.research.assert_not_called()
         with self.assertRaises(ValueError):
             scheduler.tick(datetime(2026, 9, 11))
+
+    def test_blocking_research_does_not_stall_concurrent_publication_workers(self):
+        research_entered = threading.Event()
+        release_research = threading.Event()
+        post_sent = threading.Event()
+        publish_calls: list[str] = []
+
+        def blocking_research():
+            research_entered.set()
+            release_research.wait(2)
+            return {"added": 1, "failures": []}
+
+        class RecordingPublisher:
+            def validate_credentials(self):
+                return None
+
+            def publish(self, text):
+                publish_calls.append(text)
+                post_sent.set()
+                return PublishResult("123456")
+
+        self.pipeline.research.side_effect = blocking_research
+        raw = RawResearchItem("scheduler", "1", "Title", "https://example.com/scheduler", "Evidence")
+        item_id, _ = self.repo.add_research(raw, raw.url, "scheduler-fingerprint")
+        draft_id = self.repo.create_draft(text="due draft", category="tools", confidence=.8, factual_risk="low", verification_status="supported", research_item_id=item_id, provider="fake", model="m", prompt_version="v1", claims=[])
+        approved = self.repo.set_draft_status(draft_id, "approved", 1)
+        self.repo.schedule_draft(draft_id, "2020-01-01T00:00:00+00:00", approved.revision)
+        service = PublishService(self.repo, RecordingPublisher(), enabled=True)
+        config = replace(self.config, scheduler_tick_seconds=.01, publish_interval_seconds=.02, publish_enabled=True)
+        schedulers = [Scheduler(config, self.repo, self.pipeline, service) for _ in range(2)]
+        try:
+            for scheduler in schedulers:
+                scheduler.start()
+            self.assertTrue(research_entered.wait(1), "research worker did not enter the blocking fixture")
+            self.assertTrue(post_sent.wait(1), "publication was stalled behind research")
+            time.sleep(.08)
+            self.assertEqual(publish_calls, ["due draft"])
+            self.assertTrue(all(scheduler.healthy() for scheduler in schedulers))
+        finally:
+            release_research.set()
+            for scheduler in schedulers:
+                scheduler.stop()
+        for scheduler in schedulers:
+            self.assertFalse(scheduler.thread and scheduler.thread.is_alive())
+            self.assertFalse(scheduler._research_thread and scheduler._research_thread.is_alive())
+            self.assertFalse(scheduler._publish_thread and scheduler._publish_thread.is_alive())
+
+    def test_health_fails_when_publication_worker_dies(self):
+        scheduler = self.scheduler(publish_enabled=True, scheduler_tick_seconds=.01, publish_interval_seconds=.02)
+        self.publisher.publish_due.side_effect = SystemExit("fixture worker exit")
+        previous_hook = threading.excepthook
+        threading.excepthook = lambda _args: None
+        try:
+            scheduler.start()
+            deadline = time.monotonic() + 1
+            while scheduler._publish_thread is None or scheduler._publish_thread.is_alive():
+                if time.monotonic() >= deadline:
+                    self.fail("publication worker did not exit")
+                time.sleep(.01)
+            self.assertFalse(scheduler.healthy())
+        finally:
+            scheduler.stop()
+            threading.excepthook = previous_hook
 
 
 if __name__ == "__main__":

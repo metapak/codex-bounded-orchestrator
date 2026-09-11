@@ -17,7 +17,7 @@ python3 -m x_autopilot review
 
 On Windows the venv interpreter is `.venv\Scripts\python.exe`. `.env.example` documents variable names only; the application does not automatically load `.env` files. Supply secrets through the environment or service secrets.
 
-`review` starts the UI only; `serve` runs UI and persistent scheduler; `worker` runs the scheduler alone; `scheduler-tick` executes one tick and exits. `research`, `generate`, and `run` are manual commands. Manual generation bypasses the scheduler's daily slot and can incur additional model cost.
+`review` starts the UI only; `serve` runs the UI and persistent scheduler, with publication polling independent of research/model work; `worker` runs the scheduler alone; `scheduler-tick` executes one tick and exits. `research`, `generate`, and `run` are manual commands. Manual generation bypasses the scheduler's daily slot and can incur additional model cost.
 
 ## Runtime and content guards
 

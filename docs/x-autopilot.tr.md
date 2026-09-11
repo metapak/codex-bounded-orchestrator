@@ -17,7 +17,7 @@ python3 -m x_autopilot review
 
 Windows'ta sanal ortam Python'u `.venv\Scripts\python.exe` altındadır. `.env.example` yalnız isimleri açıklar; uygulama `.env` dosyalarını otomatik yüklemez. Gerçek anahtarları ortam/secrets içinde tutun.
 
-`review` yalnız paneli açar. `serve` panelle beraber sürekli scheduler başlatır. `worker` yalnız scheduler çalıştırır. `scheduler-tick` tek kontrol yapıp çıkar; `research`, `generate`, `run` elle tetikleme komutlarıdır. Elle `generate/run` günlük scheduler kotasından bağımsızdır; tekrar çağırmak ek API maliyeti yaratır.
+`review` yalnız paneli açar. `serve` panelle beraber sürekli scheduler başlatır; yayın kontrolü araştırma ve model çağrılarından bağımsız bir döngüde çalışır. `worker` yalnız scheduler çalıştırır. `scheduler-tick` tek kontrol yapıp çıkar; `research`, `generate`, `run` elle tetikleme komutlarıdır. Elle `generate/run` günlük scheduler kotasından bağımsızdır; tekrar çağırmak ek API maliyeti yaratır.
 
 ## Luna ve içerik güvenilirliği
 
