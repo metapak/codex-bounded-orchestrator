@@ -99,7 +99,7 @@ def make_handler(
             self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
             self.send_header("Cache-Control", "no-store")
 
-        def _send(self, body: bytes, status: int = 200) -> None:
+        def _send(self, body: bytes, status: int = 200, *, session_token: str | None = None) -> None:
             self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -108,6 +108,11 @@ def make_handler(
             if secure_cookie:
                 cookie += "; Secure"
             self.send_header("Set-Cookie", cookie)
+            if session_token is not None:
+                session_cookie = f"xap_session={session_token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200"
+                if secure_cookie:
+                    session_cookie += "; Secure"
+                self.send_header("Set-Cookie", session_cookie)
             self.end_headers()
             self.wfile.write(body)
 
@@ -121,21 +126,27 @@ def make_handler(
             self.wfile.write(body)
 
         def _authenticated(self) -> bool:
-            if auth is None or auth.matches(self.headers.get("Authorization")):
+            if auth is None or auth.matches(self.headers.get("Authorization")) or auth.matches_session(self._cookie_value("xap_session")):
                 return True
-            body = _page("Kimlik doğrulama gerekli", "<p>Bu sayfayı açmak için geçerli review kimlik bilgileri gereklidir.</p>")
-            self.send_response(HTTPStatus.UNAUTHORIZED)
-            self.send_header("WWW-Authenticate", 'Basic realm="X Autopilot Review", charset="UTF-8"')
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self._security_headers()
-            self.end_headers()
-            self.wfile.write(body)
+            hidden = f'<input type="hidden" name="csrf" value="{html.escape(csrf_token, quote=True)}">'
+            form = (
+                '<section class="panel"><p>Paneli açmak için giriş yap.</p>'
+                f'<form method="post" action="/login">{hidden}'
+                f'<label for="login-username">Kullanıcı adı</label><input id="login-username" name="username" value="{html.escape(auth.username, quote=True)}" autocomplete="username" required>'
+                '<label for="login-password">Parola</label><input id="login-password" type="password" name="password" autocomplete="current-password" required>'
+                '<small>Parola Railway servisindeki REVIEW_PASSWORD gizli değişkenidir.</small><button>Giriş yap</button></form></section>'
+            )
+            self._send(_page("Panel girişi", form), HTTPStatus.UNAUTHORIZED)
             return False
 
-        def _redirect(self, location: str) -> None:
+        def _redirect(self, location: str, *, session_token: str | None = None) -> None:
             self.send_response(HTTPStatus.SEE_OTHER)
             self.send_header("Location", location)
+            if session_token is not None:
+                session_cookie = f"xap_session={session_token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200"
+                if secure_cookie:
+                    session_cookie += "; Secure"
+                self.send_header("Set-Cookie", session_cookie)
             self._security_headers()
             self.end_headers()
 
@@ -267,26 +278,34 @@ def make_handler(
                 self._unavailable()
 
         def _handle_post(self) -> None:
+            path = urllib.parse.urlsplit(self.path).path
+            if path == "/login":
+                if auth is None:
+                    self._redirect("/drafts")
+                    return
+                if self.headers.get("Sec-Fetch-Site", "").lower() == "cross-site" or not self._same_origin():
+                    self._send(_page("İstek reddedildi", "<p>Çapraz kaynak isteği reddedildi.</p>"), 403)
+                    return
+                data = self._read_form()
+                if data is None:
+                    return
+                if not self._valid_csrf(data):
+                    self._send(_page("İstek reddedildi", "<p>CSRF doğrulaması başarısız.</p>"), 403)
+                    return
+                username = data.get("username", [""])[0]
+                password = data.get("password", [""])[0]
+                if not auth.matches_credentials(username, password):
+                    self._send(_page("Giriş başarısız", "<p>Kullanıcı adı veya parola yanlış.</p><p><a href=\"/drafts\">Tekrar dene</a></p>"), 401)
+                    return
+                self._redirect("/drafts", session_token=auth.session_token())
+                return
             if not self._authenticated():
                 return
             if self.headers.get("Sec-Fetch-Site", "").lower() == "cross-site" or not self._same_origin():
                 self._send(_page("İstek reddedildi", "<p>Çapraz kaynak isteği reddedildi.</p>"), 403)
                 return
-            try:
-                length = int(self.headers.get("Content-Length", ""))
-            except ValueError:
-                length = -1
-            if length < 0:
-                self._send(_page("İstek reddedildi", "<p>Geçerli Content-Length gereklidir.</p>"), 400)
-                return
-            if length > _MAX_BODY_BYTES:
-                self._send(_page("İstek reddedildi", "<p>İstek gövdesi çok büyük.</p>"), 413)
-                return
-            raw = self.rfile.read(length)
-            try:
-                data = urllib.parse.parse_qs(raw.decode("utf-8"), keep_blank_values=True, strict_parsing=False, max_num_fields=100)
-            except (UnicodeDecodeError, ValueError):
-                self._send(_page("İstek reddedildi", "<p>İstek kodlaması geçersiz.</p>"), 400)
+            data = self._read_form()
+            if data is None:
                 return
             if not self._valid_csrf(data):
                 self._send(_page("İstek reddedildi", "<p>CSRF doğrulaması başarısız.</p>"), 403)
@@ -316,6 +335,24 @@ def make_handler(
                 self._send(_page("İşlem başarısız", f"<p>{html.escape(str(exc))}</p>"), 409)
                 return
             self._redirect(f"/draft/{draft_id}")
+
+        def _read_form(self) -> dict[str, list[str]] | None:
+            try:
+                length = int(self.headers.get("Content-Length", ""))
+            except ValueError:
+                length = -1
+            if length < 0:
+                self._send(_page("İstek reddedildi", "<p>Geçerli Content-Length gereklidir.</p>"), 400)
+                return None
+            if length > _MAX_BODY_BYTES:
+                self._send(_page("İstek reddedildi", "<p>İstek gövdesi çok büyük.</p>"), 413)
+                return None
+            raw = self.rfile.read(length)
+            try:
+                return urllib.parse.parse_qs(raw.decode("utf-8"), keep_blank_values=True, strict_parsing=False, max_num_fields=100)
+            except (UnicodeDecodeError, ValueError):
+                self._send(_page("İstek reddedildi", "<p>İstek kodlaması geçersiz.</p>"), 400)
+                return None
 
         def _same_origin(self) -> bool:
             origin = self.headers.get("Origin")
@@ -348,6 +385,15 @@ def make_handler(
             except Exception:
                 cookie_token = ""
             return hmac.compare_digest(form_token, csrf_token) and hmac.compare_digest(cookie_token, csrf_token)
+
+        def _cookie_value(self, name: str) -> str:
+            try:
+                cookie = SimpleCookie()
+                cookie.load(self.headers.get("Cookie", ""))
+                morsel = cookie.get(name)
+                return morsel.value if morsel is not None else ""
+            except Exception:
+                return ""
 
     return Handler
 

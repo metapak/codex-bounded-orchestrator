@@ -76,7 +76,7 @@ Gerekli değişkenler:
 | `SCHEDULER_ENABLED` | Normal servis `true` |
 | `PORT` | Railway tarafından sağlanır |
 
-X secrets yalnız yayınlama açılacağı zaman gerekir. Kimlik doğrulama HTTP Basic üzerinden, yalnız HTTPS dış erişimle yapılır. Uzak bind kimlik bilgisi veya HTTPS origin olmadan açılmaz. Local loopback panel geliştirme için parolasız kalabilir. `/health` ve `/ready` gizli veri içermez; `/ready` DB ve birleşik servis scheduler sağlığını denetler. Railway healthcheck deploy anındaki kontroldür; sürekli dış izleme yerine geçmez.
+X secrets yalnız yayınlama açılacağı zaman gerekir. Uzak panel normal bir giriş formu ve güvenli oturum çerezi kullanır; HTTP Basic geriye dönük desteklenir. Kimlik doğrulama yalnız HTTPS dış erişimle çalışır. Uzak bind kimlik bilgisi veya HTTPS origin olmadan açılmaz. Local loopback panel geliştirme için parolasız kalabilir. `/health` ve `/ready` gizli veri içermez; `/ready` DB ve birleşik servis scheduler sağlığını denetler. Railway healthcheck deploy anındaki kontroldür; sürekli dış izleme yerine geçmez.
 
 Railway hesabında CLI oturumu veya uygun proje tokenı gerekir. `railway link` ile doğru projeyi doğrulayın, app ve Postgres servislerini seçin, secretları Railway Variables ekranından tanımlayın ve uygulamayı `railway up` ile yükleyin. Bu bir hazır kurulum tarifidir; dosyaların varlığı başarılı canlı deploy kanıtı değildir. Yeni servisin URL'sinde auth, `/ready`, worker kayıtları ve DB kalıcılığı ayrıca doğrulanmalıdır.
 

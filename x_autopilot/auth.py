@@ -1,10 +1,11 @@
-"""Small HTTP Basic authentication helpers for the review server."""
+"""Small authentication helpers for the review server."""
 
 from __future__ import annotations
 
 import base64
 import binascii
 import hmac
+import hashlib
 import ipaddress
 import os
 from dataclasses import dataclass, field
@@ -21,6 +22,18 @@ class ReviewAuth:
         username_matches = hmac.compare_digest(username.encode("utf-8"), self.username.encode("utf-8"))
         password_matches = hmac.compare_digest(password.encode("utf-8"), self.password.encode("utf-8"))
         return username_matches and password_matches
+
+    def matches_credentials(self, username: str, password: str) -> bool:
+        username_matches = hmac.compare_digest(username.encode("utf-8"), self.username.encode("utf-8"))
+        password_matches = hmac.compare_digest(password.encode("utf-8"), self.password.encode("utf-8"))
+        return username_matches and password_matches
+
+    def session_token(self) -> str:
+        message = f"x-autopilot-review-session:{self.username}".encode("utf-8")
+        return hmac.new(self.password.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+    def matches_session(self, token: str | None) -> bool:
+        return hmac.compare_digest((token or "").encode("utf-8"), self.session_token().encode("utf-8"))
 
 
 def is_loopback_host(host: str) -> bool:

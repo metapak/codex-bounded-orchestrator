@@ -36,6 +36,10 @@ class ReviewAuthTests(unittest.TestCase):
         self.assertFalse(auth.matches(f"Basic {wrong}"))
         self.assertFalse(auth.matches(f"Basic {valid} extra"))
         self.assertFalse(auth.matches("Bearer token"))
+        self.assertTrue(auth.matches_credentials("editor", "a-secure-password-long-enough"))
+        self.assertFalse(auth.matches_credentials("editor", "wrong"))
+        self.assertTrue(auth.matches_session(auth.session_token()))
+        self.assertFalse(auth.matches_session("wrong"))
 
     def test_remote_configuration_fails_closed(self):
         config = SimpleNamespace(
@@ -74,8 +78,22 @@ class ReviewAuthTests(unittest.TestCase):
         try:
             status, headers, _ = self._request(server.server_port, "GET", "/")
             self.assertEqual(status, 401)
-            self.assertIn("Basic", headers["WWW-Authenticate"])
+            self.assertNotIn("WWW-Authenticate", headers)
             self.assertEqual(repository.reads, 0)
+
+            csrf_cookie = headers["Set-Cookie"].split(";", 1)[0]
+            login_body = "csrf=test-token&username=editor&password=a-secure-password-long-enough"
+            login_headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Cookie": csrf_cookie,
+                "Origin": "https://review.example.com",
+            }
+            status, headers, _ = self._request(server.server_port, "POST", "/login", login_body, login_headers)
+            self.assertEqual(status, 303)
+            session_cookie = next(value.split(";", 1)[0] for name, value in headers.items() if name == "Set-Cookie" and value.startswith("xap_session="))
+            status, _, _ = self._request(server.server_port, "GET", "/", headers={"Cookie": session_cookie})
+            self.assertEqual(status, 200)
+            self.assertEqual(repository.reads, 1)
 
             status, _, body = self._request(server.server_port, "GET", "/health")
             self.assertEqual(status, 200)
@@ -88,7 +106,7 @@ class ReviewAuthTests(unittest.TestCase):
             authorization = {"Authorization": f"Basic {token}"}
             status, headers, body = self._request(server.server_port, "GET", "/", headers=authorization)
             self.assertEqual(status, 200)
-            self.assertEqual(repository.reads, 1)
+            self.assertEqual(repository.reads, 2)
             self.assertIn("Secure", headers["Set-Cookie"])
             self.assertEqual(headers["Referrer-Policy"], "strict-origin-when-cross-origin")
 
@@ -100,12 +118,12 @@ class ReviewAuthTests(unittest.TestCase):
             }
             status, _, _ = self._request(server.server_port, "POST", "/draft/1/approve", "csrf=test-token&revision=1", post_headers)
             self.assertEqual(status, 403)
-            self.assertEqual(repository.reads, 1)
+            self.assertEqual(repository.reads, 2)
 
             large = "x" * (64 * 1024 + 1)
             status, _, _ = self._request(server.server_port, "POST", "/draft/1/approve", large, authorization)
             self.assertEqual(status, 413)
-            self.assertEqual(repository.reads, 1)
+            self.assertEqual(repository.reads, 2)
 
             repository.fail_reads = True
             status, _, body = self._request(server.server_port, "GET", "/", headers=authorization)

@@ -72,7 +72,7 @@ python -m x_autopilot --config config/x-autopilot.cloud.toml serve
 | `SCHEDULER_ENABLED` | Normally `true` |
 | `PORT` | Provided by Railway |
 
-X credentials are required only when delivery is enabled. Remote review uses HTTP Basic authentication over external HTTPS and fails closed without credentials/HTTPS origin. Local loopback may remain unauthenticated for development. `/health` and `/ready` expose no secrets; `/ready` checks database and combined-service scheduler health. Railway healthchecks run at deployment, not as continuous monitoring.
+X credentials are required only when delivery is enabled. Remote review uses a regular sign-in form with a secure session cookie; HTTP Basic remains supported for compatibility. Authentication only runs over external HTTPS and fails closed without credentials/HTTPS origin. Local loopback may remain unauthenticated for development. `/health` and `/ready` expose no secrets; `/ready` checks database and combined-service scheduler health. Railway healthchecks run at deployment, not as continuous monitoring.
 
 Authenticate Railway CLI or supply an appropriate project token, use `railway link` to verify the target project, select app/Postgres services, configure secrets in Railway Variables, then upload with `railway up`. These files are deployment preparation, not proof of successful deployment. Verify authentication, readiness, worker records and DB persistence at the deployed URL.
 
