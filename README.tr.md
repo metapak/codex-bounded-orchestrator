@@ -14,6 +14,13 @@ Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirme
 > [!NOTE]
 > Bu bağımsız bir topluluk projesidir. OpenAI ile bağlantılı değildir ve OpenAI tarafından onaylanmamıştır.
 
+## X Autopilot Phase 2
+
+Bu repository ayrıca Luna-only Türkçe taslak üretimi, kanıt ve kişisel bağlam kontrolleri, kimlik doğrulamalı panel, kalıcı zamanlama ve yalnız insan onaylı içerikleri gönderen resmî OAuth X bağlantısını içerir. Sol/Astra runtime kapalıdır. Yerel SQLite korunur; cloud PostgreSQL kullanır. Docker/Railway yapılandırması hazırdır. Yayınlama kapalı başlar.
+
+Kurulum, durumlar, credential, test, maliyet hesabı ve gönderim sınırları için [X Autopilot rehberine](docs/x-autopilot.tr.md) bakın.
+
+
 ## Neden kullanılır?
 
 - Görev başlangıcından son doğrulamaya kadar tek root owner sorumlu kalır.

@@ -1,0 +1,4 @@
+psycopg[binary]==3.3.5
+requests==2.34.2
+requests-oauthlib==2.0.0
+tzdata==2026.3

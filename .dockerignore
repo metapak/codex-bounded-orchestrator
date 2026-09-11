@@ -1,0 +1,12 @@
+*
+!Dockerfile
+!requirements.txt
+!x_autopilot/
+!x_autopilot/**
+!config/
+!config/x-autopilot.cloud.toml
+**/__pycache__/
+**/*.pyc
+**/.env*
+**/*.sqlite3
+**/*.db

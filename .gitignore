@@ -8,6 +8,11 @@ venv/
 .env
 .env.*
 !.env.example
+config/x-autopilot.toml
+var/
+*.sqlite
+*.sqlite3
+*.db
 .DS_Store
 Thumbs.db
 *.zip

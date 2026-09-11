@@ -2,6 +2,22 @@
 
 All notable changes to the public project are documented here. This repository begins a new publication history from the recovered v0.2.0 source archive; see [source provenance](docs/provenance.md).
 
+## [Unreleased]
+
+- Added Phase 2 Luna-only batch drafting and review, conservative content guards, PostgreSQL storage, durable human-approved OAuth publishing, authenticated mobile review, scheduler, and Railway Docker configuration. Runtime Sol/Astra remain disabled; publishing starts disabled.
+
+### Added
+
+- Added the dependency-free X Autopilot Phase 1 MVP: reliable HN, RSS/Atom, and GitHub research adapters; deterministic normalization; configurable Luna and Sol runtime routes; evidence-gated Turkish draft generation; SQLite persistence; and a loopback review UI.
+- Added a cloud-ready `ModelProvider`/`ModelGateway` boundary with an OpenAI Responses API provider and a credential-free fake provider for tests.
+- Added English and Turkish setup, architecture, evidence, review, and operating guidance.
+
+### Safety
+
+- Astra runtime routing is disabled by default and is not called by the normal pipeline.
+- API keys are read only from environment variables. Runtime databases, captured research, and local configuration are excluded from source releases.
+- Human edits invalidate evidence verification; an edited draft cannot be approved before re-verification.
+
 ## [0.4.1] - 2026-09-10
 
 ### Fixed

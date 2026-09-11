@@ -1,0 +1,59 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reviews"],
+  "properties": {
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["research_item_id", "supported", "claims"],
+        "properties": {
+          "research_item_id": {"type": "integer"},
+          "supported": {"type": "boolean"},
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text", "kind", "evidence_ids", "verified_context_indices", "evidence_quotes", "context_quotes", "supported", "note"],
+              "properties": {
+                "text": {"type": "string"},
+                "kind": {"type": "string", "enum": ["factual", "numerical", "personal"]},
+                "evidence_ids": {"type": "array", "items": {"type": "integer"}},
+                "verified_context_indices": {"type": "array", "items": {"type": "integer"}},
+                "evidence_quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["evidence_id", "quote"],
+                    "properties": {
+                      "evidence_id": {"type": "integer"},
+                      "quote": {"type": "string"}
+                    }
+                  }
+                },
+                "context_quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["context_index", "quote"],
+                    "properties": {
+                      "context_index": {"type": "integer"},
+                      "quote": {"type": "string"}
+                    }
+                  }
+                },
+                "supported": {"type": "boolean"},
+                "note": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
