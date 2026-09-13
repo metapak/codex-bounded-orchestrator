@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640" role="img" aria-labelledby="title desc">
+<title id="title">Codex Bounded Orchestrator</title>
+<desc id="desc">A small AI software team with clear roles, one writer, and independent checks.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0d1117"/><stop offset="1" stop-color="#111827"/></linearGradient>
+  <radialGradient id="glow"><stop stop-color="#58a6ff" stop-opacity=".20"/><stop offset="1" stop-color="#58a6ff" stop-opacity="0"/></radialGradient>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#30363d" stroke-opacity=".22"/></pattern>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+    .eyebrow{fill:#58a6ff;font-size:15px;font-weight:700;letter-spacing:2.5px}
+    .title{fill:#f0f6fc;font-size:57px;font-weight:750;letter-spacing:-1.8px}
+    .subtitle{fill:#b1bac4;font-size:21px;font-weight:400}
+    .flow{fill:#8b949e;font-size:13px;font-weight:650;letter-spacing:1.7px}
+    .owner{fill:#f0f6fc;font-size:22px;font-weight:750}
+    .ownerrole{fill:#8b949e;font-size:12px;font-weight:650;letter-spacing:1px}
+    .model{fill:#8b949e;font-size:12px;font-weight:700;letter-spacing:.8px}
+    .action{fill:#f0f6fc;font-size:18px;font-weight:750}
+    .desc{fill:#8b949e;font-size:14px}
+    .footer{fill:#6e7681;font-size:12px;font-weight:650;letter-spacing:1.4px}
+    .wire{fill:none;stroke:#484f58;stroke-width:2}
+  </style>
+</defs>
+<rect width="1600" height="640" rx="28" fill="url(#bg)"/>
+<rect width="1600" height="640" rx="28" fill="url(#grid)"/>
+<circle cx="1290" cy="80" r="330" fill="url(#glow)"/>
+<rect x="1" y="1" width="1598" height="638" rx="27" fill="none" stroke="#30363d"/>
+<g transform="translate(80 64)">
+  <rect width="10" height="24" rx="5" fill="#58a6ff"/>
+  <text x="28" y="18" class="eyebrow">CODEX  /  OPEN SOURCE ORCHESTRATION</text>
+  <text x="0" y="94" class="title">Codex</text>
+  <text x="0" y="155" class="title">Bounded Orchestrator</text>
+  <text x="2" y="198" class="subtitle">A small AI software team with clear roles, one writer, and independent checks.</text>
+  <text x="2" y="242" class="flow">YOU DESCRIBE THE GOAL  ·  THE ORCHESTRA HANDLES THE WORKFLOW</text>
+</g>
+<g transform="translate(800 354)">
+  <circle r="65" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+  <circle r="53" fill="none" stroke="#30363d"/>
+  <path d="M-18 18L20-20M11-27l16 16" stroke="#58a6ff" stroke-width="5" stroke-linecap="round"/>
+</g>
+<text x="800" y="369" text-anchor="middle" class="owner">ASTRA · MEDIUM</text>
+<text x="800" y="399" text-anchor="middle" class="ownerrole">CONDUCTOR · OWNS THE OUTCOME</text>
+<path d="M800 390 C800 420 305 405 305 433" class="wire"/><path d="M800 390 C800 420 635 405 635 433" class="wire"/><path d="M800 390 C800 420 965 405 965 433" class="wire"/><path d="M800 390 C800 420 1295 405 1295 433" class="wire"/>
+<g transform="translate(170 433)">
+          <rect width="270" height="112" rx="18" fill="#161b22" stroke="#30363d"/>
+          <circle cx="28" cy="27" r="9" fill="#58a6ff" opacity="0.87"/>
+          <text x="48" y="32" class="model">TERRA · MEDIUM</text>
+          <text x="24" y="66" class="action">EXPLORE</text>
+          <text x="24" y="91" class="desc">Maps the project</text>
+        </g><g transform="translate(500 433)">
+          <rect width="270" height="112" rx="18" fill="#161b22" stroke="#30363d"/>
+          <circle cx="28" cy="27" r="9" fill="#58a6ff" opacity="0.7899999999999999"/>
+          <text x="48" y="32" class="model">SOL · HIGH</text>
+          <text x="24" y="66" class="action">BUILD</text>
+          <text x="24" y="91" class="desc">Makes the change</text>
+        </g><g transform="translate(830 433)">
+          <rect width="270" height="112" rx="18" fill="#161b22" stroke="#30363d"/>
+          <circle cx="28" cy="27" r="9" fill="#58a6ff" opacity="0.71"/>
+          <text x="48" y="32" class="model">TERRA · HIGH</text>
+          <text x="24" y="66" class="action">VERIFY</text>
+          <text x="24" y="91" class="desc">Checks the evidence</text>
+        </g><g transform="translate(1160 433)">
+          <rect width="270" height="112" rx="18" fill="#161b22" stroke="#30363d"/>
+          <circle cx="28" cy="27" r="9" fill="#58a6ff" opacity="0.6299999999999999"/>
+          <text x="48" y="32" class="model">ASTRA · MEDIUM</text>
+          <text x="24" y="66" class="action">REVIEW</text>
+          <text x="24" y="91" class="desc">Reviews the result</text>
+        </g>
+<line x1="80" y1="590" x2="1520" y2="590" stroke="#21262d"/>
+<text x="800" y="616" text-anchor="middle" class="footer">NATIVE MODELS BY DEFAULT  ·  OPTIONAL EXTERNAL API PROPOSALS</text>
+</svg>

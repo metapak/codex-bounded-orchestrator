@@ -1,5 +1,9 @@
 [English](README.md) | [Türkçe](README.tr.md)
 
+<p align="center">
+  <img src="docs/assets/codex-bounded-orchestrator-cover-tr.svg" alt="Codex Bounded Orchestrator Türkçe kapak" width="100%">
+</p>
+
 # Codex Bounded Orchestrator
 
 [![Lisans: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
