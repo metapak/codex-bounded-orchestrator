@@ -478,7 +478,7 @@ class InstallerTests(unittest.TestCase):
         )
         self.assertIn("deepseek_proposals", active["mcp_servers"])
         self.assertIn("anthropic_claude", pending["mcp_servers"])
-        self.assertIn("KEEP .codex/tools/deepseek_mcp.py", result.stdout)
+        self.assertIn(f"KEEP {Path('.codex/tools/deepseek_mcp.py')}", result.stdout)
         self.assertIn("Requested external: anthropic", result.stdout)
         self.assertIn("Active external   : deepseek", result.stdout)
 
@@ -500,7 +500,7 @@ class InstallerTests(unittest.TestCase):
         )
         self.assertIn("deepseek_proposals", active["mcp_servers"])
         self.assertNotIn("mcp_servers", pending)
-        self.assertIn("KEEP .codex/tools/deepseek_mcp.py", result.stdout)
+        self.assertIn(f"KEEP {Path('.codex/tools/deepseek_mcp.py')}", result.stdout)
         self.assertIn("Requested external: none", result.stdout)
         self.assertIn("Active external   : deepseek", result.stdout)
 
