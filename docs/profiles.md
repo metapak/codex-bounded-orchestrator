@@ -17,4 +17,4 @@ Profile names describe routing intent and expected relative resource use; they a
 | reviewer | Astra medium | Astra xhigh | Terra high |
 | advisor | Astra xhigh | Astra max | Sol high |
 
-`custom` starts from Balanced and asks for every role's exact model ID and effort. Non-interactive installs can repeat `--role-model ROLE=MODEL` and `--role-effort ROLE=EFFORT`. The installer validates effort names and TOML-escapes model IDs; it cannot confirm that a chosen model is enabled in the user's account.
+`custom` starts from Balanced and asks for every role's exact model ID and effort. Native Codex roles accept OpenAI `gpt-*` model IDs only; Claude and DeepSeek are available through the explicit external proposal-provider flow. This prefix rule avoids a brittle exact allowlist while keeping future GPT model IDs usable. Non-interactive installs can repeat `--role-model ROLE=MODEL` and `--role-effort ROLE=EFFORT`. The installer cannot confirm that a chosen GPT model is enabled in the user's account.

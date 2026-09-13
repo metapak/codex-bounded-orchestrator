@@ -73,6 +73,7 @@ REQUIRED_FILES = (
     ".codex/tools/candidate.py",
     ".codex/tools/ledger.py",
     ".codex/tools/anthropic_mcp.py",
+    ".codex/tools/deepseek_mcp.py",
     ".codex/.candidate/.gitignore",
     ".codex/.bounded-orchestrator/.gitignore",
     ".agents/skills/bounded-orchestrator/SKILL.md",
@@ -109,6 +110,8 @@ REQUIRED_FILES = (
     "docs/release-v0.4.0.tr.md",
     "docs/release-v0.4.1.md",
     "docs/release-v0.4.1.tr.md",
+    "docs/release-v0.5.0.md",
+    "docs/release-v0.5.0.tr.md",
     "AGENTS.md",
     "LICENSE",
     "NOTICE",
@@ -336,6 +339,7 @@ def validate_wrapper_modes(errors: list[str]) -> None:
         Path("scripts/build_release.py"),
         Path(".codex/tools/ledger.py"),
         Path(".codex/tools/anthropic_mcp.py"),
+        Path(".codex/tools/deepseek_mcp.py"),
     ):
         if not ((ROOT / relative).stat().st_mode & 0o111):
             errors.append(f"{relative}: expected executable bit")

@@ -7,11 +7,11 @@ param(
     [string]$Preset,
     [string[]]$RoleModel = @(),
     [string[]]$RoleEffort = @(),
-    [ValidateSet("none", "anthropic")]
+    [ValidateSet("none", "anthropic", "deepseek")]
     [string]$ExternalProvider,
-    [string]$ExternalModel = "claude-sonnet-5",
-    [ValidateSet("low", "medium", "high", "xhigh", "max")]
-    [string]$ExternalEffort = "high",
+    [string]$ExternalModel,
+    [ValidateSet("none", "minimal", "low", "medium", "high", "xhigh", "max")]
+    [string]$ExternalEffort,
     [switch]$Interactive,
     [switch]$Force,
     [switch]$ForceConfig,
@@ -27,8 +27,8 @@ if ($Preset) { $Arguments += @("--preset", $Preset) }
 foreach ($Value in $RoleModel) { $Arguments += @("--role-model", $Value) }
 foreach ($Value in $RoleEffort) { $Arguments += @("--role-effort", $Value) }
 if ($ExternalProvider) { $Arguments += @("--external-provider", $ExternalProvider) }
-if ($ExternalModel) { $Arguments += @("--external-model", $ExternalModel) }
-if ($ExternalEffort) { $Arguments += @("--external-effort", $ExternalEffort) }
+if (-not [string]::IsNullOrWhiteSpace($ExternalModel)) { $Arguments += @("--external-model", $ExternalModel) }
+if (-not [string]::IsNullOrWhiteSpace($ExternalEffort)) { $Arguments += @("--external-effort", $ExternalEffort) }
 if ($Interactive) { $Arguments += "--interactive" }
 if ($Force) { $Arguments += "--force" }
 if ($ForceConfig) { $Arguments += "--force-config" }

@@ -1,10 +1,20 @@
 [English](external-providers.md) | [Türkçe](external-providers.tr.md)
 
-# Optional Anthropic API bridge
+# Optional external API proposal providers
 
-Codex supports MCP tools, so this project can optionally expose Anthropic's Messages API as a local stdio MCP tool. This is an API-backed tool integration, not a native Claude subagent inside Codex.
+Codex uses OpenAI GPT models for every native role. The installer defaults to no external provider. Anthropic and DeepSeek are optional API-backed MCP tools that return bounded implementation proposals; they are not native Codex subagents.
 
-## Install
+## Guided setup
+
+The interactive installer presents three explicit choices:
+
+1. None (default)
+2. Anthropic Claude proposal
+3. DeepSeek proposal
+
+It then shows the provider, model, effort, and proposal-only boundary in the final review. Selecting a provider does not store an API key.
+
+## Anthropic
 
 Set the key only in the environment that launches Codex:
 
@@ -17,16 +27,29 @@ python3 scripts/install.py /path/to/project \
   --external-effort high
 ```
 
-The installer adds `.codex/tools/anthropic_mcp.py` and an `anthropic_claude` MCP server entry only when selected. Existing `.codex/config.toml` files are preserved unless they are still unmodified installer-owned files or `--force-config` is used. In a conflict, merge the generated example manually.
+Prepared choices are `claude-sonnet-5` and `claude-opus-5`. Anthropic efforts are `low`, `medium`, `high`, `xhigh`, and `max`. A custom `claude-*` model ID can be supplied, but availability and effort support depend on the user's account and current Anthropic documentation.
 
-## Boundary
+## DeepSeek
 
-The tool accepts a task, supplied context, constraints, and a non-empty allowlist of repository-relative paths. It sends those values to Anthropic and requests a unified-diff proposal. It has no workspace path parameter, does not read files, and does not apply changes. The native implementer remains the only writer and must review any proposal before applying it.
+Set the key only in the environment that launches Codex:
 
-Do not include credentials, personal data, proprietary source outside the agreed scope, or unrelated files in the supplied context. API use is subject to the user's Anthropic account, model access, quota, and billing.
+```bash
+export DEEPSEEK_API_KEY="your-key"
+python3 scripts/install.py /path/to/project \
+  --preset balanced \
+  --external-provider deepseek \
+  --external-model deepseek-flash \
+  --external-effort high
+```
 
-## Models and effort
+The prepared choice is `deepseek-flash`. DeepSeek's September 10, 2026 [V4.1 Flash announcement](https://deepseek.com/en/news/deepseek-v4-1-flash/) identifies that alias for the current API model and says older V4 Flash aliases temporarily route to it. Supported bridge effort values follow DeepSeek's Responses API shape: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`. A custom `deepseek-*` model ID can be supplied, but availability must be checked against current provider documentation and the user's account.
 
-As verified on 2026-09-10, the prepared choices use the current pinned Claude API IDs `claude-sonnet-5` and `claude-opus-5`. Anthropic's [effort documentation](https://platform.claude.com/docs/en/build-with-claude/effort) lists both models as supporting `low`, `medium`, `high`, `xhigh`, and `max`; the bridge sends the selected value as `output_config.effort`. A custom model ID may be installed, but availability and effort support must be checked against Anthropic's current [model overview](https://platform.claude.com/docs/en/about-claude/models/overview) and [Messages API reference](https://platform.claude.com/docs/en/api/messages/create), plus the user's account.
+## Boundary and data handling
 
-The repository test suite exercises the complete local MCP handshake and a mocked Messages API HTTP request. It does not claim a live paid API call in CI.
+Each bridge accepts a task, explicitly supplied context, constraints, and a non-empty allowlist of repository-relative paths. It has no workspace path parameter, does not read files, and does not apply changes. The native GPT implementer remains the sole writer and must review any proposal before applying it.
+
+Do not include credentials, personal data, proprietary source outside the agreed scope, or unrelated files in supplied context. The selected context is sent to the provider. API use is subject to that provider's access, quota, data terms, and billing.
+
+The installer adds the selected provider's bridge and MCP entry. When it updates the active config, switching providers or returning to `none` removes an unchanged installer-owned bridge that is no longer selected. If a user-modified `.codex/config.toml` is preserved for manual merging, every installer-owned bridge still referenced by that active config is retained. The result distinguishes the requested provider from the active provider and shows the generated example path. `--force-config` remains the explicit backup-and-replace option.
+
+The test suite exercises each local MCP handshake and mocked HTTP request. It makes no live paid API call and claims no live-provider compatibility beyond the documented request format.

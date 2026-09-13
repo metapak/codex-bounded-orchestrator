@@ -95,21 +95,27 @@ Aşağıdaki giriş noktaları repo içinde sunulur. Gerçek çalışma davranı
 | Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows kurulumu](INSTALL-WINDOWS.md) |
 | Linux | `scripts/install.sh`, `scripts/install.py` | [Hızlı başlangıcı](#hızlı-başlangıç) ve `--help` çıktısını kullan |
 
-Installer yalnız Python standart kütüphanesini kullanır. Tek tıklamalı kurulum `balanced`, `quality`, `economy` ve `custom` seçeneklerini sunar. Bu adlar yönlendirme amacını anlatır; ölçülmüş sonuç garantisi değildir. Özel kurulumda her rolün modeli ve eforu ayrı seçilir. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.
+Installer yalnız Python standart kütüphanesini kullanır. Üç adımlı yönlendirmeli ekran her seçeneği açıklar, yerel marka sınırını belirtir ve dosyalar yazılmadan önce son yapılandırma özetini gösterir. Tek tıklamalı kurulum `balanced`, `quality`, `economy` ve `custom` seçeneklerini sunar. Bu adlar yönlendirme amacını anlatır; ölçülmüş sonuç garantisi değildir. Özel profil dahil bütün yerel roller yalnız OpenAI `gpt-*` modellerini kabul eder. Diğer markalar ancak açıkça seçilen API destekli öneri araçlarıdır. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.
 
 Tam dağılım için [profil yönlendirme tablosuna](docs/profiles.tr.md) bak.
 
-## İsteğe bağlı Claude API öneri rolü
+## İsteğe bağlı haricî API öneri rolü
 
-Kurulumda açıkça `anthropic` seçilirse Codex, yerel bir stdio MCP köprüsü üzerinden Claude'dan öneri alabilir. Köprü Anthropic Messages API'yi seçilen model ve `output_config.effort` değeriyle çağırır. Yalnız Codex'in verdiği görev, bağlam, sınırlar ve izin verilen dosya yollarını görür; çalışma alanını okuyamaz veya yazamaz. Claude bir yama önerisi döndürür. Öneriyi inceleyip kabul edilen kısmı uygulayan tek writer yine yerel implementer'dır.
+Varsayılan seçimde haricî sağlayıcı yoktur. Açıkça seçilirse Codex, yerel stdio MCP köprüsü üzerinden Claude (`anthropic`) veya DeepSeek (`deepseek`) modelinden sınırlı bir yama önerisi alabilir. Köprü yalnız görevi, verilen bağlamı, kısıtları ve izinli yolları görür; çalışma alanını okuyamaz veya yazamaz. Öneriyi inceleyip kabul edilen kısmı uygulayan tek writer yerel GPT implementer olarak kalır.
 
-Codex'i başlatmadan önce `ANTHROPIC_API_KEY` ortam değişkenini tanımla. Installer anahtarı kaydetmez; yalnız ortam değişkeninin adını config'e yazar. API kullanımı Anthropic tarafından ücretlendirilir. Hazır seçenekler `claude-sonnet-5` ve `claude-opus-5`; özel model kimliği de girilebilir.
+Codex'i başlatmadan önce seçime göre `ANTHROPIC_API_KEY` veya `DEEPSEEK_API_KEY` ortam değişkenini tanımla. Installer anahtarı kaydetmez; yalnız ortam değişkeninin adını config'e yazar. Sağlayıcı API kullanımı ayrıca ücretlendirilebilir. Hazır seçenekler arasında Claude Sonnet/Opus ve DeepSeek V4.1 Flash (`deepseek-flash`) bulunur; aynı sağlayıcı ailesinden özel model kimliği de girilebilir.
 
 ```bash
 export ANTHROPIC_API_KEY="anahtarın"
 python3 scripts/install.py /projenin/tam/yolu \
   --preset balanced --external-provider anthropic \
   --external-model claude-sonnet-5 --external-effort high
+
+# Veya güncel DeepSeek V4.1 Flash API adını seç.
+export DEEPSEEK_API_KEY="anahtarın"
+python3 scripts/install.py /projenin/tam/yolu \
+  --preset balanced --external-provider deepseek \
+  --external-model deepseek-flash --external-effort high
 ```
 
 Ayrıntılar için [haricî sağlayıcı kurulumu ve sınırlarına](docs/external-providers.tr.md) bak.
@@ -169,7 +175,7 @@ Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo kor
 - [Runtime smoke testi](docs/runtime-smoke-test.md)
 - [Görev ledger'ı](docs/task-ledger.tr.md) ve [uzmanlık paketleri](docs/expertise-packs.tr.md)
 - [Yönlendirme profilleri](docs/profiles.tr.md) ve [haricî sağlayıcı köprüsü](docs/external-providers.tr.md)
-- [v0.4.1 sürüm notları](docs/release-v0.4.1.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.5.0 sürüm notları](docs/release-v0.5.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Kaynak kökeni](docs/provenance.md)
 
 ## Geliştirme

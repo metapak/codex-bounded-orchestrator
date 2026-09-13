@@ -2,6 +2,25 @@
 
 All notable changes to the public project are documented here. This repository begins a new publication history from the recovered v0.2.0 source archive; see [source provenance](docs/provenance.md).
 
+## [0.5.0] - 2026-09-14
+
+### Added
+
+- Added an opt-in, standard-library DeepSeek proposal bridge using the current `deepseek-flash` V4.1 Flash API alias.
+- Added a three-step guided terminal display with plain-ASCII sections, short choice explanations, a final configuration review, clearer results, and next steps.
+- Added mocked DeepSeek MCP/API tests and provider-switch lifecycle coverage.
+
+### Changed
+
+- Native Codex roles, including custom profiles, now accept only forward-compatible OpenAI `gpt-*` IDs. Anthropic and DeepSeek models are available only through explicit external API proposal providers.
+- External providers now default visibly to none and share the same proposal-only, no-workspace-access, environment-key boundary.
+
+### Safety
+
+- Neither `ANTHROPIC_API_KEY` nor `DEEPSEEK_API_KEY` is written to project files, install metadata, or output.
+- Switching or disabling providers removes only unchanged installer-owned bridge files and preserves user-modified config unless forced with backup.
+- When a user-modified active config is preserved, bridges it still references are retained; output separates the requested provider from the currently active provider.
+
 ## [0.4.1] - 2026-09-10
 
 ### Fixed
@@ -75,6 +94,7 @@ All notable changes to the public project are documented here. This repository b
 [0.3.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.3.0
 [0.4.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.4.0
 [0.4.1]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.4.1
+[0.5.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.5.0
 
 ### Publication validation repair / Yayın doğrulama düzeltmesi
 

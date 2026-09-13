@@ -61,4 +61,4 @@ Agent sandbox settings are workflow defaults, not a substitute for live platform
 
 ## Optional external proposal model
 
-When explicitly installed, a local stdio MCP server may call Anthropic's Messages API for a bounded patch proposal. It receives only context selected by the root and has no workspace access. This keeps the topology one level deep: Claude is a tool-backed proposal source, not a recursively delegating Codex agent. The native implementer remains the single writer and normal verification, freeze, and review steps still apply.
+All default, prepared, and custom native roles use OpenAI GPT models. When explicitly installed, one local stdio MCP server may call Anthropic or DeepSeek for a bounded patch proposal. It receives only context selected by the root and has no workspace access. This keeps the topology one level deep: the external model is a tool-backed proposal source, not a recursively delegating Codex agent. The native GPT implementer remains the single writer and normal verification, freeze, and review steps still apply.

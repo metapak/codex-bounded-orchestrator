@@ -39,6 +39,8 @@ class ReleaseBuilderTests(unittest.TestCase):
                 self.assertIn(PREFIX + ".codex/config.toml", names)
                 self.assertIn(PREFIX + ".codex/tools/ledger.py", names)
                 self.assertIn(PREFIX + ".codex/tools/anthropic_mcp.py", names)
+                self.assertIn(PREFIX + ".codex/tools/deepseek_mcp.py", names)
+                self.assertIn(PREFIX + "docs/release-v0.5.0.md", names)
                 self.assertIn(
                     PREFIX
                     + ".agents/skills/bounded-orchestrator-ui-design/SKILL.md",

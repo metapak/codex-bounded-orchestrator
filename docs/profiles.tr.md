@@ -17,4 +17,4 @@ Profil adları yönlendirme amacını ve göreli kaynak kullanımını anlatır;
 | reviewer | Astra medium | Astra xhigh | Terra high |
 | advisor | Astra xhigh | Astra max | Sol high |
 
-`custom`, Balanced ayarlarından başlar ve her rolün model kimliği ile eforunu sorar. Otomatik kurulumda `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` tekrarlanabilir. Installer efor adlarını doğrular ve model kimliklerini TOML için güvenli biçimde yazar; seçilen modelin kullanıcının hesabında açık olduğunu doğrulayamaz.
+`custom`, Balanced ayarlarından başlar ve her rolün model kimliği ile eforunu sorar. Yerel Codex rolleri yalnız OpenAI `gpt-*` model kimliklerini kabul eder; Claude ve DeepSeek açık haricî öneri sağlayıcısı akışından seçilir. Bu önek kuralı kırılgan bir tam liste oluşturmadan gelecekteki GPT model kimliklerini kullanılabilir tutar. Otomatik kurulumda `--role-model ROLE=MODEL` ve `--role-effort ROLE=EFOR` tekrarlanabilir. Installer seçilen GPT modelinin kullanıcının hesabında açık olduğunu doğrulayamaz.

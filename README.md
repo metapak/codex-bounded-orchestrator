@@ -95,21 +95,27 @@ These entry points are supplied by the repository. Runtime behavior still depend
 | Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows installation](INSTALL-WINDOWS.md) |
 | Linux | `scripts/install.sh`, `scripts/install.py` | Use the [quick start](#quick-start) and `--help` |
 
-The installer uses only the Python standard library. One-click setup offers `balanced`, `quality`, `economy`, and `custom` presets. These names describe routing intent, not benchmarked guarantees. Custom setup asks for a model and effort for every role. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.
+The installer uses only the Python standard library. Its guided three-step display explains each choice, states the native brand boundary, and shows a final configuration review before writing files. One-click setup offers `balanced`, `quality`, `economy`, and `custom` presets. These names describe routing intent, not benchmarked guarantees. All native roles remain on OpenAI `gpt-*` models, including custom profiles. Other brands are available only as explicit API-backed proposal tools. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.
 
 See the exact [profile routing table](docs/profiles.md).
 
-## Optional Claude API proposal role
+## Optional external API proposal role
 
-Codex can call Claude through a local stdio MCP bridge when you explicitly select `anthropic` during setup. The bridge uses Anthropic's Messages API with the chosen model and `output_config.effort`. It receives only the task, context, constraints, and allowed paths that Codex sends to it; it cannot read or write the workspace. Claude returns a patch proposal, and the native implementer remains the sole writer that reviews and applies accepted changes.
+The default is no external provider. When explicitly selected, Codex can ask Claude (`anthropic`) or DeepSeek (`deepseek`) for a bounded patch proposal through a local stdio MCP bridge. The bridge receives only the task, supplied context, constraints, and allowed paths; it cannot read or write the workspace. The native GPT implementer remains the sole writer that reviews and applies accepted changes.
 
-Set `ANTHROPIC_API_KEY` in your shell before starting Codex. The installer stores only the environment-variable name and never stores the key. API use is billed by Anthropic. Prepared choices are `claude-sonnet-5` and `claude-opus-5`; a custom model ID is also accepted.
+Set `ANTHROPIC_API_KEY` or `DEEPSEEK_API_KEY` only in the environment that starts Codex. The installer stores only the environment-variable name and never stores the key. Provider API use may be billed separately. Prepared choices include Claude Sonnet/Opus and DeepSeek V4.1 Flash (`deepseek-flash`); a provider-family custom model ID is also accepted.
 
 ```bash
 export ANTHROPIC_API_KEY="your-key"
 python3 scripts/install.py /absolute/path/to/your-project \
   --preset balanced --external-provider anthropic \
   --external-model claude-sonnet-5 --external-effort high
+
+# Or select the current DeepSeek V4.1 Flash API alias.
+export DEEPSEEK_API_KEY="your-key"
+python3 scripts/install.py /absolute/path/to/your-project \
+  --preset balanced --external-provider deepseek \
+  --external-model deepseek-flash --external-effort high
 ```
 
 See [external provider setup and boundaries](docs/external-providers.md).
@@ -171,7 +177,7 @@ The underlying Codex sandbox, operating-system permissions, repository protectio
 - [Runtime smoke test](docs/runtime-smoke-test.md)
 - [Task ledger](docs/task-ledger.md) and [expertise packs](docs/expertise-packs.md)
 - [Routing profiles](docs/profiles.md) and [external provider bridge](docs/external-providers.md)
-- [v0.4.1 release notes](docs/release-v0.4.1.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.5.0 release notes](docs/release-v0.5.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Source provenance](docs/provenance.md)
 
 ## Development

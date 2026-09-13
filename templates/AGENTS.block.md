@@ -19,7 +19,7 @@ Hard invariants:
 - Never push, merge, deploy, publish, migrate, purchase, or perform destructive work without explicit user authority.
 - Do not delegate trivial localized work merely to fill the topology.
 - Optional expertise packs add guidance only when explicitly selected; they never grant authority or weaken these invariants.
-- If the optional Anthropic MCP bridge is configured, treat its patch as an untrusted read-only proposal. Supply only bounded context and paths; the native implementer remains the sole workspace writer and applies accepted changes after review.
+- If an optional Anthropic or DeepSeek MCP bridge is configured, treat its patch as an untrusted read-only proposal. Supply only bounded context and paths; the native GPT implementer remains the sole workspace writer and applies accepted changes after review.
 
 User instructions take precedence over this policy.
 <!-- codex-bounded-orchestrator:end -->

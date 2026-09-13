@@ -33,7 +33,7 @@ class RepositoryTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("bounded_validate_modes", ROOT / "scripts/validate.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        for platform, expected_errors in (("win32", 0), ("linux", 7), ("darwin", 7)):
+        for platform, expected_errors in (("win32", 0), ("linux", 8), ("darwin", 8)):
             with self.subTest(platform=platform):
                 errors = []
                 with patch.object(module.sys, "platform", platform), patch.object(
@@ -47,6 +47,7 @@ class RepositoryTests(unittest.TestCase):
             ROOT / ".codex/tools/candidate.py",
             ROOT / ".codex/tools/ledger.py",
             ROOT / ".codex/tools/anthropic_mcp.py",
+            ROOT / ".codex/tools/deepseek_mcp.py",
             ROOT / "scripts/install.py",
             ROOT / "scripts/validate.py",
             ROOT / "scripts/build_release.py",
@@ -76,7 +77,7 @@ class RepositoryTests(unittest.TestCase):
             interactive = subprocess.run(
                 [str(ROOT / "setup.command"), str(target)],
                 cwd=ROOT,
-                input="1\nn\n",
+                input="1\n1\n",
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -84,7 +85,8 @@ class RepositoryTests(unittest.TestCase):
                 timeout=30,
             )
             self.assertEqual(interactive.returncode, 0, interactive.stderr)
-            self.assertIn("Kurulum profili / Installation profile", interactive.stdout)
+            self.assertIn("NATIVE PROFILE / YEREL PROFIL", interactive.stdout)
+            self.assertIn("REVIEW / SON KONTROL", interactive.stdout)
             self.assertTrue((target / ".codex/config.toml").is_file())
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -106,7 +108,7 @@ class RepositoryTests(unittest.TestCase):
                 timeout=30,
             )
             self.assertEqual(direct.returncode, 0, direct.stderr)
-            self.assertNotIn("Kurulum profili / Installation profile", direct.stdout)
+            self.assertNotIn("NATIVE PROFILE / YEREL PROFIL", direct.stdout)
             self.assertEqual(list(target.iterdir()), [])
 
     def test_windows_launchers_keep_safe_defaults(self) -> None:
@@ -115,13 +117,15 @@ class RepositoryTests(unittest.TestCase):
         setup_cmd = (ROOT / "setup.cmd").read_text(encoding="utf-8")
         self.assertIn('ValidateSet("balanced", "quality", "economy", "custom")', setup_ps1)
         self.assertIn('ValidateSet("balanced", "quality", "economy", "custom")', install_ps1)
+        self.assertIn('ValidateSet("none", "anthropic", "deepseek")', setup_ps1)
+        self.assertIn('ValidateSet("none", "anthropic", "deepseek")', install_ps1)
         self.assertIn("--interactive", (ROOT / "setup.command").read_text(encoding="utf-8"))
         self.assertIn("-ExecutionPolicy Bypass", setup_cmd)
         self.assertNotIn("force-config", setup_cmd.lower())
 
     def test_versioned_docs_and_language_pairs_exist(self) -> None:
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-        self.assertEqual(version, "0.4.1")
+        self.assertEqual(version, "0.5.0")
         for stem in ("task-ledger", "expertise-packs", "external-providers", "profiles", f"release-v{version}"):
             self.assertTrue((ROOT / "docs" / f"{stem}.md").is_file())
             self.assertTrue((ROOT / "docs" / f"{stem}.tr.md").is_file())

@@ -13,19 +13,26 @@ fi
 
 cat <<'BANNER'
 ============================================================
- Codex Bounded Orchestrator 0.4.1 - macOS installer
- Astra owns | Terra maps/verifies | Sol builds/diagnoses
+ Codex Bounded Orchestrator 0.5.0
+ Guided setup / macOS
 ============================================================
+ Native roles: OpenAI GPT models only
+ External APIs: optional, proposal-only, default is none
 BANNER
 
-printf '\nDrag the target repository folder here, then press Return:\n> '
+printf '\n[ TARGET / HEDEF ]\n'
+printf 'Drag the target repository folder here, then press Return:\n> '
 IFS= read -r TARGET || exit 1
 TARGET=$(printf '%s' "$TARGET" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" -e 's/\\ / /g')
 case "$TARGET" in
     "~/"*) TARGET="$HOME/${TARGET#~/}" ;;
 esac
 
-printf '\nAction:\n  1) Safe install/update\n  2) Dry run only\n  3) Uninstall managed files\nSelect [1]: '
+printf '\n[ ACTION / ISLEM ]\n'
+printf '  1) Safe install/update  - back up only when replacement is chosen\n'
+printf '  2) Dry run only        - preview; write nothing\n'
+printf '  3) Uninstall           - remove unchanged managed files\n'
+printf 'Select [1]: '
 IFS= read -r ACTION || exit 1
 ACTION=${ACTION:-1}
 
@@ -35,7 +42,9 @@ case "$ACTION" in
     3) set -- "$@" --uninstall ;;
     1|"")
         set -- "$@" --interactive
-        printf '\nReplace conflicting managed role/skill/tool files after backup? [y/N]: '
+        printf '\n[ CONFLICTS / CAKISMALAR ]\n'
+        printf 'Default keeps files that differ. Choose yes only to back up and replace them.\n'
+        printf 'Replace conflicting managed role/skill/tool files? [y/N]: '
         IFS= read -r FORCE_CHOICE || exit 1
         case "$FORCE_CHOICE" in y|Y|yes|YES|Yes) set -- "$@" --force ;; esac
 

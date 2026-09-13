@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only MCP bridge that asks Claude for a bounded implementation proposal."""
+"""Read-only MCP bridge for bounded DeepSeek implementation proposals."""
 
 from __future__ import annotations
 
@@ -12,13 +12,14 @@ import urllib.request
 from pathlib import PurePosixPath
 from typing import Any, TextIO
 
-SERVER_NAME = "codex-bounded-anthropic-bridge"
+SERVER_NAME = "codex-bounded-deepseek-bridge"
 SERVER_VERSION = "0.5.0"
 PROTOCOL_VERSION = "2025-06-18"
-DEFAULT_ENDPOINT = "https://api.anthropic.com/v1/messages"
-DEFAULT_MODEL = "claude-sonnet-5"
+DEFAULT_ENDPOINT = "https://api.deepseek.com/responses"
+DEFAULT_MODEL = "deepseek-flash"
 DEFAULT_EFFORT = "high"
-EFFORTS = {"low", "medium", "high", "xhigh", "max"}
+EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
+MODEL_PREFIX = "deepseek-"
 MAX_CONTEXT_CHARS = 200_000
 MAX_TASK_CHARS = 20_000
 MAX_ALLOWED_PATHS = 64
@@ -26,6 +27,21 @@ MAX_ALLOWED_PATHS = 64
 
 class BridgeError(RuntimeError):
     """Expected provider or input failure."""
+
+
+def validate_model(model: Any) -> str:
+    if (
+        not isinstance(model, str)
+        or not model.startswith(MODEL_PREFIX)
+        or not model.strip()
+        or len(model) > 120
+        or any(character.isspace() for character in model)
+    ):
+        raise BridgeError(
+            "model must be a DeepSeek API model ID beginning with 'deepseek-' "
+            "and contain at most 120 characters"
+        )
+    return model
 
 
 def validate_allowed_paths(values: Any) -> list[str]:
@@ -70,21 +86,32 @@ def build_prompt(arguments: dict[str, Any]) -> str:
 
 
 def extract_text(response: dict[str, Any]) -> str:
-    blocks = response.get("content")
-    if not isinstance(blocks, list):
-        raise BridgeError("Anthropic response did not contain a content list")
-    parts = [
-        block.get("text", "")
-        for block in blocks
-        if isinstance(block, dict) and block.get("type") == "text"
-    ]
-    text = "\n".join(part for part in parts if isinstance(part, str)).strip()
-    if not text:
-        raise BridgeError("Anthropic response did not contain text output")
-    return text
+    direct = response.get("output_text")
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+    output = response.get("output")
+    if not isinstance(output, list):
+        raise BridgeError("DeepSeek response did not contain output text")
+    parts: list[str] = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        content = item.get("content", [])
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            text = block.get("text")
+            if isinstance(text, str) and block.get("type") in {"output_text", "text"}:
+                parts.append(text)
+    combined = "\n".join(parts).strip()
+    if not combined:
+        raise BridgeError("DeepSeek response did not contain output text")
+    return combined
 
 
-def call_anthropic(
+def call_deepseek(
     arguments: dict[str, Any],
     *,
     default_model: str,
@@ -92,33 +119,34 @@ def call_anthropic(
     endpoint: str = DEFAULT_ENDPOINT,
     timeout: float = 120.0,
 ) -> str:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
     if not api_key:
-        raise BridgeError("ANTHROPIC_API_KEY is not set in the MCP server environment")
-    model = arguments.get("model", default_model)
+        raise BridgeError("DEEPSEEK_API_KEY is not set in the MCP server environment")
+    model = validate_model(arguments.get("model", default_model))
     effort = arguments.get("effort", default_effort)
-    max_tokens = arguments.get("max_tokens", 4096)
-    if not isinstance(model, str) or not model.strip() or len(model) > 120:
-        raise BridgeError("model must be a non-empty string up to 120 characters")
+    max_output_tokens = arguments.get("max_tokens", 4096)
     if effort not in EFFORTS:
         raise BridgeError(f"effort must be one of: {', '.join(sorted(EFFORTS))}")
-    if not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or not 256 <= max_tokens <= 16384:
+    if (
+        not isinstance(max_output_tokens, int)
+        or isinstance(max_output_tokens, bool)
+        or not 256 <= max_output_tokens <= 16384
+    ):
         raise BridgeError("max_tokens must be an integer from 256 to 16384")
 
     body = {
         "model": model,
-        "max_tokens": max_tokens,
-        "messages": [{"role": "user", "content": build_prompt(arguments)}],
-        "output_config": {"effort": effort},
+        "input": build_prompt(arguments),
+        "reasoning": {"effort": effort},
+        "max_output_tokens": max_output_tokens,
     }
     request = urllib.request.Request(
         endpoint,
         data=json.dumps(body).encode("utf-8"),
         method="POST",
         headers={
+            "authorization": f"Bearer {api_key}",
             "content-type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
             "user-agent": f"{SERVER_NAME}/{SERVER_VERSION}",
         },
     )
@@ -129,23 +157,23 @@ def call_anthropic(
         detail = exc.read(4096).decode("utf-8", errors="replace").replace(
             api_key, "[REDACTED]"
         )
-        raise BridgeError(f"Anthropic API returned HTTP {exc.code}: {detail}") from exc
+        raise BridgeError(f"DeepSeek API returned HTTP {exc.code}: {detail}") from exc
     except urllib.error.URLError as exc:
-        raise BridgeError(f"Anthropic API request failed: {exc.reason}") from exc
+        raise BridgeError(f"DeepSeek API request failed: {exc.reason}") from exc
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise BridgeError("Anthropic API returned an invalid JSON response") from exc
+        raise BridgeError("DeepSeek API returned an invalid JSON response") from exc
     if not isinstance(payload, dict):
-        raise BridgeError("Anthropic API returned a non-object response")
+        raise BridgeError("DeepSeek API returned a non-object response")
     return extract_text(payload)
 
 
 def tool_definition() -> dict[str, Any]:
     return {
-        "name": "claude_implementation_proposal",
+        "name": "deepseek_implementation_proposal",
         "description": (
-            "Ask Claude for a read-only, bounded patch proposal. The bridge has no "
-            "workspace access and never applies changes; a native single writer must "
-            "review and apply any accepted patch."
+            "Ask DeepSeek for a read-only, bounded patch proposal. The bridge has no "
+            "workspace access and never applies changes; a native GPT single writer "
+            "must review and apply any accepted patch."
         ),
         "inputSchema": {
             "type": "object",
@@ -161,7 +189,7 @@ def tool_definition() -> dict[str, Any]:
                     "maxItems": MAX_ALLOWED_PATHS,
                     "items": {"type": "string", "minLength": 1},
                 },
-                "model": {"type": "string", "minLength": 1, "maxLength": 120},
+                "model": {"type": "string", "pattern": "^deepseek-", "maxLength": 120},
                 "effort": {"type": "string", "enum": sorted(EFFORTS)},
                 "max_tokens": {"type": "integer", "minimum": 256, "maximum": 16384},
             },
@@ -189,12 +217,12 @@ def handle_request(
             result = {"tools": [tool_definition()]}
         elif method == "tools/call":
             params = message.get("params", {})
-            if not isinstance(params, dict) or params.get("name") != "claude_implementation_proposal":
+            if not isinstance(params, dict) or params.get("name") != "deepseek_implementation_proposal":
                 raise BridgeError("unknown tool")
             arguments = params.get("arguments", {})
             if not isinstance(arguments, dict):
                 raise BridgeError("tool arguments must be an object")
-            proposal = call_anthropic(
+            proposal = call_deepseek(
                 arguments,
                 default_model=default_model,
                 default_effort=default_effort,
@@ -213,7 +241,7 @@ def handle_request(
             "jsonrpc": "2.0",
             "id": request_id,
             "result": {
-                "content": [{"type": "text", "text": f"Claude bridge error: {exc}"}],
+                "content": [{"type": "text", "text": f"DeepSeek bridge error: {exc}"}],
                 "isError": True,
             },
         }
@@ -259,6 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    validate_model(args.model)
     serve(
         sys.stdin,
         sys.stdout,

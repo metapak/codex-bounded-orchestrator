@@ -76,6 +76,7 @@ class InstallerTests(unittest.TestCase):
     def run_installer(self, *args: str, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
         environment = dict(os.environ)
         environment.pop("ANTHROPIC_API_KEY", None)
+        environment.pop("DEEPSEEK_API_KEY", None)
         return subprocess.run(
             [sys.executable, str(INSTALLER), str(self.target), *args],
             text=True,
@@ -201,6 +202,23 @@ class InstallerTests(unittest.TestCase):
             ]
         )
 
+    def test_deepseek_selection_preserves_existing_mcp_config(self) -> None:
+        codex = self.target / ".codex"
+        codex.mkdir()
+        config = codex / "config.toml"
+        existing = (
+            'model = "gpt-local"\n'
+            "[mcp_servers.example]\n"
+            'url = "https://example.com"\n'
+        )
+        config.write_text(existing, encoding="utf-8")
+
+        result = self.run_installer("--external-provider", "deepseek")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(config.read_text(encoding="utf-8"), existing)
+        example = read_toml(codex / "bounded-orchestrator.config.example.toml")
+        self.assertIn("deepseek_proposals", example["mcp_servers"])
+
     def test_force_config_creates_ignored_backup_and_replaces(self) -> None:
         codex = self.target / ".codex"
         codex.mkdir()
@@ -313,15 +331,16 @@ class InstallerTests(unittest.TestCase):
             answers.extend([model, effort])
         for role_name in EXPECTED_ROLES:
             answers.extend(["", ""])
-        answers.append("n")
+        answers.append("1")
         result = self.run_installer("--interactive", input_text="\n".join(answers) + "\n")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Kurulum profili", result.stdout)
+        self.assertIn("NATIVE PROFILE / YEREL PROFIL", result.stdout)
         self.assertEqual(read_toml(self.target / ".codex/config.toml")["model"], "gpt-owner")
 
     def test_interactive_output_survives_restrictive_cp1252_console(self) -> None:
         environment = dict(os.environ)
         environment.pop("ANTHROPIC_API_KEY", None)
+        environment.pop("DEEPSEEK_API_KEY", None)
         environment["PYTHONIOENCODING"] = "cp1252:strict"
         result = subprocess.run(
             [
@@ -331,7 +350,7 @@ class InstallerTests(unittest.TestCase):
                 "--interactive",
                 "--dry-run",
             ],
-            input=b"1\nn\n",
+            input=b"1\n1\n",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=False,
@@ -339,7 +358,9 @@ class InstallerTests(unittest.TestCase):
             env=environment,
         )
         self.assertEqual(result.returncode, 0, result.stderr.decode("cp1252"))
-        self.assertIn(b"Installation profile", result.stdout)
+        self.assertIn(b"NATIVE PROFILE", result.stdout)
+        self.assertIn(b"REVIEW / SON KONTROL", result.stdout)
+        self.assertIn(b"OpenAI GPT", result.stdout)
         self.assertEqual(list(self.target.iterdir()), [])
 
     def test_console_fallback_configures_stdout_and_stderr(self) -> None:
@@ -377,6 +398,112 @@ class InstallerTests(unittest.TestCase):
         self.assertNotIn("test-only-key", config_text + manifest_text)
         self.assertIn("ANTHROPIC_API_KEY is not set", result.stdout)
 
+    def test_native_roles_reject_external_brand_models(self) -> None:
+        for model in ("claude-sonnet-5", "deepseek-flash"):
+            with self.subTest(model=model):
+                result = self.run_installer(
+                    "--preset", "custom", "--role-model", f"implementer={model}"
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("must be an OpenAI GPT model ID", result.stderr)
+                self.assertIn("--external-provider", result.stderr)
+
+    def test_default_install_has_no_external_provider(self) -> None:
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        config = read_toml(self.target / ".codex/config.toml")
+        self.assertNotIn("mcp_servers", config)
+        manifest = json.loads((self.target / MANIFEST).read_text())
+        self.assertEqual(manifest["external_provider"], "none")
+        self.assertFalse((self.target / ".codex/tools/anthropic_mcp.py").exists())
+        self.assertFalse((self.target / ".codex/tools/deepseek_mcp.py").exists())
+
+    def test_external_deepseek_bridge_is_opt_in_and_never_persists_key(self) -> None:
+        result = self.run_installer(
+            "--external-provider", "deepseek",
+            "--external-model", "deepseek-flash",
+            "--external-effort", "max",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        bridge = self.target / ".codex/tools/deepseek_mcp.py"
+        self.assertTrue(bridge.is_file())
+        config_text = (self.target / ".codex/config.toml").read_text()
+        config = read_toml(self.target / ".codex/config.toml")
+        server = config["mcp_servers"]["deepseek_proposals"]
+        self.assertEqual(server["env_vars"], ["DEEPSEEK_API_KEY"])
+        self.assertIn("deepseek-flash", server["args"])
+        manifest_text = (self.target / MANIFEST).read_text()
+        self.assertNotIn("test-only-key", config_text + manifest_text)
+        self.assertIn("DEEPSEEK_API_KEY is not set", result.stdout)
+
+    def test_external_provider_model_and_effort_are_provider_specific(self) -> None:
+        wrong_model = self.run_installer(
+            "--external-provider", "deepseek", "--external-model", "claude-sonnet-5"
+        )
+        self.assertEqual(wrong_model.returncode, 2)
+        self.assertIn("deepseek-", wrong_model.stderr)
+        wrong_effort = self.run_installer(
+            "--external-provider", "anthropic", "--external-effort", "minimal"
+        )
+        self.assertEqual(wrong_effort.returncode, 2)
+        self.assertIn("Unsupported anthropic effort", wrong_effort.stderr)
+
+    def test_switching_external_provider_removes_previous_owned_bridge(self) -> None:
+        first = self.run_installer("--external-provider", "anthropic")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        result = self.run_installer("--external-provider", "deepseek")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.target / ".codex/tools/anthropic_mcp.py").exists())
+        self.assertTrue((self.target / ".codex/tools/deepseek_mcp.py").is_file())
+        config = read_toml(self.target / ".codex/config.toml")
+        self.assertNotIn("anthropic_claude", config.get("mcp_servers", {}))
+        self.assertIn("deepseek_proposals", config["mcp_servers"])
+
+    def test_modified_deepseek_config_keeps_active_bridge_when_anthropic_requested(self) -> None:
+        first = self.run_installer("--external-provider", "deepseek")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        config_path = self.target / ".codex/config.toml"
+        config_path.write_text(
+            config_path.read_text(encoding="utf-8") + "\n# user setting\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_installer("--external-provider", "anthropic")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.target / ".codex/tools/deepseek_mcp.py").is_file())
+        self.assertTrue((self.target / ".codex/tools/anthropic_mcp.py").is_file())
+        active = read_toml(config_path)
+        pending = read_toml(
+            self.target / ".codex/bounded-orchestrator.config.example.toml"
+        )
+        self.assertIn("deepseek_proposals", active["mcp_servers"])
+        self.assertIn("anthropic_claude", pending["mcp_servers"])
+        self.assertIn("KEEP .codex/tools/deepseek_mcp.py", result.stdout)
+        self.assertIn("Requested external: anthropic", result.stdout)
+        self.assertIn("Active external   : deepseek", result.stdout)
+
+    def test_modified_deepseek_config_keeps_active_bridge_when_none_requested(self) -> None:
+        first = self.run_installer("--external-provider", "deepseek")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        config_path = self.target / ".codex/config.toml"
+        config_path.write_text(
+            config_path.read_text(encoding="utf-8") + "\n# user setting\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_installer("--external-provider", "none")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.target / ".codex/tools/deepseek_mcp.py").is_file())
+        active = read_toml(config_path)
+        pending = read_toml(
+            self.target / ".codex/bounded-orchestrator.config.example.toml"
+        )
+        self.assertIn("deepseek_proposals", active["mcp_servers"])
+        self.assertNotIn("mcp_servers", pending)
+        self.assertIn("KEEP .codex/tools/deepseek_mcp.py", result.stdout)
+        self.assertIn("Requested external: none", result.stdout)
+        self.assertIn("Active external   : deepseek", result.stdout)
+
     def test_uninstall_ignores_manifest_path_outside_allowlist(self) -> None:
         self.assertEqual(self.run_installer().returncode, 0)
         outside = self.target.parent / "outside.txt"
@@ -411,6 +538,14 @@ class InstallerTests(unittest.TestCase):
         result = self.run_installer("--uninstall")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.target / ".codex/tools/anthropic_mcp.py").exists())
+
+    def test_deepseek_install_uninstall_removes_bridge(self) -> None:
+        self.assertEqual(
+            self.run_installer("--external-provider", "deepseek").returncode, 0
+        )
+        result = self.run_installer("--uninstall")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.target / ".codex/tools/deepseek_mcp.py").exists())
 
 
 if __name__ == "__main__":

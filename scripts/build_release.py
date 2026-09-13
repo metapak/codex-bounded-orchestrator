@@ -26,6 +26,7 @@ EXECUTABLE_PATHS = {
     ".codex/tools/candidate.py",
     ".codex/tools/ledger.py",
     ".codex/tools/anthropic_mcp.py",
+    ".codex/tools/deepseek_mcp.py",
 }
 SKIP_NAMES = {
     ".git",
@@ -40,20 +41,24 @@ SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle"}
 WINDOWS_CRLF_SUFFIXES = {".ps1", ".cmd"}
 REQUIRED_SOURCE_FILES = {
     ".codex/tools/anthropic_mcp.py",
+    ".codex/tools/deepseek_mcp.py",
     "docs/external-providers.md",
     "docs/external-providers.tr.md",
     "docs/release-v0.4.0.md",
     "docs/release-v0.4.0.tr.md",
     "docs/release-v0.4.1.md",
     "docs/release-v0.4.1.tr.md",
+    "docs/release-v0.5.0.md",
+    "docs/release-v0.5.0.tr.md",
     "docs/profiles.md",
     "docs/profiles.tr.md",
     "tests/test_anthropic_bridge.py",
+    "tests/test_deepseek_bridge.py",
 }
 
-MAC_START = """Codex Bounded Orchestrator {version} - macOS\n\n1. Extract this ZIP completely.\n2. Double-click setup.command.\n3. Drag the target Git repository folder into Terminal.\n4. Choose balanced, quality, economy, or custom.\n5. Optionally configure the read-only Claude API proposal role.\n\nDetailed instructions: INSTALL-MACOS.md\n"""
+MAC_START = """Codex Bounded Orchestrator {version} - macOS\n\n1. Extract this ZIP completely.\n2. Double-click setup.command.\n3. Drag the target Git repository folder into Terminal.\n4. Choose balanced, quality, economy, or custom.\n5. Keep external APIs disabled, or explicitly select a read-only Claude or DeepSeek proposal tool.\n6. Review the final configuration summary.\n\nDetailed instructions: INSTALL-MACOS.md\n"""
 
-WINDOWS_START = """Codex Bounded Orchestrator {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click setup.cmd.\r\n3. Paste the target Git repository folder path.\r\n4. Choose balanced, quality, economy, or custom.\r\n5. Optionally configure the read-only Claude API proposal role.\r\n\r\nDetailed instructions: INSTALL-WINDOWS.md\r\n"""
+WINDOWS_START = """Codex Bounded Orchestrator {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click setup.cmd.\r\n3. Paste the target Git repository folder path.\r\n4. Choose balanced, quality, economy, or custom.\r\n5. Keep external APIs disabled, or explicitly select a read-only Claude or DeepSeek proposal tool.\r\n6. Review the final configuration summary.\r\n\r\nDetailed instructions: INSTALL-WINDOWS.md\r\n"""
 
 
 class ReleaseError(RuntimeError):

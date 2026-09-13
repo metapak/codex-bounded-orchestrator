@@ -11,6 +11,7 @@ import re
 import shutil
 import sys
 import tempfile
+import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -22,7 +23,12 @@ MANIFEST_RELATIVE = Path(".codex/.bounded-orchestrator/install.json")
 BACKUP_RELATIVE = Path(".codex/.bounded-orchestrator/backups")
 CONFIG_EXAMPLE_RELATIVE = Path(".codex/bounded-orchestrator.config.example.toml")
 CONFIG_RELATIVE = Path(".codex/config.toml")
-EXTERNAL_BRIDGE_RELATIVE = Path(".codex/tools/anthropic_mcp.py")
+ANTHROPIC_BRIDGE_RELATIVE = Path(".codex/tools/anthropic_mcp.py")
+DEEPSEEK_BRIDGE_RELATIVE = Path(".codex/tools/deepseek_mcp.py")
+EXTERNAL_BRIDGES = {
+    "anthropic": ANTHROPIC_BRIDGE_RELATIVE,
+    "deepseek": DEEPSEEK_BRIDGE_RELATIVE,
+}
 
 ROLE_FILES = {
     "fast_lookup": Path(".codex/agents/fast-lookup.toml"),
@@ -37,6 +43,16 @@ ROLE_FILES = {
 }
 ALL_ROLES = ("owner", *ROLE_FILES)
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
+EXTERNAL_EFFORTS = {
+    "anthropic": ("low", "medium", "high", "xhigh", "max"),
+    "deepseek": ("none", "minimal", "low", "medium", "high", "xhigh", "max"),
+}
+EXTERNAL_DEFAULTS = {
+    "anthropic": ("claude-sonnet-5", "high"),
+    "deepseek": ("deepseek-flash", "high"),
+}
+NATIVE_MODEL_PATTERN = re.compile(r"^gpt-[a-z0-9][a-z0-9._-]*$", re.IGNORECASE)
+EXTERNAL_MODEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:/-]*$", re.IGNORECASE)
 
 BALANCED_PROFILE = {
     "owner": ("gpt-6-astra", "medium"),
@@ -95,7 +111,7 @@ MANAGED_RELATIVE_FILES = (
 
 ALLOWED_MANIFEST_FILES = frozenset(
     (*MANAGED_RELATIVE_FILES, *ROLE_FILES.values(), CONFIG_RELATIVE,
-     CONFIG_EXAMPLE_RELATIVE, EXTERNAL_BRIDGE_RELATIVE)
+     CONFIG_EXAMPLE_RELATIVE, *EXTERNAL_BRIDGES.values())
 )
 
 
@@ -177,7 +193,7 @@ def load_manifest(target: Path) -> dict[str, Any]:
 
 def atomic_write_text(path: Path, text: str, dry_run: bool) -> None:
     if dry_run:
-        return
+        return False
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     temporary = Path(temporary_name)
@@ -250,7 +266,7 @@ def ensure_source_files(root: Path) -> None:
         [
             root / CONFIG_RELATIVE,
             root / "presets/sol-owner.config.toml",
-            root / EXTERNAL_BRIDGE_RELATIVE,
+            *[root / path for path in EXTERNAL_BRIDGES.values()],
             root / "templates/AGENTS.block.md",
             root / "VERSION",
         ]
@@ -271,6 +287,49 @@ def parse_override(value: str, option: str) -> tuple[str, str]:
     return role, selected
 
 
+def validate_native_model(model: str, option: str = "native role model") -> str:
+    """Keep native Codex roles on OpenAI GPT models.
+
+    Prefix validation deliberately preserves forward compatibility for future
+    gpt-* IDs without pretending the installer can verify account access.
+    """
+    if not isinstance(model, str) or not NATIVE_MODEL_PATTERN.fullmatch(model):
+        raise InstallError(
+            f"{option} must be an OpenAI GPT model ID beginning with 'gpt-'. "
+            "Use --external-provider anthropic or deepseek for other brands."
+        )
+    return model
+
+
+def validate_external_selection(
+    provider: str, model: str | None, effort: str | None
+) -> tuple[str, str]:
+    if provider == "none":
+        return "", ""
+    if provider not in EXTERNAL_DEFAULTS:
+        raise InstallError(f"Unsupported external provider: {provider!r}")
+    default_model, default_effort = EXTERNAL_DEFAULTS[provider]
+    selected_model = model or default_model
+    selected_effort = effort or default_effort
+    expected_prefix = "claude-" if provider == "anthropic" else "deepseek-"
+    if (
+        not EXTERNAL_MODEL_PATTERN.fullmatch(selected_model)
+        or not selected_model.lower().startswith(expected_prefix)
+        or len(selected_model) > 120
+    ):
+        raise InstallError(
+            f"{provider} external model must be a {expected_prefix} model ID "
+            "up to 120 characters."
+        )
+    allowed_efforts = EXTERNAL_EFFORTS[provider]
+    if selected_effort not in allowed_efforts:
+        raise InstallError(
+            f"Unsupported {provider} effort {selected_effort!r}; choose one of: "
+            + ", ".join(allowed_efforts)
+        )
+    return selected_model, selected_effort
+
+
 def resolve_profile(
     preset: str,
     legacy_profile: str | None,
@@ -284,6 +343,7 @@ def resolve_profile(
         selected["owner"] = ("gpt-6-astra", "medium")
     for raw in model_overrides:
         role, model = parse_override(raw, "--role-model")
+        validate_native_model(model, f"--role-model {role}")
         selected[role] = (model, selected[role][1])
     for raw in effort_overrides:
         role, effort = parse_override(raw, "--role-effort")
@@ -327,7 +387,7 @@ def render_root_config(
     )
     if external_provider == "anthropic":
         command = json.dumps(sys.executable)
-        bridge = json.dumps(str((target / EXTERNAL_BRIDGE_RELATIVE).resolve()))
+        bridge = json.dumps(str((target / ANTHROPIC_BRIDGE_RELATIVE).resolve()))
         text += (
             "\n# Optional read-only Anthropic bridge. The API key is inherited from "
             "ANTHROPIC_API_KEY and is never stored here.\n"
@@ -338,6 +398,22 @@ def render_root_config(
             'env_vars = ["ANTHROPIC_API_KEY"]\n'
             "enabled = true\n"
             'enabled_tools = ["claude_implementation_proposal"]\n'
+            "startup_timeout_sec = 10\n"
+            "tool_timeout_sec = 180\n"
+        )
+    elif external_provider == "deepseek":
+        command = json.dumps(sys.executable)
+        bridge = json.dumps(str((target / DEEPSEEK_BRIDGE_RELATIVE).resolve()))
+        text += (
+            "\n# Optional read-only DeepSeek bridge. The API key is inherited from "
+            "DEEPSEEK_API_KEY and is never stored here.\n"
+            "[mcp_servers.deepseek_proposals]\n"
+            f"command = {command}\n"
+            f"args = [{bridge}, \"--model\", {json.dumps(external_model)}, "
+            f"\"--effort\", {json.dumps(external_effort)}]\n"
+            'env_vars = ["DEEPSEEK_API_KEY"]\n'
+            "enabled = true\n"
+            'enabled_tools = ["deepseek_implementation_proposal"]\n'
             "startup_timeout_sec = 10\n"
             "tool_timeout_sec = 180\n"
         )
@@ -458,34 +534,35 @@ def install_config(
     force_config: bool,
     dry_run: bool,
     messages: list[str],
-) -> None:
+) -> bool:
+    """Install desired config and report whether it becomes the active config."""
     relative = CONFIG_RELATIVE
     destination = target / relative
 
     if destination.exists() and destination.is_dir():
         messages.append(f"SKIP {relative}: destination is a directory")
-        return
+        return False
 
     if not destination.exists() and not destination.is_symlink():
         messages.append(f"INSTALL {relative} ({preset} preset)")
         atomic_write_text(destination, config_text, dry_run)
         if not dry_run:
             remember_file(manifest, relative, destination, True)
-        return
+        return True
 
     if same_text(destination, config_text):
         owned = previous_owned(manifest, relative)
         messages.append(f"UNCHANGED {relative}")
         if not dry_run:
             remember_file(manifest, relative, destination, owned)
-        return
+        return True
 
     if unchanged_owned(manifest, relative, destination):
         messages.append(f"UPDATE {relative} ({preset} preset; installer-owned)")
         atomic_write_text(destination, config_text, dry_run)
         if not dry_run:
             remember_file(manifest, relative, destination, True)
-        return
+        return True
 
     if force_config:
         backup = backup_file(target, destination, dry_run)
@@ -494,14 +571,14 @@ def install_config(
         atomic_write_text(destination, config_text, dry_run)
         if not dry_run:
             remember_file(manifest, relative, destination, True)
-        return
+        return True
 
     example = target / CONFIG_EXAMPLE_RELATIVE
     if example.exists() and example.is_dir():
         messages.append(
             f"SKIP {CONFIG_EXAMPLE_RELATIVE}: destination is a directory"
         )
-        return
+        return False
 
     example_was_absent = not example.exists() and not example.is_symlink()
     if example_was_absent or same_text(example, config_text):
@@ -516,7 +593,7 @@ def install_config(
                 manifest, CONFIG_EXAMPLE_RELATIVE
             )
             remember_file(manifest, CONFIG_EXAMPLE_RELATIVE, example, owned)
-        return
+        return False
 
     text = example.read_text(encoding="utf-8", errors="replace")
     if "managed-by: codex-bounded-orchestrator" in text:
@@ -530,11 +607,43 @@ def install_config(
         atomic_write_text(example, config_text, dry_run)
         if not dry_run:
             remember_file(manifest, CONFIG_EXAMPLE_RELATIVE, example, True)
-        return
+        return False
 
     messages.append(
         f"PRESERVE {relative}; SKIP {CONFIG_EXAMPLE_RELATIVE} because it also differs"
     )
+    return False
+
+
+def active_external_providers(target: Path) -> set[str] | None:
+    """Return external providers referenced by active config, or None if unknown."""
+    path = target / CONFIG_RELATIVE
+    try:
+        with path.open("rb") as handle:
+            config = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    servers = config.get("mcp_servers", {})
+    if not isinstance(servers, dict):
+        return set()
+
+    providers: set[str] = set()
+    for server_name, server in servers.items():
+        if not isinstance(server, dict):
+            continue
+        arguments = server.get("args", [])
+        if not isinstance(arguments, list):
+            arguments = []
+        searchable = [server_name, *(item for item in arguments if isinstance(item, str))]
+        for provider, relative in EXTERNAL_BRIDGES.items():
+            if any(
+                relative.name in value
+                or (provider == "anthropic" and value == "anthropic_claude")
+                or (provider == "deepseek" and value == "deepseek_proposals")
+                for value in searchable
+            ):
+                providers.add(provider)
+    return providers
 
 
 def normalize_block(raw: str) -> str:
@@ -765,7 +874,7 @@ def install(
         messages=messages,
     )
 
-    install_config(
+    config_applied = install_config(
         target=target,
         config_text=config_text,
         preset=preset,
@@ -773,6 +882,11 @@ def install(
         force_config=force_config,
         dry_run=dry_run,
         messages=messages,
+    )
+    active_providers = (
+        ({external_provider} if external_provider != "none" else set())
+        if config_applied
+        else active_external_providers(target)
     )
 
     for role, relative in ROLE_FILES.items():
@@ -800,27 +914,46 @@ def install(
             messages=messages,
         )
 
-    if external_provider == "anthropic":
+    if external_provider in EXTERNAL_BRIDGES:
+        selected_bridge = EXTERNAL_BRIDGES[external_provider]
         install_file(
             root=root,
             target=target,
-            relative=EXTERNAL_BRIDGE_RELATIVE,
+            relative=selected_bridge,
             manifest=manifest,
             force=force,
             dry_run=dry_run,
             messages=messages,
         )
-        if "ANTHROPIC_API_KEY" not in os.environ:
+        key_name = (
+            "ANTHROPIC_API_KEY"
+            if external_provider == "anthropic"
+            else "DEEPSEEK_API_KEY"
+        )
+        if key_name not in os.environ:
             messages.append(
-                "NOTE ANTHROPIC_API_KEY is not set; export it before using the Claude tool"
+                f"NOTE {key_name} is not set; export it before using the external proposal tool"
             )
-    else:
-        bridge = target / EXTERNAL_BRIDGE_RELATIVE
-        if unchanged_owned(manifest, EXTERNAL_BRIDGE_RELATIVE, bridge):
-            messages.append(f"REMOVE {EXTERNAL_BRIDGE_RELATIVE} (external provider disabled)")
+
+    for provider, relative in EXTERNAL_BRIDGES.items():
+        if provider == external_provider:
+            continue
+        bridge = target / relative
+        if unchanged_owned(manifest, relative, bridge):
+            if not config_applied and (
+                active_providers is None or provider in active_providers
+            ):
+                reason = (
+                    "active preserved config could not be inspected safely"
+                    if active_providers is None
+                    else "active preserved config still references it"
+                )
+                messages.append(f"KEEP {relative}: {reason}")
+                continue
+            messages.append(f"REMOVE {relative} (provider not selected)")
             if not dry_run:
                 bridge.unlink()
-                manifest.get("files", {}).pop(EXTERNAL_BRIDGE_RELATIVE.as_posix(), None)
+                manifest.get("files", {}).pop(relative.as_posix(), None)
 
     install_agents_block(
         root=root,
@@ -842,11 +975,37 @@ def install(
     )
 
     heading = "DRY RUN" if dry_run else "INSTALL COMPLETE"
-    print(heading)
-    print("\n".join(messages))
-    print(f"Target: {target}")
-    print(f"Preset: {preset}")
-    print(f"External provider: {external_provider}")
+    print_section(heading)
+    for message in messages:
+        print(f"  - {message}")
+    print("\nConfiguration / Yapilandirma")
+    print(f"  Target            : {target}")
+    print(f"  Native models     : OpenAI GPT only")
+    print(f"  Profile           : {preset}")
+    print(f"  Requested external: {external_provider}")
+    if external_provider != "none":
+        print(f"  Requested model   : {external_model} ({external_effort})")
+    if config_applied:
+        active_label = external_provider
+    elif active_providers is None:
+        active_label = "unknown (existing config preserved)"
+    elif active_providers:
+        active_label = ", ".join(sorted(active_providers))
+    else:
+        active_label = "none detected (existing config preserved)"
+    print(f"  Active external   : {active_label}")
+    if not config_applied and external_provider != "none":
+        print(f"  Manual merge      : {CONFIG_EXAMPLE_RELATIVE}")
+    if not dry_run:
+        print("\nNext steps / Sonraki adimlar")
+        print("  1. Restart Codex / Codex'i yeniden baslatin.")
+        if external_provider != "none":
+            key_name = (
+                "ANTHROPIC_API_KEY"
+                if external_provider == "anthropic"
+                else "DEEPSEEK_API_KEY"
+            )
+            print(f"  2. Set {key_name} only in the environment that starts Codex.")
     return 0
 
 
@@ -858,30 +1017,46 @@ def prompt_choice(prompt: str, choices: dict[str, str], default: str) -> str:
         print("Geçersiz seçim / Invalid choice.")
 
 
+def print_section(title: str) -> None:
+    line = "=" * 60
+    print(f"\n{line}\n{title}\n{line}")
+
+
 def interactive_options(
     preset: str | None,
     model_overrides: list[str],
     effort_overrides: list[str],
     external_provider: str | None,
-    external_model: str,
-    external_effort: str,
+    external_model: str | None,
+    external_effort: str | None,
 ) -> tuple[str, list[str], list[str], str, str, str]:
-    print("\nKurulum profili / Installation profile:")
-    print("  1) Dengeli / Balanced (önerilen / recommended)")
-    print("  2) Yüksek kalite / Quality")
-    print("  3) Ekonomik / Economy")
-    print("  4) Özel / Custom")
+    print_section("1 / 3  NATIVE PROFILE / YEREL PROFIL")
+    print("All native roles use OpenAI GPT models only.")
+    print("Tum yerel roller yalniz OpenAI GPT modellerini kullanir.\n")
+    print("  1) Balanced / Dengeli       Daily work; recommended")
+    print("  2) Quality / Yuksek kalite  Hard or high-impact work")
+    print("  3) Economy / Ekonomik       Small, lower-cost work")
+    print("  4) Custom / Ozel            Choose GPT model + effort per role")
     if preset is None:
         preset = prompt_choice("Seçim / Select [1]: ", {
             "1": "balanced", "2": "quality", "3": "economy", "4": "custom"
         }, "1")
     if preset == "custom":
         defaults = resolve_profile("balanced", None, model_overrides, effort_overrides)
-        print("\nHer rol için model ve efor seçin. Boş bırakırsanız önerilen değer kullanılır.")
-        print("Choose a model and effort per role. Press Return to keep the default.")
+        print("\nChoose an OpenAI gpt-* model and effort per role.")
+        print(
+            "Her rol icin OpenAI gpt-* modeli ve efor secin. "
+            "Bos birakmak varsayilani korur."
+        )
         for role in ALL_ROLES:
             model, effort = defaults[role]
-            selected_model = input(f"  {role} model [{model}]: ").strip() or model
+            while True:
+                selected_model = input(f"  {role} model [{model}]: ").strip() or model
+                try:
+                    validate_native_model(selected_model, f"{role} model")
+                    break
+                except InstallError as exc:
+                    print(f"  {exc}")
             while True:
                 selected_effort = input(f"  {role} effort [{effort}]: ").strip() or effort
                 if selected_effort in EFFORTS:
@@ -890,12 +1065,19 @@ def interactive_options(
             model_overrides.append(f"{role}={selected_model}")
             effort_overrides.append(f"{role}={selected_effort}")
 
+    print_section("2 / 3  EXTERNAL API / HARICI API")
+    print("Default is none. External models are read-only proposal tools.")
+    print("They cannot access the workspace or replace the native GPT writer.")
+    print("API use may send supplied context to the provider and may be billed.\n")
+    print("  1) None / Yok (default)")
+    print("  2) Anthropic Claude proposal")
+    print("  3) DeepSeek proposal")
     if external_provider is None:
-        answer = input(
-            "\nClaude API üzerinden salt okunur öneri rolü eklensin mi? "
-            "/ Add read-only Claude API proposal role? [y/N]: "
-        ).strip().lower()
-        external_provider = "anthropic" if answer in {"y", "yes", "e", "evet"} else "none"
+        external_provider = prompt_choice(
+            "Select / Secim [1]: ",
+            {"1": "none", "2": "anthropic", "3": "deepseek"},
+            "1",
+        )
     if external_provider == "anthropic":
         print("\nClaude modeli / Claude model:")
         print("  1) claude-sonnet-5 (dengeli / balanced)")
@@ -907,13 +1089,55 @@ def interactive_options(
         elif choice == "opus":
             external_model = "claude-opus-5"
         else:
-            external_model = input(f"Model ID [{external_model}]: ").strip() or external_model
+            default_model = external_model or EXTERNAL_DEFAULTS["anthropic"][0]
+            external_model = input(f"Model ID [{default_model}]: ").strip() or default_model
+        external_effort = external_effort or EXTERNAL_DEFAULTS["anthropic"][1]
         while True:
             value = input(f"Claude effort [{external_effort}]: ").strip() or external_effort
             if value in {"low", "medium", "high", "xhigh", "max"}:
                 external_effort = value
                 break
             print("Geçersiz efor / Invalid effort: low, medium, high, xhigh, max")
+    elif external_provider == "deepseek":
+        default_model, default_effort = EXTERNAL_DEFAULTS["deepseek"]
+        print("\nDeepSeek model:")
+        print("  1) deepseek-flash (V4.1 Flash; current prepared choice)")
+        print("  2) Custom DeepSeek model ID")
+        choice = prompt_choice(
+            "Select / Secim [1]: ", {"1": "flash", "2": "custom"}, "1"
+        )
+        if choice == "flash":
+            external_model = default_model
+        else:
+            initial = external_model or default_model
+            external_model = input(f"Model ID [{initial}]: ").strip() or initial
+        external_effort = external_effort or default_effort
+        while True:
+            value = (
+                input(f"DeepSeek effort [{external_effort}]: ").strip()
+                or external_effort
+            )
+            if value in EXTERNAL_EFFORTS["deepseek"]:
+                external_effort = value
+                break
+            print("Invalid effort: " + ", ".join(EXTERNAL_EFFORTS["deepseek"]))
+
+    external_model, external_effort = validate_external_selection(
+        external_provider, external_model, external_effort
+    )
+    settings = resolve_profile(preset, None, model_overrides, effort_overrides)
+    print_section("3 / 3  REVIEW / SON KONTROL")
+    print(f"  Native brand      : OpenAI GPT")
+    print(f"  Profile           : {preset}")
+    print(f"  Owner             : {settings['owner'][0]} ({settings['owner'][1]})")
+    print(f"  Implementer       : {settings['implementer'][0]} ({settings['implementer'][1]})")
+    print(f"  Verifier          : {settings['verifier'][0]} ({settings['verifier'][1]})")
+    print(f"  Reviewer          : {settings['reviewer'][0]} ({settings['reviewer'][1]})")
+    print(f"  External proposal : {external_provider}")
+    if external_provider != "none":
+        print(f"  External model    : {external_model} ({external_effort})")
+        print("  Boundary          : proposal only; no workspace access")
+    print("\nStarting safe installer / Guvenli kurulum baslatiliyor...")
     return (
         preset, model_overrides, effort_overrides, external_provider,
         external_model, external_effort,
@@ -953,15 +1177,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--external-provider",
-        choices=("none", "anthropic"),
+        choices=("none", "anthropic", "deepseek"),
         default=None,
-        help="Optionally configure the read-only Anthropic MCP bridge.",
+        help="Optionally configure a read-only Anthropic or DeepSeek proposal bridge.",
     )
-    parser.add_argument("--external-model", default="claude-sonnet-5")
+    parser.add_argument("--external-model", default=None)
     parser.add_argument(
         "--external-effort",
-        choices=("low", "medium", "high", "xhigh", "max"),
-        default="high",
+        choices=("none", "minimal", "low", "medium", "high", "xhigh", "max"),
+        default=None,
     )
     parser.add_argument("--interactive", action="store_true")
     parser.add_argument(
@@ -1021,6 +1245,9 @@ def main(argv: list[str] | None = None) -> int:
         external_provider = external_provider or "none"
         settings = resolve_profile(
             preset, args.profile, model_overrides, effort_overrides
+        )
+        external_model, external_effort = validate_external_selection(
+            external_provider, external_model, external_effort
         )
         return install(
             target=target,
