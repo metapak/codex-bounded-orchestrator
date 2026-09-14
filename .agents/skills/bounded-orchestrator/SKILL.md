@@ -129,6 +129,8 @@ python .codex/tools/ledger.py status
 
 Declare required tasks before implementation, update their states at real transitions, and run `ready-for-review` before freezing. Run `complete-run` only after the workflow completion gate. A justified required skip may pass the ledger gate; record the owner decision in its short reason.
 
+Record interruptions, user waits, and verification repairs explicitly. A retry requires new short evidence, is limited to one, and routes repair back to the task's named owner. Local evaluation is opt-in: only when the user explicitly invokes `.codex/tools/local_eval.py` with a reviewed JSON `argv` manifest may the run require its named pass result with `ledger.py require-eval --label LABEL`. The runner is a project-specific check, not a universal benchmark. Never execute repository-controlled evaluation commands automatically.
+
 The ledger stores only short IDs, short labels, dependencies, states, reasons, and timestamps in an ignored local directory. Never put prompts, source, diffs, logs, personal data, credentials, or secrets in it. It detects unresolved **declared** required work. It cannot prove that every necessary task was declared or that completed work is correct.
 
 ## 5. Contract every delegated task

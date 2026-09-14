@@ -15,3 +15,7 @@ Bu yol haritası yönü gösterir; sürüm sözü değildir. Öncelikler, doğru
 - [ ] Kapsam başına tek writer, bağımsız review ve sonlu döngü sınırlarını koruyan ek owner/yönlendirme preset'lerini değerlendirmek.
 
 Yeni bir yol haritası maddesini somut kullanım senaryosu, gözlemlenebilir kabul kriterleri ve izin veya güvenlik sınırlarına etkisiyle birlikte feature request olarak öner.
+
+## v0.6.0 ile tamamlananlar
+
+Yerel gözlenen kullanım raporu, kota tasarrufu profili, açık yerel değerlendirme kapısı ve yeniden deneme geçmişi eklendi. Sonraki çalışmalar kota veya fatura eşitliği iddiasında bulunmadan belgelenmiş yerel kayıt biçimleriyle uyuma odaklanacak.

@@ -24,7 +24,9 @@ Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirme
 - Her implementasyon kapsamında aynı anda yalnız bir writer çalışır.
 - İnceleme, implementasyon, doğrulama ve review birbirinden ayrılır.
 - Aday review öncesi dondurulur; sonraki dosya değişiklikleri tespit edilir.
-- Review öncesinde tanımlanmış zorunlu işler yerel ve yalnız metadata tutan bir ledger ile izlenir.
+- İnceleme öncesinde görevler, sabit denemeler, kesintiler ve tek sınırlı yeniden deneme yerel ve yalnız metadata tutan ledger ile izlenir.
+- İstem içeriğini okumadan veya yazdırmadan yerel model/token sayaçları raporlanabilir.
+- Açıkça çalıştırılan yerel değerlendirme isteğe bağlı olarak inceleme öncesinde zorunlu tutulabilir.
 - Yetkiyi genişletmeden isteğe bağlı UI tasarımı veya güvenlik review rehberliği eklenir.
 - Deneme, writer turu, repair ve re-review sayıları sınırlandırılır.
 - Kurulum önceden görüntülenir ve mevcut proje config'i varsayılan olarak korunur.
@@ -99,7 +101,7 @@ Aşağıdaki giriş noktaları repo içinde sunulur. Gerçek çalışma davranı
 | Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows kurulumu](INSTALL-WINDOWS.md) |
 | Linux | `scripts/install.sh`, `scripts/install.py` | [Hızlı başlangıcı](#hızlı-başlangıç) ve `--help` çıktısını kullan |
 
-Installer yalnız Python standart kütüphanesini kullanır. Üç adımlı yönlendirmeli ekran her seçeneği açıklar, yerel marka sınırını belirtir ve dosyalar yazılmadan önce son yapılandırma özetini gösterir. Tek tıklamalı kurulum `balanced`, `quality`, `economy` ve `custom` seçeneklerini sunar. Bu adlar yönlendirme amacını anlatır; ölçülmüş sonuç garantisi değildir. Özel profil dahil bütün yerel roller yalnız OpenAI `gpt-*` modellerini kabul eder. Diğer markalar ancak açıkça seçilen API destekli öneri araçlarıdır. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.
+Installer yalnız Python standart kütüphanesini kullanır. Üç adımlı yönlendirmeli ekran her seçeneği açıklar, yerel marka sınırını belirtir ve dosyalar yazılmadan önce son yapılandırma özetini gösterir. Tek tıklamalı kurulum `balanced`, `quality`, `economy`, `quota-saver` ve `custom` seçeneklerini sunar. Bu adlar yönlendirme amacını anlatır; ölçülmüş sonuç garantisi değildir. Özel profil dahil bütün yerel roller yalnız OpenAI `gpt-*` modellerini kabul eder. Diğer markalar ancak açıkça seçilen API destekli öneri araçlarıdır. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.
 
 Tam dağılım için [profil yönlendirme tablosuna](docs/profiles.tr.md) bak.
 
@@ -178,8 +180,9 @@ Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo kor
 - [Mimari ayrıntıları](docs/architecture.md)
 - [Runtime smoke testi](docs/runtime-smoke-test.md)
 - [Görev ledger'ı](docs/task-ledger.tr.md) ve [uzmanlık paketleri](docs/expertise-packs.tr.md)
+- [Kullanım raporu ve isteğe bağlı yerel değerlendirme](docs/usage-and-local-eval.tr.md)
 - [Yönlendirme profilleri](docs/profiles.tr.md) ve [haricî sağlayıcı köprüsü](docs/external-providers.tr.md)
-- [v0.5.0 sürüm notları](docs/release-v0.5.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.6.0 sürüm notları](docs/release-v0.6.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Kaynak kökeni](docs/provenance.md)
 
 ## Geliştirme

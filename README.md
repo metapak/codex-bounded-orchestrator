@@ -24,7 +24,9 @@ It is designed to make multi-agent work easier to inspect and stop. The reposito
 - Give each implementation scope to one writer at a time.
 - Separate investigation, implementation, verification, and review.
 - Freeze a candidate before independent review and detect later file changes.
-- Track declared required work in a local metadata-only ledger before review.
+- Track declared work, stable attempts, interruptions, and one bounded retry in a local metadata-only ledger before review.
+- Report locally observed model/token counters without reading or printing prompt content.
+- Optionally require an explicitly invoked local evaluation before review.
 - Add opt-in UI design or security review guidance without expanding authority.
 - Cap retries, writer turns, repair cycles, and re-reviews.
 - Preview installation and preserve existing project configuration by default.
@@ -99,7 +101,7 @@ These entry points are supplied by the repository. Runtime behavior still depend
 | Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows installation](INSTALL-WINDOWS.md) |
 | Linux | `scripts/install.sh`, `scripts/install.py` | Use the [quick start](#quick-start) and `--help` |
 
-The installer uses only the Python standard library. Its guided three-step display explains each choice, states the native brand boundary, and shows a final configuration review before writing files. One-click setup offers `balanced`, `quality`, `economy`, and `custom` presets. These names describe routing intent, not benchmarked guarantees. All native roles remain on OpenAI `gpt-*` models, including custom profiles. Other brands are available only as explicit API-backed proposal tools. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.
+The installer uses only the Python standard library. Its guided three-step display explains each choice, states the native brand boundary, and shows a final configuration review before writing files. One-click setup offers `balanced`, `quality`, `economy`, `quota-saver`, and `custom` presets. These names describe routing intent, not benchmarked guarantees. All native roles remain on OpenAI `gpt-*` models, including custom profiles. Other brands are available only as explicit API-backed proposal tools. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.
 
 See the exact [profile routing table](docs/profiles.md).
 
@@ -180,8 +182,9 @@ The underlying Codex sandbox, operating-system permissions, repository protectio
 - [Architecture details](docs/architecture.md)
 - [Runtime smoke test](docs/runtime-smoke-test.md)
 - [Task ledger](docs/task-ledger.md) and [expertise packs](docs/expertise-packs.md)
+- [Usage reporting and optional local evaluation](docs/usage-and-local-eval.md)
 - [Routing profiles](docs/profiles.md) and [external provider bridge](docs/external-providers.md)
-- [v0.5.0 release notes](docs/release-v0.5.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.6.0 release notes](docs/release-v0.6.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
 - [Source provenance](docs/provenance.md)
 
 ## Development

@@ -54,3 +54,10 @@ A task can begin only after its dependencies are complete or have a recorded ski
 Runtime state is written atomically under `.codex/.bounded-orchestrator/runs/`. The installer places an exact `.gitignore` in the parent runtime directory before installing the tool. On systems with POSIX permissions, directories are restricted to the current user and JSON files use mode `0600`.
 
 The ledger is a workflow aid, not a scheduler or security boundary. It validates declared IDs, dependencies, transitions, and completion conditions. It cannot discover an omitted task, confirm that a status update is truthful, prove code correctness, or replace tests and review.
+
+## Attempts, interruptions, and local evaluation
+
+Schema 2 keeps existing run/task IDs, stable attempt IDs, append-only transition event IDs, a named owner role, and route-back metadata. Schema-1 files are upgraded in memory and written as schema 2 on the next change. Use `interrupt`, `wait-user`, and `needs-repair` for real transitions. `retry TASK --evidence "short new evidence"` allows one bounded retry; it does not claim that external effects are idempotent.
+After `wait-user`, use `resume TASK --evidence "answer received"`. A task that waited before starting returns to pending; an active task continues the same attempt. Dependency checks still apply.
+
+`require-eval --label LABEL` adds an explicitly invoked local evaluation to the review gate. The matching ignored summary must report `pass`.

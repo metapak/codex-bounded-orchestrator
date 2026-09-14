@@ -93,12 +93,28 @@ PRESETS = {
         "reviewer": ("gpt-5.6-terra", "high"),
         "advisor": ("gpt-5.6-sol", "high"),
     },
+    "quota-saver": {
+        **BALANCED_PROFILE,
+        "owner": ("gpt-6-astra", "low"),
+        "fast_lookup": ("gpt-5.6-luna", "minimal"),
+        "explorer": ("gpt-5.6-terra", "low"),
+        "researcher": ("gpt-5.6-terra", "low"),
+        "implementer": ("gpt-5.6-sol", "medium"),
+        "verifier": ("gpt-5.6-terra", "medium"),
+        "failure_analyst": ("gpt-5.6-sol", "medium"),
+        "qa_operator": ("gpt-5.6-sol", "medium"),
+        "reviewer": ("gpt-6-astra", "low"),
+        "advisor": ("gpt-6-astra", "low"),
+    },
     "custom": BALANCED_PROFILE,
 }
 
 MANAGED_RELATIVE_FILES = (
     Path(".codex/tools/candidate.py"),
     Path(".codex/tools/ledger.py"),
+    Path(".codex/tools/usage_report.py"),
+    Path(".codex/tools/local_eval.py"),
+    Path(".codex/bounded-orchestrator.eval.example.json"),
     Path(".codex/.candidate/.gitignore"),
     Path(".codex/.bounded-orchestrator/.gitignore"),
     Path(".agents/skills/bounded-orchestrator/SKILL.md"),
@@ -1037,9 +1053,10 @@ def interactive_options(
     print("  2) Quality / Yuksek kalite  Hard or high-impact work")
     print("  3) Economy / Ekonomik       Small, lower-cost work")
     print("  4) Custom / Ozel            Choose GPT model + effort per role")
+    print("  5) Quota saver / Kota tasarrufu  Lower-effort bounded routing")
     if preset is None:
         preset = prompt_choice("Seçim / Select [1]: ", {
-            "1": "balanced", "2": "quality", "3": "economy", "4": "custom"
+            "1": "balanced", "2": "quality", "3": "economy", "4": "custom", "5": "quota-saver"
         }, "1")
     if preset == "custom":
         defaults = resolve_profile("balanced", None, model_overrides, effort_overrides)

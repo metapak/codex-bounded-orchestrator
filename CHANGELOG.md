@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+
+- Added truthful local Codex usage reporting, a quota-saver profile, explicit local evaluation, and richer retry-aware task history.
+
 All notable changes to the public project are documented here. This repository begins a new publication history from the recovered v0.2.0 source archive; see [source provenance](docs/provenance.md).
 
 ## [0.5.0] - 2026-09-14

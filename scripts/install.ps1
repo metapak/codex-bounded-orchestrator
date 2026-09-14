@@ -3,7 +3,7 @@ param(
     [string]$Target,
     [ValidateSet("astra", "sol")]
     [string]$Profile,
-    [ValidateSet("balanced", "quality", "economy", "custom")]
+    [ValidateSet("balanced", "quality", "economy", "quota-saver", "custom")]
     [string]$Preset,
     [string[]]$RoleModel = @(),
     [string[]]$RoleEffort = @(),

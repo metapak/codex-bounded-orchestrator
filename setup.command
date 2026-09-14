@@ -13,7 +13,7 @@ fi
 
 cat <<'BANNER'
 ============================================================
- Codex Bounded Orchestrator 0.5.0
+ Codex Bounded Orchestrator 0.6.0
  Guided setup / macOS
 ============================================================
  Native roles: OpenAI GPT models only

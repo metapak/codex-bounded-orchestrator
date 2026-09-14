@@ -6,7 +6,7 @@
 1. Extract the release ZIP.
 2. Double-click `setup.command`.
 3. Drag the target project folder into Terminal and press Return.
-4. Choose `balanced`, `quality`, `economy`, or `custom`. Custom accepts OpenAI `gpt-*` models for native roles.
+4. Choose `balanced`, `quality`, `economy`, `quota-saver`, or `custom`. Custom accepts OpenAI `gpt-*` models for native roles.
 5. Keep the external provider at `none`, or explicitly choose a read-only Claude or DeepSeek API proposal tool.
 6. Review the final native brand, role, provider, model, and effort summary.
 7. The safe defaults preserve conflicting files and existing `.codex/config.toml`.

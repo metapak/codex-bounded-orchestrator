@@ -15,3 +15,7 @@ The roadmap records direction, not a release promise. Priorities may change with
 - [ ] Evaluate additional owner/routing presets only when they preserve one-writer ownership, independent review, and finite loop limits.
 
 Please use a feature request to propose a roadmap item with a concrete use case, observable acceptance criteria, and any effect on permissions or safety boundaries.
+
+## Delivered in v0.6.0
+
+Local observed-usage reporting, the quota-saver profile, explicit local-evaluation gating, and retry-aware ledger history are now implemented. Future work will focus on compatibility with documented local record formats without claiming quota or billing equivalence.

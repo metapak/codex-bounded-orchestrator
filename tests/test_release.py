@@ -38,9 +38,12 @@ class ReleaseBuilderTests(unittest.TestCase):
                 names = set(archive.namelist())
                 self.assertIn(PREFIX + ".codex/config.toml", names)
                 self.assertIn(PREFIX + ".codex/tools/ledger.py", names)
+                self.assertIn(PREFIX + ".codex/tools/usage_report.py", names)
+                self.assertIn(PREFIX + ".codex/tools/local_eval.py", names)
+                self.assertIn(PREFIX + ".codex/bounded-orchestrator.eval.example.json", names)
                 self.assertIn(PREFIX + ".codex/tools/anthropic_mcp.py", names)
                 self.assertIn(PREFIX + ".codex/tools/deepseek_mcp.py", names)
-                self.assertIn(PREFIX + "docs/release-v0.5.0.md", names)
+                self.assertIn(PREFIX + "docs/release-v0.6.0.md", names)
                 self.assertIn(
                     PREFIX
                     + ".agents/skills/bounded-orchestrator-ui-design/SKILL.md",

@@ -72,6 +72,9 @@ REQUIRED_FILES = (
     "presets/sol-owner.config.toml",
     ".codex/tools/candidate.py",
     ".codex/tools/ledger.py",
+    ".codex/tools/usage_report.py",
+    ".codex/tools/local_eval.py",
+    ".codex/bounded-orchestrator.eval.example.json",
     ".codex/tools/anthropic_mcp.py",
     ".codex/tools/deepseek_mcp.py",
     ".codex/.candidate/.gitignore",
@@ -112,6 +115,10 @@ REQUIRED_FILES = (
     "docs/release-v0.4.1.tr.md",
     "docs/release-v0.5.0.md",
     "docs/release-v0.5.0.tr.md",
+    "docs/release-v0.6.0.md",
+    "docs/release-v0.6.0.tr.md",
+    "docs/usage-and-local-eval.md",
+    "docs/usage-and-local-eval.tr.md",
     "AGENTS.md",
     "LICENSE",
     "NOTICE",
@@ -338,6 +345,8 @@ def validate_wrapper_modes(errors: list[str]) -> None:
         Path("scripts/validate.py"),
         Path("scripts/build_release.py"),
         Path(".codex/tools/ledger.py"),
+        Path(".codex/tools/usage_report.py"),
+        Path(".codex/tools/local_eval.py"),
         Path(".codex/tools/anthropic_mcp.py"),
         Path(".codex/tools/deepseek_mcp.py"),
     ):
@@ -351,6 +360,8 @@ def main() -> int:
         return 2
 
     errors: list[str] = []
+    if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != "0.6.0":
+        errors.append("VERSION must be 0.6.0")
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
             errors.append(f"missing required file: {relative}")

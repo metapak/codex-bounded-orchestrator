@@ -33,7 +33,7 @@ class RepositoryTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("bounded_validate_modes", ROOT / "scripts/validate.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        for platform, expected_errors in (("win32", 0), ("linux", 8), ("darwin", 8)):
+        for platform, expected_errors in (("win32", 0), ("linux", 10), ("darwin", 10)):
             with self.subTest(platform=platform):
                 errors = []
                 with patch.object(module.sys, "platform", platform), patch.object(
@@ -46,6 +46,8 @@ class RepositoryTests(unittest.TestCase):
         files = [
             ROOT / ".codex/tools/candidate.py",
             ROOT / ".codex/tools/ledger.py",
+            ROOT / ".codex/tools/usage_report.py",
+            ROOT / ".codex/tools/local_eval.py",
             ROOT / ".codex/tools/anthropic_mcp.py",
             ROOT / ".codex/tools/deepseek_mcp.py",
             ROOT / "scripts/install.py",
@@ -115,8 +117,8 @@ class RepositoryTests(unittest.TestCase):
         setup_ps1 = (ROOT / "setup.ps1").read_text(encoding="utf-8")
         install_ps1 = (ROOT / "scripts/install.ps1").read_text(encoding="utf-8")
         setup_cmd = (ROOT / "setup.cmd").read_text(encoding="utf-8")
-        self.assertIn('ValidateSet("balanced", "quality", "economy", "custom")', setup_ps1)
-        self.assertIn('ValidateSet("balanced", "quality", "economy", "custom")', install_ps1)
+        self.assertIn('ValidateSet("balanced", "quality", "economy", "quota-saver", "custom")', setup_ps1)
+        self.assertIn('ValidateSet("balanced", "quality", "economy", "quota-saver", "custom")', install_ps1)
         self.assertIn('ValidateSet("none", "anthropic", "deepseek")', setup_ps1)
         self.assertIn('ValidateSet("none", "anthropic", "deepseek")', install_ps1)
         self.assertIn("--interactive", (ROOT / "setup.command").read_text(encoding="utf-8"))
@@ -125,7 +127,7 @@ class RepositoryTests(unittest.TestCase):
 
     def test_versioned_docs_and_language_pairs_exist(self) -> None:
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-        self.assertEqual(version, "0.5.0")
+        self.assertEqual(version, "0.6.0")
         for stem in ("task-ledger", "expertise-packs", "external-providers", "profiles", f"release-v{version}"):
             self.assertTrue((ROOT / "docs" / f"{stem}.md").is_file())
             self.assertTrue((ROOT / "docs" / f"{stem}.tr.md").is_file())

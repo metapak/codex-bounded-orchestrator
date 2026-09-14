@@ -3,7 +3,7 @@ param(
     [string]$Target,
     [ValidateSet("astra", "sol")]
     [string]$Profile,
-    [ValidateSet("balanced", "quality", "economy", "custom")]
+    [ValidateSet("balanced", "quality", "economy", "quota-saver", "custom")]
     [string]$Preset,
     [string[]]$RoleModel = @(),
     [string[]]$RoleEffort = @(),
@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host "============================================================"
-Write-Host " Codex Bounded Orchestrator 0.5.0"
+Write-Host " Codex Bounded Orchestrator 0.6.0"
 Write-Host " Guided setup / Windows"
 Write-Host "============================================================"
 Write-Host " Native roles: OpenAI GPT models only"

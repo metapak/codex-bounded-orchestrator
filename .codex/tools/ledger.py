@@ -9,6 +9,7 @@ Runtime files live under .codex/.bounded-orchestrator/runs/ and are ignored by G
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -19,14 +20,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 RUNTIME_RELATIVE = Path(".codex/.bounded-orchestrator")
 RUNS_RELATIVE = RUNTIME_RELATIVE / "runs"
 CURRENT_RELATIVE = RUNTIME_RELATIVE / "current.json"
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 MAX_LABEL_LENGTH = 160
 MAX_REASON_LENGTH = 240
-TASK_STATES = {"pending", "in_progress", "complete", "blocked", "skipped"}
+TASK_STATES = {"pending", "in_progress", "complete", "blocked", "skipped", "interrupted", "waiting_user", "needs_repair"}
+MAX_ATTEMPTS = 2
+EVAL_RUNTIME = Path(".codex/.bounded-orchestrator/evals")
 
 
 class LedgerError(RuntimeError):
@@ -154,6 +157,35 @@ def load_json(path: Path, description: str) -> dict[str, Any]:
     return value
 
 
+def append_event(task: dict[str, Any], state: str, evidence: str | None = None) -> None:
+    events = task.setdefault("events", [])
+    event = {"event_id": f"e{len(events) + 1:04d}", "state": state, "at": utc_now()}
+    if evidence:
+        event["evidence"] = evidence
+    events.append(event)
+
+
+def migrate_run(run: dict[str, Any]) -> dict[str, Any]:
+    """Upgrade schema 1 in memory without changing stable run or task IDs."""
+    if run.get("schema") == SCHEMA_VERSION:
+        return run
+    if run.get("schema") != 1 or not isinstance(run.get("tasks"), dict):
+        raise LedgerError("Unsupported ledger schema.")
+    run["schema"] = SCHEMA_VERSION
+    run.setdefault("evaluation", {"required": False, "label": None})
+    for task in run["tasks"].values():
+        task.setdefault("owner_role", "owner")
+        task.setdefault("route_back_to", task["owner_role"])
+        count = 1 if task.get("status") in {"in_progress", "complete"} else 0
+        task.setdefault("attempt_count", count)
+        task.setdefault("active_attempt_id", f"a{count:02d}" if count else None)
+        task.setdefault("attempts", ([{"attempt_id": "a01", "started_at": task.get("updated_at", run.get("created_at")), "ended_at": task.get("updated_at") if task.get("status") == "complete" else None}] if count else []))
+        task.setdefault("events", [{"event_id": "e0001", "state": task.get("status", "pending"), "at": task.get("updated_at", run.get("created_at"))}])
+        task.setdefault("last_failure", task.get("reason") if task.get("status") == "blocked" else None)
+        task.setdefault("last_transition_at", task.get("updated_at", run.get("created_at")))
+    return run
+
+
 def current_run_id(root: Path) -> str:
     current = load_json(root / CURRENT_RELATIVE, "current run pointer")
     run_id = current.get("run_id")
@@ -164,6 +196,43 @@ def current_run_id(root: Path) -> str:
 
 def run_path(root: Path, run_id: str) -> Path:
     return root / RUNS_RELATIVE / f"{validate_id(run_id, 'run')}.json"
+
+
+def git_bytes(root: Path, arguments: list[str], *, allow_failure: bool = False) -> bytes:
+    result = subprocess.run(["git", *arguments], cwd=root, stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL, check=False, timeout=30)
+    if result.returncode and not allow_failure:
+        raise LedgerError("Cannot fingerprint the current Git candidate.")
+    return result.stdout
+
+
+def candidate_fingerprint(root: Path) -> str:
+    digest = hashlib.sha256(b"bounded-candidate-v1\0")
+    head = git_bytes(root, ["rev-parse", "--verify", "HEAD"], allow_failure=True).strip() or b"UNBORN"
+    digest.update(b"HEAD\0" + head + b"\0")
+    digest.update(b"TRACKED\0" + git_bytes(root, ["diff", "--raw", "--no-ext-diff", "HEAD"], allow_failure=True) + b"\0")
+    listed = git_bytes(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"])
+    for raw in sorted(item for item in listed.split(b"\0") if item):
+        relative = Path(os.fsdecode(raw))
+        if relative == EVAL_RUNTIME or EVAL_RUNTIME in relative.parents:
+            continue
+        path = root / relative
+        digest.update(b"PATH\0" + raw + b"\0")
+        if path.is_symlink():
+            digest.update(b"SYMLINK\0" + os.fsencode(os.readlink(path)) + b"\0")
+        elif path.is_file():
+            digest.update(b"FILE\0")
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            digest.update(b"\0")
+        elif path.is_dir():
+            subhead = subprocess.run(["git", "-C", str(path), "rev-parse", "HEAD"], stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL, check=False, timeout=10).stdout.strip()
+            digest.update(b"DIR\0" + subhead + b"\0")
+        else:
+            digest.update(b"MISSING\0")
+    return digest.hexdigest()
 
 
 def validate_run(run: dict[str, Any]) -> None:
@@ -188,6 +257,13 @@ def validate_run(run: dict[str, Any]) -> None:
             raise LedgerError(f"Task {task_id} has invalid dependencies.")
         if task_id in dependencies:
             raise LedgerError(f"Task {task_id} cannot depend on itself.")
+        if not isinstance(task.get("owner_role"), str) or not task["owner_role"]:
+            raise LedgerError(f"Task {task_id} has an invalid owner role.")
+        if not isinstance(task.get("attempts"), list) or task.get("attempt_count") != len(task["attempts"]):
+            raise LedgerError(f"Task {task_id} has invalid attempt history.")
+        events = task.get("events")
+        if not isinstance(events, list) or len({event.get("event_id") for event in events if isinstance(event, dict)}) != len(events):
+            raise LedgerError(f"Task {task_id} has invalid event history.")
 
     visiting: set[str] = set()
     visited: set[str] = set()
@@ -210,7 +286,7 @@ def validate_run(run: dict[str, Any]) -> None:
 def load_run(root: Path, run_id: str | None = None) -> tuple[Path, dict[str, Any]]:
     selected = validate_id(run_id, "run") if run_id else current_run_id(root)
     path = run_path(root, selected)
-    run = load_json(path, "run ledger")
+    run = migrate_run(load_json(path, "run ledger"))
     validate_run(run)
     return path, run
 
@@ -231,7 +307,32 @@ def blockers(run: dict[str, Any]) -> list[str]:
             results.append(f"{task_id}: {status}")
         elif status == "skipped" and not task.get("reason"):
             results.append(f"{task_id}: skipped without justification")
+        elif status in {"interrupted", "waiting_user", "needs_repair"}:
+            results.append(f"{task_id}: {status}")
+    evaluation = run.get("evaluation", {})
+    if evaluation.get("required"):
+        label = evaluation.get("label")
+        results.append(f"local evaluation {label}: not checked")
     return results
+
+
+def evaluation_blocker(root: Path, run: dict[str, Any]) -> str | None:
+    evaluation = run.get("evaluation", {})
+    if not evaluation.get("required"):
+        return None
+    label = evaluation.get("label")
+    summary_path = root / RUNTIME_RELATIVE / "evals" / f"{label}.json"
+    try:
+        summary = load_json(summary_path, "local evaluation summary")
+    except LedgerError:
+        return f"local evaluation {label}: not-configured"
+    if summary.get("label") != label or summary.get("outcome") not in {"pass", "fail", "timeout", "candidate_changed"}:
+        return f"local evaluation {label}: invalid summary"
+    if summary["outcome"] != "pass":
+        return f"local evaluation {label}: {summary['outcome']}"
+    if summary.get("candidate_fingerprint") != candidate_fingerprint(root):
+        return f"local evaluation {label}: stale candidate"
+    return None
 
 
 def command_start(root: Path, args: argparse.Namespace) -> None:
@@ -251,6 +352,7 @@ def command_start(root: Path, args: argparse.Namespace) -> None:
         "updated_at": now,
         "completed_at": None,
         "tasks": {},
+        "evaluation": {"required": False, "label": None},
     }
     atomic_write_json(path, run)
     atomic_write_json(root / CURRENT_RELATIVE, {"schema": SCHEMA_VERSION, "run_id": run_id})
@@ -278,6 +380,14 @@ def command_add(root: Path, args: argparse.Namespace) -> None:
         "reason": None,
         "created_at": now,
         "updated_at": now,
+        "owner_role": validate_text(args.owner_role, "Owner role", 48),
+        "route_back_to": validate_text(args.owner_role, "Owner role", 48),
+        "attempt_count": 0,
+        "active_attempt_id": None,
+        "attempts": [],
+        "events": [{"event_id": "e0001", "state": "pending", "at": now}],
+        "last_failure": None,
+        "last_transition_at": now,
     }
     save_run(path, run)
     print(f"Added task {task_id} ({'optional' if args.optional else 'required'}).")
@@ -296,6 +406,9 @@ def transition(root: Path, args: argparse.Namespace, target: str) -> None:
         "complete": {"in_progress"},
         "blocked": {"pending", "in_progress"},
         "skipped": {"pending", "blocked"},
+        "interrupted": {"in_progress"},
+        "waiting_user": {"pending", "in_progress", "blocked"},
+        "needs_repair": {"complete", "in_progress"},
     }
     if task["status"] not in allowed[target]:
         raise LedgerError(
@@ -316,39 +429,67 @@ def transition(root: Path, args: argparse.Namespace, target: str) -> None:
                 f"Task {task_id} has unresolved dependencies: {', '.join(unresolved)}"
             )
     reason = getattr(args, "reason", None)
-    if target == "blocked":
-        reason = validate_text(reason, "Block reason", MAX_REASON_LENGTH)
+    if target in {"blocked", "interrupted", "waiting_user", "needs_repair"}:
+        reason = validate_text(reason, "Transition evidence", MAX_REASON_LENGTH)
     elif target == "skipped" and reason is not None:
         reason = validate_text(reason, "Skip reason", MAX_REASON_LENGTH, allow_empty=True)
     else:
         reason = None
     task["status"] = target
     task["reason"] = reason or None
-    task["updated_at"] = utc_now()
+    task["updated_at"] = task["last_transition_at"] = utc_now()
+    if target == "in_progress" and task["active_attempt_id"] is None:
+        task["attempt_count"] += 1
+        attempt_id = f"a{task['attempt_count']:02d}"
+        task["active_attempt_id"] = attempt_id
+        task["attempts"].append({"attempt_id": attempt_id, "started_at": task["updated_at"], "ended_at": None})
+    if target in {"complete", "interrupted", "needs_repair"} and task["active_attempt_id"]:
+        task["attempts"][-1]["ended_at"] = task["updated_at"]
+        task["active_attempt_id"] = None
+    if target in {"blocked", "interrupted", "needs_repair"}:
+        task["last_failure"] = reason
+    if target == "needs_repair":
+        task["route_back_to"] = task["owner_role"]
+    append_event(task, target, reason)
     save_run(path, run)
     print(f"Task {task_id}: {target}")
 
 
-def status_payload(run: dict[str, Any]) -> dict[str, Any]:
+def status_payload(run: dict[str, Any], root: Path | None = None) -> dict[str, Any]:
     pending_blockers = blockers(run)
+    if root is not None:
+        pending_blockers = [item for item in pending_blockers if not item.startswith("local evaluation ")]
+        eval_problem = evaluation_blocker(root, run)
+        if eval_problem:
+            pending_blockers.append(eval_problem)
     counts = {state: 0 for state in sorted(TASK_STATES)}
     for task in run["tasks"].values():
         counts[task["status"]] += 1
+    states = {task["status"] for task in run["tasks"].values()}
+    derived = "complete" if run["status"] == "complete" else (
+        "waiting_for_user" if "waiting_user" in states else
+        "repair_needed" if "needs_repair" in states else
+        "interrupted" if "interrupted" in states else
+        "blocked" if "blocked" in states else
+        "active" if "in_progress" in states else
+        "ready_for_review" if not pending_blockers else "planned")
     return {
         "run": run,
         "counts": counts,
         "ready_for_review": run["status"] == "active" and not pending_blockers,
         "completion_blockers": pending_blockers,
+        "derived_status": derived,
     }
 
 
 def command_status(root: Path, args: argparse.Namespace) -> None:
     _, run = load_run(root, args.run)
-    payload = status_payload(run)
+    payload = status_payload(run, root)
     if args.json:
         print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
         return
     print(f"Run {run['run_id']} [{run['status']}]: {run['title']}")
+    print(f"Workflow status: {payload['derived_status']}")
     if not run["tasks"]:
         print("  No declared tasks.")
     for task_id, task in run["tasks"].items():
@@ -370,7 +511,7 @@ def command_ready(root: Path, args: argparse.Namespace) -> None:
     _, run = load_run(root, args.run)
     if run["status"] != "active":
         raise LedgerError("Run is already complete.")
-    pending_blockers = blockers(run)
+    pending_blockers = status_payload(run, root)["completion_blockers"]
     if pending_blockers:
         raise LedgerError("Not ready for review: " + "; ".join(pending_blockers))
     print(f"Run {run['run_id']} is ready for review based on declared required tasks.")
@@ -380,13 +521,64 @@ def command_complete_run(root: Path, args: argparse.Namespace) -> None:
     path, run = load_run(root, args.run)
     if run["status"] != "active":
         raise LedgerError("Run is already complete.")
-    pending_blockers = blockers(run)
+    pending_blockers = status_payload(run, root)["completion_blockers"]
     if pending_blockers:
         raise LedgerError("Cannot complete run: " + "; ".join(pending_blockers))
     run["status"] = "complete"
     run["completed_at"] = utc_now()
     save_run(path, run)
     print(f"Completed run {run['run_id']} based on declared required tasks.")
+
+
+def command_retry(root: Path, args: argparse.Namespace) -> None:
+    path, run = load_run(root, args.run)
+    task = run["tasks"].get(validate_id(args.task_id, "task"))
+    if task is None:
+        raise LedgerError("Task does not exist.")
+    if task["status"] not in {"interrupted", "needs_repair"}:
+        raise LedgerError(f"Cannot retry {args.task_id} from {task['status']}.")
+    if task["attempt_count"] >= MAX_ATTEMPTS:
+        raise LedgerError(f"Retry limit reached for {args.task_id}.")
+    evidence = validate_text(args.evidence, "Retry evidence", MAX_REASON_LENGTH)
+    task["status"] = "pending"
+    task["reason"] = evidence
+    task["last_transition_at"] = task["updated_at"] = utc_now()
+    append_event(task, "retry_scheduled", evidence)
+    save_run(path, run)
+    print(f"Task {args.task_id}: retry scheduled; route back to {task['route_back_to']}")
+
+
+def command_resume(root: Path, args: argparse.Namespace) -> None:
+    path, run = load_run(root, args.run)
+    evidence = validate_text(args.evidence, "Resume evidence", MAX_REASON_LENGTH)
+    task_id = validate_id(args.task_id, "task")
+    task = run["tasks"].get(task_id)
+    if task is None:
+        raise LedgerError(f"Task does not exist: {task_id}")
+    if task["status"] != "waiting_user":
+        raise LedgerError(f"Cannot resume {task_id} from {task['status']}.")
+    if task["active_attempt_id"]:
+        unresolved = [dependency for dependency in task["depends_on"]
+                      if run["tasks"][dependency]["status"] not in {"complete", "skipped"}
+                      or (run["tasks"][dependency]["status"] == "skipped" and not run["tasks"][dependency].get("reason"))]
+        if unresolved:
+            raise LedgerError(f"Task {task_id} has unresolved dependencies: {', '.join(unresolved)}")
+        task["status"] = "in_progress"
+    else:
+        task["status"] = "pending"
+    task["reason"] = None
+    task["updated_at"] = task["last_transition_at"] = utc_now()
+    append_event(task, "resumed", evidence)
+    save_run(path, run)
+    print(f"Task {task_id}: {task['status']}")
+
+
+def command_require_eval(root: Path, args: argparse.Namespace) -> None:
+    path, run = load_run(root, args.run)
+    label = validate_id(args.label, "evaluation label")
+    run["evaluation"] = {"required": True, "label": label}
+    save_run(path, run)
+    print(f"Local evaluation required before review: {label}")
 
 
 def command_clear(root: Path, args: argparse.Namespace) -> None:
@@ -427,6 +619,7 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--title", required=True)
     add.add_argument("--depends-on", action="append", default=[])
     add.add_argument("--optional", action="store_true")
+    add.add_argument("--owner-role", default="owner")
     add_run_option(add)
     add.set_defaults(handler=command_add)
 
@@ -435,11 +628,14 @@ def build_parser() -> argparse.ArgumentParser:
         ("complete", "complete", "Complete an in-progress task."),
         ("block", "blocked", "Block a pending or in-progress task."),
         ("skip", "skipped", "Skip a pending or blocked task."),
+        ("interrupt", "interrupted", "Record an interrupted active task."),
+        ("wait-user", "waiting_user", "Record a task waiting for the user."),
+        ("needs-repair", "needs_repair", "Route failed verification back to its owner."),
     ):
         command = subparsers.add_parser(name, help=help_text)
         command.add_argument("task_id")
         add_run_option(command)
-        if name == "block":
+        if name in {"block", "interrupt", "wait-user", "needs-repair"}:
             command.add_argument("--reason", required=True)
         elif name == "skip":
             command.add_argument("--reason")
@@ -463,6 +659,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_run_option(complete_run)
     complete_run.set_defaults(handler=command_complete_run)
+
+    retry = subparsers.add_parser("retry", help="Schedule the single bounded retry with new evidence.")
+    retry.add_argument("task_id")
+    retry.add_argument("--evidence", required=True)
+    add_run_option(retry)
+    retry.set_defaults(handler=command_retry)
+
+    resume = subparsers.add_parser("resume", help="Resume a task after user input without losing its active attempt.")
+    resume.add_argument("task_id")
+    resume.add_argument("--evidence", required=True)
+    add_run_option(resume)
+    resume.set_defaults(handler=command_resume)
+
+    require_eval = subparsers.add_parser("require-eval", help="Require a named local evaluation summary before review.")
+    require_eval.add_argument("--label", required=True)
+    add_run_option(require_eval)
+    require_eval.set_defaults(handler=command_require_eval)
 
     clear = subparsers.add_parser("clear", help="Delete one run's local metadata.")
     add_run_option(clear)

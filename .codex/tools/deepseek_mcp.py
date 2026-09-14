@@ -13,7 +13,7 @@ from pathlib import PurePosixPath
 from typing import Any, TextIO
 
 SERVER_NAME = "codex-bounded-deepseek-bridge"
-SERVER_VERSION = "0.5.0"
+SERVER_VERSION = "0.6.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_ENDPOINT = "https://api.deepseek.com/responses"
 DEFAULT_MODEL = "deepseek-flash"

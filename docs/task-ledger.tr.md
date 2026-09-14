@@ -54,3 +54,10 @@ Bir görev ancak bağımlılıkları tamamlandıktan veya kayıtlı bir atlama n
 Çalışma verisi `.codex/.bounded-orchestrator/runs/` altında atomik biçimde yazılır. Installer, aracı kurmadan önce üst çalışma dizinine tam bir `.gitignore` yerleştirir. POSIX izinlerini destekleyen sistemlerde dizinler geçerli kullanıcıyla sınırlandırılır ve JSON dosyaları `0600` modunu kullanır.
 
 Ledger bir çalışma yardımcısıdır; scheduler veya güvenlik sınırı değildir. Tanımlanmış kimlikleri, bağımlılıkları, durum geçişlerini ve tamamlanma koşullarını doğrular. Hiç tanımlanmayan bir görevi keşfedemez, durum güncellemesinin doğru olduğunu onaylayamaz, kod doğruluğunu kanıtlayamaz ve test veya review'ın yerini alamaz.
+
+## Denemeler, kesintiler ve yerel değerlendirme
+
+Şema 2 mevcut çalışma/görev kimliklerini, sabit deneme kimliklerini, yalnız sona eklenen geçiş olaylarını, sorumlu rolü ve geri yönlendirme bilgisini korur. Şema-1 dosyaları bellekte güncellenir ve sonraki değişiklikte şema 2 olarak yazılır. Gerçek geçişlerde `interrupt`, `wait-user` ve `needs-repair` kullanılır. `retry GOREV --evidence "yeni kısa kanıt"` yalnız bir sınırlı yeniden denemeye izin verir; dış işlemlerin yinelenmez olduğunu iddia etmez.
+`wait-user` sonrasında `resume GOREV --evidence "yanıt alındı"` kullanılır. Başlamadan bekleyen görev beklemeye döner; aktif görev aynı denemeyi sürdürür. Bağımlılık kontrolleri devam eder.
+
+`require-eval --label ETIKET`, açıkça çalıştırılmış yerel değerlendirmeyi inceleme kapısına ekler. Eşleşen ve Git tarafından yok sayılan özet `pass` göstermelidir.
