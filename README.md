@@ -9,7 +9,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**A project-scoped Codex workflow for complex repository work: one accountable owner, one writer per scope, independent verification, and a finite review loop.**
+**A bounded operating layer for Codex that plans, delegates, implements, verifies, measures, and safely resumes complex repository work.**
 
 Codex Bounded Orchestrator packages agent profiles, task contracts, review rules, and local integrity tooling into a safe-to-preview installer. Astra owns the outcome, Terra maps and verifies, Sol implements and diagnoses, and Luna is reserved for exact read-only lookups.
 
@@ -17,6 +17,12 @@ It is designed to make multi-agent work easier to inspect and stop. The reposito
 
 > [!NOTE]
 > This is an unofficial community project. It is not affiliated with or endorsed by OpenAI.
+
+## What does it do now?
+
+You describe the result in normal language. The owner turns it into bounded tasks, assigns each stage to the appropriate GPT model, keeps one writer responsible for each scope, verifies the result, freezes the exact candidate, and sends it to an independent reviewer. The workflow can also preserve interruption and retry history, show which models and locally observed tokens were used, require an explicit project-specific evaluation, and resume work after the user supplies a missing decision.
+
+Prepared profiles let you choose balanced routing, maximum quality, lighter everyday routing, quota-saving behavior, or a custom model/effort map. Native work remains GPT-only. Claude and DeepSeek can be added only as optional proposal APIs without workspace access; the native GPT implementer still owns every accepted change.
 
 ## Why use it?
 
@@ -132,6 +138,8 @@ See [external provider setup and boundaries](docs/external-providers.md).
 - The `$bounded-orchestrator` skill and its task, review, and escalation contracts.
 - `.codex/tools/candidate.py` for candidate hashes and Git identity.
 - `.codex/tools/ledger.py` for ignored local task metadata and completion gates.
+- `.codex/tools/usage_report.py` for privacy-conscious local model/token reporting.
+- `.codex/tools/local_eval.py` and an example manifest for explicitly selected project checks.
 - Two opt-in expertise packs: UI design and security review.
 - A marked, updateable block in the target project's `AGENTS.md`.
 - A local install manifest and ignored backup directory for safe updates and uninstall.

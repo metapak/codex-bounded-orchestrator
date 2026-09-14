@@ -9,7 +9,7 @@
 [![Lisans: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**Karmaşık repo işleri için proje kapsamlı Codex akışı: tek sorumlu owner, kapsam başına tek writer, bağımsız doğrulama ve sonlu review döngüsü.**
+**Codex’in karmaşık repo işlerini planlamasını, dağıtmasını, uygulamasını, kontrol etmesini, ölçmesini ve güvenle devam ettirmesini sağlayan sınırlı bir çalışma katmanı.**
 
 Codex Bounded Orchestrator; agent profillerini, görev sözleşmelerini, review kurallarını ve yerel bütünlük araçlarını önceden incelenebilen bir installer içinde sunar. Astra sonucu sahiplenir, Terra haritalar ve doğrular, Sol uygular ve kök neden analizi yapar, Luna ise yalnız kesin ve salt okunur aramalarda kullanılır.
 
@@ -17,6 +17,12 @@ Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirme
 
 > [!NOTE]
 > Bu bağımsız bir topluluk projesidir. OpenAI ile bağlantılı değildir ve OpenAI tarafından onaylanmamıştır.
+
+## Artık ne yapıyor?
+
+Siz istediğiniz sonucu normal şekilde anlatırsınız. Ana yönetici işi sınırlı görevlere ayırır, her aşamayı uygun GPT modeline verir, her çalışma alanında tek bir uygulayıcıyı sorumlu tutar, sonucu kontrol eder, değişmeyecek son hâli sabitler ve bağımsız incelemeye gönderir. Sistem ayrıca kesinti ve yeniden deneme geçmişini saklayabilir, hangi modellerin ve yerel olarak gözlenen tokenların kullanıldığını gösterebilir, açıkça seçilen projeye özel bir son kontrolü zorunlu tutabilir ve siz eksik kararı verdikten sonra bekleyen göreve devam edebilir.
+
+Hazır profillerle dengeli dağılım, en yüksek kalite, daha hafif günlük kullanım, kota tasarrufu veya tamamen özel model ve efor dağılımı seçilebilir. Yerel çalışma yalnızca GPT modelleriyle devam eder. Claude ve DeepSeek, çalışma alanına erişemeyen isteğe bağlı öneri API’leri olarak eklenebilir; kabul edilen değişikliklerin sorumlusu yine yerel GPT uygulayıcıdır.
 
 ## Neden kullanılır?
 
@@ -132,6 +138,8 @@ Ayrıntılar için [haricî sağlayıcı kurulumu ve sınırlarına](docs/extern
 - `$bounded-orchestrator` skill'i ile görev, review ve escalation sözleşmeleri.
 - Candidate hash'leri ve Git kimliği için `.codex/tools/candidate.py`.
 - Ignore edilen yerel görev metadata'sı ve tamamlanma kontrolleri için `.codex/tools/ledger.py`.
+- İstem veya kod içeriğini göstermeyen yerel model/token raporu için `.codex/tools/usage_report.py`.
+- Açıkça seçilen proje kontrolleri için `.codex/tools/local_eval.py` ve örnek ayar dosyası.
 - İsteğe bağlı iki uzmanlık paketi: UI tasarımı ve güvenlik review.
 - Hedef projenin `AGENTS.md` dosyasında işaretli ve güncellenebilir bir blok.
 - Güvenli güncelleme ve uninstall için yerel kurulum manifest'i ile ignore edilen yedek dizini.
