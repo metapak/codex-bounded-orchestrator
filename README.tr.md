@@ -16,15 +16,27 @@ Ekibi kurun, değişiklikleri kontrol edin ve geçmiş kullanımı görün. Şef
 > [!NOTE]
 > Bu bağımsız bir topluluk projesidir. OpenAI ile bağlantılı değildir ve OpenAI tarafından onaylanmamıştır.
 
-## Tarayıcıyla kurulum
+## Dört adımda kurulum
 
-1. [Güncel proje ZIP dosyasını indirin](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) ve tamamen açın. Bu dosya GUI başlatıcılarını içeren güncel `main` kaynağıdır; eski sürüm indirmelerinde başlatıcılar bulunmayabilir.
-2. macOS'ta `launchers/Bounded Orchestrator.app`, Windows'ta `launchers/Launch Bounded Orchestrator.vbs` dosyasına çift tıklayın.
-3. Klasör seçicisinden mevcut Git projenizin klasörünü seçin. Yerel konsol tarayıcınızda açılır.
-4. Bir çalışma biçimi ve 1–10 yardımcı seçin. Her yardımcının görevini, modelini ve inceleme düzeyini ayarlayın; aynı görev tekrar edebilir.
-5. Projeye yazılacakları görmek için **Değişiklikleri kontrol et**, ardından **Kur** veya **Kaydet** seçin. Yeni ekibi kullanmak için Codex'i yeniden başlatın.
+Önce Codex, [Git](https://git-scm.com/downloads) ve [Python 3.11 veya yenisi](https://www.python.org/downloads/) kurulu olsun. Python bu indirmeye **dahil değildir**.
 
-[Git](https://git-scm.com/downloads) ve [Python **3.11 veya yenisi**](https://www.python.org/downloads/) önceden kurulu olmalıdır; bağlantılarda resmî grafik kurucuları bulunur. Başlatıcılar Python içermez. Codex istemciniz proje ayarlarını ve özel ajanları desteklemeli, hesabınız seçtiğiniz modellere erişebilmelidir. Çalışma ortamı aynı anda 10'dan az yardımcıya izin verebilir. Sunucu yalnız `127.0.0.1` adresini dinler. Kayıtlı dosyalar sonradan değişmediyse **Son değişikliği geri al** kullanılabilir; işiniz bitince **Konsolu kapat** seçin. Başlatıcıların çift tıklamayla açılması her işletim sisteminde doğrulanmadı; [macOS](INSTALL-MACOS.md) ve [Windows](INSTALL-WINDOWS.md) rehberlerinde terminal alternatifi bulunur.
+1. **İndirin:** [Güncel ZIP dosyasını alın](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) ve açılan klasöre girin.
+2. **Açın:** Mac'te `launchers` klasöründeki **Bounded Orchestrator.app** dosyasına çift tıklayın. Windows'ta aynı klasördeki **Launch Bounded Orchestrator.vbs** dosyasına çift tıklayın. Linux'ta aşağıdaki kısa komutu kullanın.
+3. **Proje seçin:** Mac veya Windows'ta Codex kullandığınız Git proje klasörünü seçin. Linux'ta bu klasörü komutta belirtirsiniz.
+4. **Kurun:** Tarayıcıda önerilen ekibi bırakabilir veya değiştirebilirsiniz. **Değişiklikleri kontrol et**, ardından **Kur** düğmesine basın. Codex'i bu projede yeniden başlatın.
+
+<details>
+<summary>Linux: aynı kurulum ekranını açın</summary>
+
+Bu pakette Linux için çift tıklamalı başlatıcı veya klasör seçici yoktur. Açtığınız klasörde terminal açın ve Git projenizin yoluyla şu komutu çalıştırın:
+
+```bash
+python3 scripts/dashboard.py /projenizin/tam/yolu
+```
+
+</details>
+
+Ekibi daha sonra değiştirmek için başlatıcıyı yeniden açıp (Linux'ta komutu yineleyip) **Kaydet** düğmesini kullanın. Ayarlar projeye hemen yazılır; silip yeniden kurmanız gerekmez. Açık Codex oturumunun yeni ayarları kullanması için oturumu yeniden açmanız gerekebilir. Kurulum açılmazsa [Mac](INSTALL-MACOS.md) veya [Windows](INSTALL-WINDOWS.md) rehberine bakın. Codex istemciniz proje ayarlarını ve özel ajanları desteklemeli, seçtiğiniz modellere hesabınızdan erişilebilmelidir.
 
 ![Orkestra sahnesini ve gözlenen yardımcı dağılımını gösteren örnek Codex Kullanım sayfası](docs/assets/console-tr.png)
 

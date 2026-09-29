@@ -16,15 +16,27 @@ Set up the team, check the changes, and see locally recorded past usage. The set
 > [!NOTE]
 > This is an unofficial community project. It is not affiliated with or endorsed by OpenAI.
 
-## Install with the browser
+## Install in four steps
 
-1. [Download the current project ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and extract it completely. This is the current `main` source, including the GUI launchers; older release downloads may not include them.
-2. On macOS, double-click `launchers/Bounded Orchestrator.app`. On Windows, double-click `launchers/Launch Bounded Orchestrator.vbs`.
-3. Choose your existing Git project folder in the folder picker. The local console opens in your browser.
-4. Choose a work style and 1–10 helpers. Set each helper's duty, model, and reasoning level; duplicate duties are allowed.
-5. Select **Check changes** to review what will be written to that project, then **Install** or **Save**. Restart Codex to use the new team.
+Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed first. Python is **not included** in this download.
 
-[Git](https://git-scm.com/downloads) and [Python **3.11 or newer**](https://www.python.org/downloads/) must already be installed; their official graphical installers are available at those links. The launchers do not bundle Python. Your Codex client must support project settings and custom agents, and your account must have access to the chosen models. The runtime may permit fewer than 10 simultaneous helpers. The server listens only on `127.0.0.1`. You can **Undo last change** if the saved files are unchanged, or **Close console** when finished. Launcher double-click behavior has not been tested on every OS; [macOS](INSTALL-MACOS.md) and [Windows](INSTALL-WINDOWS.md) guides include a terminal fallback.
+1. **Download:** [Get the current ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
+2. **Open:** On Mac, open `launchers` and double-click **Bounded Orchestrator.app**. On Windows, double-click **Launch Bounded Orchestrator.vbs** in the same folder. On Linux, use the short command below.
+3. **Choose a project:** On Mac or Windows, pick the Git project folder where you use Codex. On Linux, the command includes that folder instead.
+4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
+
+<details>
+<summary>Linux: open the same setup page</summary>
+
+Linux has no double-click launcher or folder picker in this package. Open a terminal in the extracted folder, then run this with your Git project's path:
+
+```bash
+python3 scripts/dashboard.py /absolute/path/to/your-git-project
+```
+
+</details>
+
+To change the team later, open the launcher again (or repeat the Linux command) and use **Save**. It updates the project settings without uninstalling. You may need to reopen an active Codex session before it uses the changes. If setup does not open, see the [Mac](INSTALL-MACOS.md) or [Windows](INSTALL-WINDOWS.md) guide. Your Codex client must support project settings and custom agents, and your account must have access to the selected models.
 
 ![Sample Codex Usage page with an orchestra stage and observed helper breakdown](docs/assets/console-en.png)
 

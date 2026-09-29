@@ -1,15 +1,16 @@
 
 # Install on Windows
 
-## Browser setup without typing commands
+## Four steps on Windows
 
-1. [Download the current `main` ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and extract it completely. Older release ZIPs may lack the GUI launcher. Install [Python 3.11+](https://www.python.org/downloads/) and [Git](https://git-scm.com/downloads) with their graphical installers if needed.
-2. Double-click `launchers/Launch Bounded Orchestrator.vbs` and choose the target Git project folder in the folder picker.
-3. In the local browser console, choose a work style and 1–10 planned helpers. Each helper can have its own duty, model, and reasoning level; duplicate duties are allowed. The chief is separate, and this team is not automatically started.
-4. Select **Check changes**. Review the before/after choices, then select **Install** or **Save** to write only to the chosen project.
-5. Use **Undo last change** if eligible, or **Close console** when finished. Restart Codex to use new settings.
+Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed. Python is not included.
 
-The launcher uses local Python; it does not bundle a runtime. The console binds to `127.0.0.1` and does not send conversation text or credentials to the browser. Details: [local console](docs/local-console.md).
+1. **Download:** [Get the current ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
+2. **Open:** Open `launchers` and double-click **Launch Bounded Orchestrator.vbs**.
+3. **Choose a project:** Pick the Git project folder where you use Codex.
+4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
+
+For later changes, reopen the launcher and click **Save**; no uninstall is needed. An already-open Codex session may need to be reopened before it uses the changes. Double-click behavior has not been tested on every Windows setup. See the [local console guide](docs/local-console.md) for more help.
 
 <details>
 <summary>Terminal alternative</summary>

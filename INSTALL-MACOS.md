@@ -1,15 +1,16 @@
 
 # Install on macOS
 
-## Browser setup without typing commands
+## Four steps on Mac
 
-1. [Download the current `main` ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and extract it completely. Older release ZIPs may lack the GUI launcher. Install [Python 3.11+](https://www.python.org/downloads/) and [Git](https://git-scm.com/downloads) with their graphical installers if needed.
-2. Open `launchers/Bounded Orchestrator.app` and choose the target Git project folder in the native picker.
-3. In the local browser console, choose a work style and 1–10 planned helpers. Each helper can have its own duty, model, and reasoning level; duplicate duties are allowed. The chief is separate, and this team is not automatically started.
-4. Select **Check changes**. Review the before/after choices, then select **Install** or **Save** to write only to the chosen project.
-5. Use **Undo last change** if eligible, or **Close console** when finished. Restart Codex to use new settings.
+Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed. Python is not included.
 
-If macOS blocks the unsigned app, right-click it and choose **Open**. The app needs local Python; it does not bundle a runtime. The console binds to `127.0.0.1` and does not send conversation text or credentials to the browser. Details: [local console](docs/local-console.md).
+1. **Download:** [Get the current ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
+2. **Open:** Open `launchers` and double-click **Bounded Orchestrator.app**.
+3. **Choose a project:** Pick the Git project folder where you use Codex.
+4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
+
+For later changes, reopen the app and click **Save**; no uninstall is needed. An already-open Codex session may need to be reopened before it uses the changes. If macOS blocks the unsigned app, Control-click it and choose **Open**. Double-click behavior has not been tested on every Mac. See the [local console guide](docs/local-console.md) for more help.
 
 <details>
 <summary>Terminal alternative</summary>
