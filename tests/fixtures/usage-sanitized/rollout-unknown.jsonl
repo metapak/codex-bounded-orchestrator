@@ -1,0 +1,1 @@
+{"timestamp":"2026-09-03T11:30:00Z","type":"token_usage_record","payload":{"thread_id":"demo-unassigned","session_id":"demo-root","usage":{"input_tokens":470,"cached_input_tokens":100,"output_tokens":30,"total_tokens":500}}}

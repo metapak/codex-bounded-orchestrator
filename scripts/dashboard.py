@@ -78,6 +78,111 @@ def usage_breakdowns(report, history, project):
             'style': {'basis': 'estimated_from_console_save_history', 'rows': rows(styles)},
             'total_tokens': report['totals'].get('total_tokens', 0)}
 
+def orchestra_view(report, selected_root='', filters=None):
+    """Attribute each observed record once through explicit session identities."""
+    nodes = {item['id']: item for item in report.get('agents', []) if isinstance(item, dict) and isinstance(item.get('id'), str)}
+    filters = filters or {}
+    def metadata_visible(node):
+        stamp = node.get('observed_at', 'unknown')
+        day = stamp[:10] if stamp != 'unknown' else ''
+        if (filters.get('date_from') and (not day or day < filters['date_from'])) or (filters.get('date_to') and (not day or day > filters['date_to'])):
+            return False
+        if filters.get('project') and node.get('project') != filters['project']:
+            return False
+        if filters.get('thread') and node.get('id') != filters['thread']:
+            return False
+        return True
+    def root_of(agent_id):
+        seen = set()
+        current = agent_id
+        while current in nodes and current not in seen:
+            seen.add(current)
+            node = nodes[current]
+            if node.get('ambiguous'):
+                return None
+            parent = node.get('parent')
+            if not parent:
+                return current if node.get('source') == 'root' else None
+            if node.get('source') != 'subagent':
+                return None
+            current = parent
+        return None
+    def family(record):
+        root = root_of(record['thread'])
+        linked = record.get('session_id')
+        if root and linked not in (None, '', 'unknown', root):
+            return None
+        if root:
+            return root
+        return linked if linked in nodes and root_of(linked) == linked else None
+    roots = {}
+    for record in report['records']:
+        root = family(record)
+        if root:
+            item = roots.setdefault(root, {'id': root, 'project': nodes[root].get('project', 'unknown'), 'last_seen': '', 'total_tokens': 0})
+            item['last_seen'] = max(item['last_seen'], record['timestamp'] if record['timestamp'] != 'unknown' else '')
+            item['total_tokens'] += record['usage'].get('total_tokens', 0)
+    for agent_id in nodes:
+        root = root_of(agent_id)
+        if root:
+            roots.setdefault(root, {'id': root, 'project': nodes[root].get('project', 'unknown'), 'last_seen': '', 'total_tokens': 0})
+    scopes = sorted(roots.values(), key=lambda item: (item['last_seen'], item['id']), reverse=True)
+    if selected_root and (selected_root not in nodes or root_of(selected_root) != selected_root):
+        raise ValueError('Unknown work selection')
+    chosen = [record for record in report['records'] if not selected_root or family(record) == selected_root]
+    actors = {}
+    unassigned = 0
+    for record in chosen:
+        amount = record['usage'].get('total_tokens', 0)
+        actor_id = record['thread']
+        node = nodes.get(actor_id)
+        if not node or root_of(actor_id) != family(record):
+            unassigned += amount
+            continue
+        actor = actors.setdefault(actor_id, {'id': actor_id, 'name': node.get('name') or '', 'role': node.get('role') or '',
+                                             'kind': 'conductor' if actor_id == family(record) else 'helper',
+                                             'source': 'session_meta', 'total_tokens': 0, 'input_tokens': 0,
+                                             'cached_input_tokens': 0, 'output_tokens': 0, 'models': {}})
+        actor['total_tokens'] += amount
+        for key in ('input_tokens', 'cached_input_tokens', 'output_tokens'):
+            actor[key] += record['usage'].get(key, 0)
+        model = record['model']
+        actor['models'][model] = actor['models'].get(model, 0) + amount
+    if selected_root:
+        for agent_id, node in nodes.items():
+            if root_of(agent_id) != selected_root or agent_id in actors or (agent_id != selected_root and not metadata_visible(node)):
+                continue
+            actors[agent_id] = {'id': agent_id, 'name': node.get('name') or '', 'role': node.get('role') or '',
+                                'kind': 'conductor' if agent_id == selected_root else 'helper', 'source': 'session_meta',
+                                'total_tokens': None, 'input_tokens': None, 'cached_input_tokens': None,
+                                'output_tokens': None, 'models': {}, 'usage_observed': False}
+    actor_rows = []
+    for actor in actors.values():
+        actor['models'] = [{'id': model, 'total_tokens': tokens} for model, tokens in sorted(actor['models'].items(), key=lambda item: (-item[1], item[0]))]
+        actor_rows.append(actor)
+    actor_rows.sort(key=lambda item: (item['kind'] != 'conductor', -(item['total_tokens'] or 0), item['id']))
+    total = sum(record['usage'].get('total_tokens', 0) for record in chosen)
+    conductor = sum(item['total_tokens'] or 0 for item in actor_rows if item['kind'] == 'conductor')
+    helpers = sum(item['total_tokens'] or 0 for item in actor_rows if item['kind'] == 'helper')
+    return {'scopes': scopes, 'selected_root': selected_root or None, 'actors': actor_rows, '_records': chosen,
+            'total_tokens': total, 'conductor_tokens': conductor, 'helper_tokens': helpers,
+            'unassigned_tokens': unassigned, 'helper_count': sum(item['kind'] == 'helper' for item in actor_rows),
+            'basis': 'session_meta_id_parent_thread_id_and_request_thread_id'}
+
+def filter_report_records(report, records):
+    report['records'] = records
+    report['records_observed'] = len(records)
+    report['status'] = 'available' if records else 'unavailable'
+    grouped, grand = defaultdict(lambda: defaultdict(int)), defaultdict(int)
+    for record in records:
+        key = tuple(record[name] for name in ('model', 'role', 'thread', 'project'))
+        for name, value in record['usage'].items():
+            grouped[key][name] += value
+            grand[name] += value
+    report['groups'] = [dict(zip(('model', 'role', 'thread', 'project'), key), usage=dict(usage)) for key, usage in sorted(grouped.items())]
+    report['totals'] = dict(grand)
+    return report
+
 def visible_lines(text):
     """Locate structural lines outside multiline strings."""
     lines = []
@@ -368,14 +473,21 @@ class Console:
         return {'status': 'restored', 'restart_required': True}
 
     def report(self, query):
-        allowed = {'date_from', 'date_to', 'project', 'thread'}
+        allowed = {'date_from', 'date_to', 'project', 'thread', 'root'}
         if set(query)-allowed or any(len(v) != 1 or len(v[0]) > 4096 for v in query.values()):
             raise ValueError('Invalid usage filter')
         filters = {k: v[0] for k,v in query.items()}
+        selected_root = filters.pop('root', '')
         for name in ('date_from', 'date_to'):
             if filters.get(name) and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', filters[name]):
                 raise ValueError('Invalid date')
         result = usage.scan(self.sessions, **filters)
+        orchestra = orchestra_view(result, selected_root, filters)
+        if selected_root:
+            filter_report_records(result, orchestra.pop('_records'))
+        else:
+            orchestra.pop('_records')
+        result['orchestra'] = orchestra
         result['sample_data'] = self.sessions == (ROOT/'tests/fixtures/usage-sanitized').resolve()
         result['source_path'] = str(self.sessions)
         if result['sample_data']:
@@ -424,10 +536,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, {**self.server.console.settings(), 'csrf_token': self.server.token})
             if parsed.path == '/api/usage':
                 return self.respond(200, self.server.console.report(parse_qs(parsed.query, keep_blank_values=True)))
-            names = {'/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css'}
+            names = {'/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/orchestra.svg': 'orchestra.svg'}
             if parsed.path not in names:
                 return self.respond(404, {'error': 'Not found'})
-            kinds = {'/': 'text/html', '/app.js': 'text/javascript', '/style.css': 'text/css'}
+            kinds = {'/': 'text/html', '/app.js': 'text/javascript', '/style.css': 'text/css', '/orchestra.svg': 'image/svg+xml'}
             return self.respond(200, (ASSETS/names[parsed.path]).read_bytes(), kinds[parsed.path])
         except (ValueError, OSError, installer.InstallError) as exc:
             return self.respond(400, {'error': str(exc)})

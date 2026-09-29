@@ -134,13 +134,22 @@ class ConsoleTests(unittest.TestCase):
         report = console.report({})
         self.assertTrue(report['sample_data'])
         self.assertEqual(report['source_path'], str(sample.resolve()))
-        self.assertEqual(report['totals']['total_tokens'], 61694)
-        self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['model']['rows']}, {'gpt-6-sol':29268, 'gpt-6-astra':32426})
-        self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['style']['rows']}, {'focused':29268, 'quality':32426})
-        filtered = console.report({'date_from':['2026-09-02'], 'thread':['sanitized-thread-two']})
+        self.assertEqual(report['totals']['total_tokens'], 88194)
+        self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['model']['rows']}, {'gpt-6-sol':35268, 'gpt-6-astra':32426, 'gpt-6-luna':12000, 'gpt-5.6-sol':8000, 'unknown':500})
+        self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['style']['rows']}, {'focused':29268, 'quality':58426, 'unknown':500})
+        self.assertEqual(report['orchestra']['conductor_tokens'],61694)
+        self.assertEqual(report['orchestra']['helper_tokens'],26000)
+        self.assertEqual(report['orchestra']['unassigned_tokens'],500)
+        self.assertEqual(report['orchestra']['helper_count'],3)
+        scoped = console.report({'root':['demo-root']})
+        self.assertEqual(scoped['orchestra']['helper_count'],4)
+        self.assertIsNone(next(actor['total_tokens'] for actor in scoped['orchestra']['actors'] if actor['id']=='demo-helper-four'))
+        self.assertEqual(sum(scoped['orchestra'][key] for key in ('conductor_tokens','helper_tokens','unassigned_tokens')),scoped['orchestra']['total_tokens'])
+        filtered = console.report({'date_from':['2026-09-02'], 'date_to':['2026-09-02'], 'thread':['demo-root'], 'root':['demo-root']})
         self.assertEqual(filtered['breakdowns']['total_tokens'], 32426)
         self.assertEqual(filtered['breakdowns']['model']['rows'], [{'id':'gpt-6-astra','total_tokens':32426}])
         self.assertEqual(filtered['breakdowns']['style']['rows'], [{'id':'quality','total_tokens':32426}])
+        self.assertEqual(filtered['orchestra']['helper_count'],0)
         self.assertFalse(self.console.report({})['sample_data'])
 
     def test_style_attribution_requires_bounded_turn_and_exact_project(self):
@@ -209,6 +218,45 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(report['totals']['total_tokens'],42)
         self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['style']['rows']},{'focused':10,'quality':20,'unknown':12})
         self.assertEqual(sum(row['total_tokens'] for row in report['breakdowns']['model']['rows']),42)
+
+    def test_agent_hierarchy_nested_orphan_cycle_and_multiple_models(self):
+        agents = [
+            {'id':'root','parent':None,'source':'root','name':'','role':'owner','project':'/project'},
+            {'id':'child','parent':'root','source':'subagent','name':'<script>not markup</script>','role':'researcher','project':'/project'},
+            {'id':'grandchild','parent':'child','source':'subagent','name':'','role':'reviewer','project':'/project'},
+            {'id':'orphan','parent':'missing','source':'subagent','name':'','role':'worker','project':'/project'},
+            {'id':'bad-source','parent':'root','source':'root','name':'','role':'worker','project':'/project'},
+            {'id':'cycle-a','parent':'cycle-b','source':'subagent','name':'','role':'worker','project':'/project'},
+            {'id':'cycle-b','parent':'cycle-a','source':'subagent','name':'','role':'worker','project':'/project'},
+        ]
+        records = [
+            {'thread':'root','session_id':'root','model':'gpt-root','timestamp':'2026-09-01T10:00:00Z','usage':{'total_tokens':10}},
+            {'thread':'child','session_id':'root','model':'gpt-one','timestamp':'2026-09-01T10:01:00Z','usage':{'total_tokens':20}},
+            {'thread':'child','session_id':'root','model':'gpt-two','timestamp':'2026-09-01T10:02:00Z','usage':{'total_tokens':30}},
+            {'thread':'grandchild','session_id':'root','model':'gpt-two','timestamp':'2026-09-01T10:03:00Z','usage':{'total_tokens':5}},
+            {'thread':'orphan','session_id':'root','model':'gpt-one','timestamp':'2026-09-01T10:04:00Z','usage':{'total_tokens':7}},
+            {'thread':'bad-source','session_id':'root','model':'gpt-one','timestamp':'2026-09-01T10:04:01Z','usage':{'total_tokens':9}},
+            {'thread':'cycle-a','session_id':'root','model':'gpt-one','timestamp':'2026-09-01T10:05:00Z','usage':{'total_tokens':3}},
+        ]
+        result = dashboard.orchestra_view({'agents':agents,'records':records},'root')
+        self.assertEqual((result['total_tokens'],result['conductor_tokens'],result['helper_tokens'],result['unassigned_tokens']),(84,10,55,19))
+        self.assertEqual(result['helper_count'],2)
+        child = next(actor for actor in result['actors'] if actor['id']=='child')
+        self.assertEqual(child['name'],'<script>not markup</script>')
+        self.assertEqual(child['models'],[{'id':'gpt-two','total_tokens':30},{'id':'gpt-one','total_tokens':20}])
+
+    def test_conflicting_agent_metadata_across_files_remains_unassigned(self):
+        root_one = {'type':'session_meta','payload':{'id':'root-one','source':'cli','cwd':'/project'}}
+        root_two = {'type':'session_meta','payload':{'id':'root-two','source':'cli','cwd':'/project'}}
+        first = {'type':'session_meta','payload':{'id':'same-helper','parent_thread_id':'root-one','source':{'subagent':{}},'agent_role':'reviewer','cwd':'/project'}}
+        second = {'type':'session_meta','payload':{'id':'same-helper','parent_thread_id':'root-two','source':{'subagent':{}},'agent_role':'reviewer','cwd':'/project'}}
+        usage_row = {'timestamp':'2026-09-01T10:00:00Z','type':'token_usage_record','payload':{'thread_id':'same-helper','session_id':'root-one','usage':{'total_tokens':9}}}
+        for filename, rows in [('a.jsonl',[root_one,first,usage_row]),('b.jsonl',[root_two,second])]:
+            (self.sessions/filename).write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        report = dashboard.usage.scan(self.sessions)
+        self.assertTrue(next(agent for agent in report['agents'] if agent['id']=='same-helper')['ambiguous'])
+        result = dashboard.orchestra_view(report,'root-one')
+        self.assertEqual((result['helper_count'],result['helper_tokens'],result['unassigned_tokens']),(0,0,9))
 
     def test_model_catalog_merges_runtime_and_offline_documentation(self):
         import model_catalog

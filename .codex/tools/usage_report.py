@@ -41,7 +41,7 @@ def instant(value):
 def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
     groups = defaultdict(lambda: defaultdict(int))
     records, raw_records, seen, previous = [], [], set(), {}
-    turns = {}
+    turns, agents = {}, {}
     files = malformed = duplicates = resets = unreadable = 0
     for path in sorted(root.rglob('*.jsonl')) if root.exists() else []:
         files += 1
@@ -68,6 +68,18 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
                     metadata.update({k: v for k, v in payload.items() if k in META and isinstance(v, (str, int))})
                     if obj['type'] == 'session_meta' and isinstance(payload.get('id'), str):
                         metadata['thread_id'] = payload['id']
+                        agent_id = payload['id']
+                        parent = payload.get('parent_thread_id') if isinstance(payload.get('parent_thread_id'), str) else None
+                        source = 'subagent' if isinstance(payload.get('source'), dict) and 'subagent' in payload['source'] else 'root' if isinstance(payload.get('source'), str) else 'unknown'
+                        name = payload.get('agent_nickname') if isinstance(payload.get('agent_nickname'), str) else ''
+                        role = payload.get('agent_role') if isinstance(payload.get('agent_role'), str) else ''
+                        candidate = {'id': agent_id, 'parent': parent, 'source': source, 'name': name[:80], 'role': role[:80], 'project': scalar(payload, 'cwd'), 'observed_at': scalar(obj, 'timestamp')}
+                        previous_agent = agents.get(agent_id)
+                        if previous_agent and any(previous_agent.get(k) != candidate[k] for k in ('parent', 'source', 'name', 'role', 'project')):
+                            candidate['ambiguous'] = True
+                        if previous_agent and previous_agent.get('ambiguous'):
+                            candidate['ambiguous'] = True
+                        agents[agent_id] = candidate
                     if obj['type'] == 'turn_context' and isinstance(payload.get('turn_id'), str):
                         started = scalar(obj, 'timestamp')
                         when = instant(started)
@@ -100,7 +112,7 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
                 current = {k: v for k, v in record['usage'].items() if k in COUNTERS and type(v) is int and v >= 0}
                 if not current:
                     continue
-                raw_records.append({'model': model, 'role': role, 'thread': tid, 'project': proj, 'timestamp': stamp, 'semantics': record['semantics'], 'event_id': record['event_id'], 'turn_id': record.get('turn_id', 'unknown'), 'usage': current})
+                raw_records.append({'model': model, 'role': role, 'thread': tid, 'session_id': scalar(meta, 'session_id'), 'project': proj, 'timestamp': stamp, 'semantics': record['semantics'], 'event_id': record['event_id'], 'turn_id': record.get('turn_id', 'unknown'), 'usage': current})
     # Sort accounting events before deltas and date filters. Rollout filenames
     # are not a chronological contract, including duplicate/exported logs.
     for record in raw_records:
@@ -146,7 +158,7 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
         result_groups.append(dict(zip(('model', 'role', 'thread', 'project'), key), usage=dict(usage)))
         for name, value in usage.items():
             grand[name] += value
-    return {'platform': 'codex', 'status': 'available' if records else 'unavailable', 'source': 'local session request usage; legacy cumulative token_count fallback', 'files_scanned': files, 'records_observed': len(records), 'duplicates_skipped': duplicates, 'counter_resets': resets, 'unreadable_files': unreadable, 'malformed_lines_skipped': malformed, 'totals': dict(grand), 'groups': result_groups, 'records': records, 'cost': None, 'limitations': 'Observed counters only, not quota or billing. Cache is included in input; reasoning is included in output. Unknown metadata is unavailable; thread filename is a fallback. Unknown legacy timestamps cannot be reliably ordered. Legacy resets count a new segment. Request records take precedence per thread; mixed-format logs may be incomplete. No reliable pricing metadata; cost unavailable.'}
+    return {'platform': 'codex', 'status': 'available' if records else 'unavailable', 'source': 'local session request usage; legacy cumulative token_count fallback', 'files_scanned': files, 'records_observed': len(records), 'duplicates_skipped': duplicates, 'counter_resets': resets, 'unreadable_files': unreadable, 'malformed_lines_skipped': malformed, 'totals': dict(grand), 'groups': result_groups, 'records': records, 'agents': list(agents.values()), 'cost': None, 'limitations': 'Observed counters only, not quota or billing. Cache is included in input; reasoning is included in output. Unknown metadata is unavailable; thread filename is a fallback. Unknown legacy timestamps cannot be reliably ordered. Legacy resets count a new segment. Request records take precedence per thread; mixed-format logs may be incomplete. No reliable pricing metadata; cost unavailable.'}
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
