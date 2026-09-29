@@ -287,7 +287,10 @@ class Console:
         for name in ('date_from', 'date_to'):
             if filters.get(name) and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', filters[name]):
                 raise ValueError('Invalid date')
-        return usage.scan(self.sessions, **filters)
+        result = usage.scan(self.sessions, **filters)
+        result['sample_data'] = self.sessions == (ROOT/'tests/fixtures/usage-sanitized').resolve()
+        result['source_path'] = str(self.sessions)
+        return result
 
 class Server(HTTPServer):
     def __init__(self, address, console):

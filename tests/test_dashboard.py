@@ -127,6 +127,15 @@ class ConsoleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.console.preview({})
 
+    def test_usage_identifies_sanitized_sample_and_selected_source(self):
+        sample = ROOT/'tests/fixtures/usage-sanitized'
+        console = dashboard.Console(self.target, sample)
+        report = console.report({})
+        self.assertTrue(report['sample_data'])
+        self.assertEqual(report['source_path'], str(sample.resolve()))
+        self.assertEqual(report['totals']['total_tokens'], 61694)
+        self.assertFalse(self.console.report({})['sample_data'])
+
     def test_http_security_api_and_assets(self):
         server = dashboard.Server(('127.0.0.1',0), self.console)
         worker = threading.Thread(target=server.serve_forever, daemon=True)
