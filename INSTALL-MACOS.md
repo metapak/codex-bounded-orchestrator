@@ -3,7 +3,7 @@
 
 ## Browser setup without typing commands
 
-1. Extract the source or macOS ZIP completely. Install Python 3.11 or newer and Git if needed.
+1. [Download the current `main` ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and extract it completely. Older release ZIPs may lack the GUI launcher. Install [Python 3.11+](https://www.python.org/downloads/) and [Git](https://git-scm.com/downloads) with their graphical installers if needed.
 2. Open `launchers/Bounded Orchestrator.app` and choose the target Git project folder in the native picker.
 3. In the local browser console, choose a work style and 1–10 planned helpers. Each helper can have its own duty, model, and reasoning level; duplicate duties are allowed. The chief is separate, and this team is not automatically started.
 4. Select **Check changes**. Review the before/after choices, then select **Install** or **Save** to write only to the chosen project.
@@ -11,7 +11,8 @@
 
 If macOS blocks the unsigned app, right-click it and choose **Open**. The app needs local Python; it does not bundle a runtime. The console binds to `127.0.0.1` and does not send conversation text or credentials to the browser. Details: [local console](docs/local-console.md).
 
-## Terminal alternative
+<details>
+<summary>Terminal alternative</summary>
 
 Double-click `setup.command` to use the older guided terminal installer. It does not offer the per-slot browser team builder. It preserves an existing `.codex/config.toml` by default and shows its choices before writing.
 
@@ -48,3 +49,5 @@ For Claude proposals, export `ANTHROPIC_API_KEY` and select `anthropic`. For Dee
 
 Python 3.11 or newer is required by the installer, browser console, candidate fingerprint tool, and local task ledger.
 After installation, restart Codex and run the read-only checklist in [docs/runtime-smoke-test.md](docs/runtime-smoke-test.md).
+
+</details>

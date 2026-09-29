@@ -1,7 +1,7 @@
 [English](README.md) | [Türkçe](README.tr.md)
 
 <p align="center">
-  <img src="docs/assets/codex-bounded-orchestrator-cover-en.svg" alt="Codex Bounded Orchestrator cover" width="100%">
+  <img src="docs/assets/cover-en.svg" alt="Illustrated orchestra stage with a conductor and specialist helpers" width="100%">
 </p>
 
 # Codex Bounded Orchestrator
@@ -9,14 +9,42 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**A local console and bounded specialist workflow for Codex repository work.**
+**Choose a chief and a specialist team for your Codex project in a local browser page.**
 
-Codex Bounded Orchestrator packages agent profiles, task contracts, review rules, local usage reporting, and integrity tools into a project installer. Its chief speaks with you, plans, delegates, and reads short specialist reports. Specialists do the research, file work, checks, and independent review, even for small tasks. The chief-only boundary is an instruction rule, not a root-specific technical tool lock.
-
-It is designed to make multi-agent work easier to inspect and stop. The repository configures guardrails; prompts alone are not a security boundary, and Codex clients may differ in how they apply settings.
+Set up the team, check the changes, and see locally recorded past usage. The setup console runs on your computer. The chief coordinates and speaks with you; specialists do the assigned work. This division is an instruction rule, not a technical lock on the chief's tools.
 
 > [!NOTE]
 > This is an unofficial community project. It is not affiliated with or endorsed by OpenAI.
+
+## Install with the browser
+
+1. [Download the current project ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and extract it completely. This is the current `main` source, including the GUI launchers; older release downloads may not include them.
+2. On macOS, double-click `launchers/Bounded Orchestrator.app`. On Windows, double-click `launchers/Launch Bounded Orchestrator.vbs`.
+3. Choose your existing Git project folder in the folder picker. The local console opens in your browser.
+4. Choose a work style and 1–10 helpers. Set each helper's duty, model, and reasoning level; duplicate duties are allowed.
+5. Select **Check changes** to review what will be written to that project, then **Install** or **Save**. Restart Codex to use the new team.
+
+[Git](https://git-scm.com/downloads) and [Python **3.11 or newer**](https://www.python.org/downloads/) must already be installed; their official graphical installers are available at those links. The launchers do not bundle Python. Your Codex client must support project settings and custom agents, and your account must have access to the chosen models. The runtime may permit fewer than 10 simultaneous helpers. The server listens only on `127.0.0.1`. You can **Undo last change** if the saved files are unchanged, or **Close console** when finished. Launcher double-click behavior has not been tested on every OS; [macOS](INSTALL-MACOS.md) and [Windows](INSTALL-WINDOWS.md) guides include a terminal fallback.
+
+![Sample Codex Usage page with an orchestra stage and observed helper breakdown](docs/assets/console-en.png)
+
+*Illustrative demo screen; it does not show your project or usage data.*
+
+<details>
+<summary>Advanced: command-line setup and skill invocation</summary>
+
+The terminal installer remains available for automation, but the per-helper team builder is in the browser console.
+
+```bash
+git clone https://github.com/metapak/codex-bounded-orchestrator.git
+cd codex-bounded-orchestrator
+python3 scripts/install.py /absolute/path/to/your-project --preset balanced --dry-run
+python3 scripts/install.py /absolute/path/to/your-project --preset balanced
+```
+
+Start a fresh Codex session in the selected project, then invoke `$bounded-orchestrator` for repository work. Run the [runtime smoke test](docs/runtime-smoke-test.md) before relying on model routing.
+
+</details>
 
 ## What does it do now?
 
@@ -41,21 +69,19 @@ Prepared profiles let you choose balanced routing, maximum quality, lighter ever
 
 ## Architecture
 
-![Codex Bounded Orchestrator role tree showing the owner, models, and responsibilities](docs/assets/codex-bounded-orchestrator-roles-tr.png)
-
-The visual overview uses short Turkish labels; the diagram below shows the same core workflow in English.
+The selected helper team can change by project. This diagram shows how work moves between the chief and specialists, not a fixed model roster.
 
 ```mermaid
 flowchart TD
-    U[User goal] --> O["Astra medium<br/>root owner"]
-    O --> E["Terra medium<br/>explore and research<br/>read-only"]
-    O --> I["Sol high<br/>implement<br/>single writer"]
-    O --> V["Terra high<br/>verify<br/>evidence only"]
+    U[User goal] --> O["Chief<br/>coordinate and delegate"]
+    O --> E["Research specialist<br/>read-only"]
+    O --> I["Implementation specialist<br/>single writer"]
+    O --> V["Verification specialist<br/>evidence only"]
     O --> L["Local task ledger<br/>declared metadata only"]
     E --> O
     I --> V
     V --> F[Freeze candidate]
-    F --> R["Astra medium<br/>independent review<br/>read-only"]
+    F --> R["Review specialist<br/>read-only"]
     R --> T{Root triage}
     T -->|pass| D[Specialist final verification]
     T -->|material finding| B[One bounded repair]
@@ -65,43 +91,7 @@ flowchart TD
     R2 --> D
 ```
 
-Optional paths: Luna medium for `fast_lookup`, Sol high for `failure_analyst` and `qa_operator`, and Astra xhigh for one framed `advisor` decision. See the [full architecture](docs/architecture.md).
-
-## Quick start
-
-Requirements: Git, Python 3.11 or newer, a Codex client that supports project-scoped configuration and custom agents, and access to the selected models in your plan or workspace. Model lists are discovery aids, not proof of account access. Runtime limits may be lower than the console's 1–10 helper choice.
-
-For a browser-led setup, extract the repository or ZIP, open `launchers/Bounded Orchestrator.app` on macOS or `launchers/Launch Bounded Orchestrator.vbs` on Windows, and choose your Git project in the folder picker. Choose a work style and helper team, select **Check changes**, then **Install** or **Save**. **Undo last change** restores the previous console-managed state if files have not changed since saving. **Close console** stops the local server. See the [local console guide](docs/local-console.md).
-
-The command-line path remains available:
-
-```bash
-git clone https://github.com/metapak/codex-bounded-orchestrator.git
-cd codex-bounded-orchestrator
-
-# Preview every planned action first.
-python3 scripts/install.py /absolute/path/to/your-project --preset balanced --dry-run
-
-# Install after reviewing the preview.
-python3 scripts/install.py /absolute/path/to/your-project --preset balanced
-
-# Open the interactive profile/model/effort selector for a known target path.
-./setup.command /absolute/path/to/your-project
-```
-
-When `setup.command` receives only a target path, it opens the interactive selector. Commands containing explicit options are passed through unchanged for advanced or automated use.
-
-Start a fresh Codex session in the target project, then invoke:
-
-```text
-$bounded-orchestrator
-
-Implement idempotency for invoice creation.
-Map the request and persistence path first.
-Do not push, merge, or deploy.
-```
-
-Run the [runtime smoke test](docs/runtime-smoke-test.md) before relying on the routing in real work.
+Other duties are available; their model and reasoning level depend on your selected team. See the [full architecture](docs/architecture.md).
 
 ## Platform entry points
 
@@ -200,7 +190,7 @@ The underlying Codex sandbox, operating-system permissions, repository protectio
 - [Task ledger](docs/task-ledger.md) and [expertise packs](docs/expertise-packs.md)
 - [Usage reporting and optional local evaluation](docs/usage-and-local-eval.md)
 - [Routing profiles](docs/profiles.md) and [external provider bridge](docs/external-providers.md)
-- [v0.6.0 release notes](docs/release-v0.6.0.md) and [release downloads](https://github.com/metapak/codex-bounded-orchestrator/releases)
+- [Historical v0.6.0 release notes](docs/release-v0.6.0.md); use the current `main` ZIP above for the browser launcher
 - [Source provenance](docs/provenance.md)
 
 ## Development

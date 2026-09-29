@@ -1,7 +1,7 @@
 [English](README.md) | [Türkçe](README.tr.md)
 
 <p align="center">
-  <img src="docs/assets/codex-bounded-orchestrator-cover-tr.svg" alt="Codex Bounded Orchestrator Türkçe kapak" width="100%">
+  <img src="docs/assets/cover-tr.svg" alt="Orkestra şefi ve uzman yardımcıları gösteren resimli sahne" width="100%">
 </p>
 
 # Codex Bounded Orchestrator
@@ -9,14 +9,42 @@
 [![Lisans: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**Codex repo işleri için yerel konsol ve sınırları belirli uzman çalışma düzeni.**
+**Codex projenizin şefini ve uzman ekibini yerel tarayıcı sayfasından seçin.**
 
-Codex Bounded Orchestrator; ajan profillerini, görev sözleşmelerini, inceleme kurallarını, yerel kullanım raporunu ve bütünlük araçlarını proje kurulumuyla sunar. Şef kullanıcıyla konuşur, planlar, görev verir ve uzmanların kısa kanıt raporlarını okur. Küçük işler dahil araştırmayı, dosya işlerini, kontrolleri ve bağımsız incelemeyi uzmanlar yapar. Şefin yalnız koordinasyon görevi bir talimat kuralıdır; köke özel teknik araç kilidi değildir.
-
-Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirmektir. Repo guardrail'leri yapılandırır; prompt'lar tek başına güvenlik sınırı değildir ve Codex istemcileri ayarları farklı biçimde uygulayabilir.
+Ekibi kurun, değişiklikleri kontrol edin ve geçmiş kullanımı görün. Şef sizinle konuşur ve işleri dağıtır; verilen işleri uzmanlar yapar. Bu görev ayrımı bir talimat kuralıdır, şefin araçlarını teknik olarak kilitlemez.
 
 > [!NOTE]
 > Bu bağımsız bir topluluk projesidir. OpenAI ile bağlantılı değildir ve OpenAI tarafından onaylanmamıştır.
+
+## Tarayıcıyla kurulum
+
+1. [Güncel proje ZIP dosyasını indirin](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) ve tamamen açın. Bu dosya GUI başlatıcılarını içeren güncel `main` kaynağıdır; eski sürüm indirmelerinde başlatıcılar bulunmayabilir.
+2. macOS'ta `launchers/Bounded Orchestrator.app`, Windows'ta `launchers/Launch Bounded Orchestrator.vbs` dosyasına çift tıklayın.
+3. Klasör seçicisinden mevcut Git projenizin klasörünü seçin. Yerel konsol tarayıcınızda açılır.
+4. Bir çalışma biçimi ve 1–10 yardımcı seçin. Her yardımcının görevini, modelini ve inceleme düzeyini ayarlayın; aynı görev tekrar edebilir.
+5. Projeye yazılacakları görmek için **Değişiklikleri kontrol et**, ardından **Kur** veya **Kaydet** seçin. Yeni ekibi kullanmak için Codex'i yeniden başlatın.
+
+[Git](https://git-scm.com/downloads) ve [Python **3.11 veya yenisi**](https://www.python.org/downloads/) önceden kurulu olmalıdır; bağlantılarda resmî grafik kurucuları bulunur. Başlatıcılar Python içermez. Codex istemciniz proje ayarlarını ve özel ajanları desteklemeli, hesabınız seçtiğiniz modellere erişebilmelidir. Çalışma ortamı aynı anda 10'dan az yardımcıya izin verebilir. Sunucu yalnız `127.0.0.1` adresini dinler. Kayıtlı dosyalar sonradan değişmediyse **Son değişikliği geri al** kullanılabilir; işiniz bitince **Konsolu kapat** seçin. Başlatıcıların çift tıklamayla açılması her işletim sisteminde doğrulanmadı; [macOS](INSTALL-MACOS.md) ve [Windows](INSTALL-WINDOWS.md) rehberlerinde terminal alternatifi bulunur.
+
+![Orkestra sahnesini ve gözlenen yardımcı dağılımını gösteren örnek Codex Kullanım sayfası](docs/assets/console-tr.png)
+
+*Temsili demo ekranı; projenizin veya kullanımınızın verilerini göstermez.*
+
+<details>
+<summary>İleri kullanım: komut satırı kurulumu ve skill çağrısı</summary>
+
+Komut satırı kurucusu otomasyon için kullanılabilir; yardımcıları tek tek oluşturma ekranı tarayıcı konsolundadır.
+
+```bash
+git clone https://github.com/metapak/codex-bounded-orchestrator.git
+cd codex-bounded-orchestrator
+python3 scripts/install.py /projenin/tam/yolu --preset balanced --dry-run
+python3 scripts/install.py /projenin/tam/yolu --preset balanced
+```
+
+Seçtiğiniz projede yeni Codex oturumu açın ve repo işlerinde `$bounded-orchestrator` çağırın. Model yönlendirmesine güvenmeden önce [çalışma zamanı kontrolünü](docs/runtime-smoke-test.md) yapın.
+
+</details>
 
 ## Artık ne yapıyor?
 
@@ -41,21 +69,19 @@ Hazır profillerle dengeli dağılım, en yüksek kalite, daha hafif günlük ku
 
 ## Mimari
 
-![Codex Bounded Orchestrator orkestra şefi, modeller ve görev dağılımı](docs/assets/codex-bounded-orchestrator-roles-tr.png)
-
-Görsel, ana yöneticinin işi hangi modellere ve rollere dağıttığını özetler. Aşağıdaki şema ise işin uygulama ve kontrol adımlarındaki ilerleyişini gösterir.
+Yardımcı ekibi projeye göre değişebilir. Bu şema, sabit model listesini değil şef ve uzmanlar arasındaki iş akışını gösterir.
 
 ```mermaid
 flowchart TD
-    U[Kullanıcı hedefi] --> O["Astra medium<br/>root owner"]
-    O --> E["Terra medium<br/>keşif ve araştırma<br/>salt okunur"]
-    O --> I["Sol high<br/>implementasyon<br/>tek writer"]
-    O --> V["Terra high<br/>doğrulama<br/>yalnız kanıt"]
+    U[Kullanıcı hedefi] --> O["Şef<br/>koordinasyon ve görev dağıtımı"]
+    O --> E["Araştırma uzmanı<br/>salt okunur"]
+    O --> I["Uygulama uzmanı<br/>tek yazar"]
+    O --> V["Doğrulama uzmanı<br/>yalnız kanıt"]
     O --> L["Yerel görev ledger'ı<br/>yalnız tanımlı metadata"]
     E --> O
     I --> V
     V --> F[Adayı dondur]
-    F --> R["Astra medium<br/>bağımsız review<br/>salt okunur"]
+    F --> R["İnceleme uzmanı<br/>salt okunur"]
     R --> T{Root triage}
     T -->|geçti| D[Uzman son doğrulaması]
     T -->|önemli bulgu| B[Bir sınırlı repair]
@@ -65,43 +91,7 @@ flowchart TD
     R2 --> D
 ```
 
-Opsiyonel yollar: `fast_lookup` için Luna medium, `failure_analyst` ve `qa_operator` için Sol high, tek çerçevelenmiş `advisor` kararı için Astra xhigh. Ayrıntılar: [mimari dokümanı](docs/architecture.md).
-
-## Hızlı başlangıç
-
-Gereksinimler: Git, Python 3.11 veya üzeri, proje kapsamlı yapılandırma ve özel ajan destekleyen bir Codex istemcisi ve seçilen modellere planınızda ya da çalışma alanınızda erişim. Model listesi hesap erişiminizi kanıtlamaz. Çalışma zamanı, konsoldaki 1–10 yardımcı seçeneğinden daha düşük bir sınır koyabilir.
-
-Tarayıcıyla kurulum için depoyu veya ZIP'i tamamen açın. macOS'ta `launchers/Bounded Orchestrator.app`, Windows'ta `launchers/Launch Bounded Orchestrator.vbs` dosyasını açıp klasör seçicisinden Git projenizi seçin. Çalışma biçimini ve yardımcı ekibi belirleyin, **Değişiklikleri kontrol et**, ardından **Kur** veya **Kaydet** seçin. Dosyalar son kayıttan beri değişmediyse **Son değişikliği geri al** önceki konsol durumunu yükler. **Konsolu kapat** yerel sunucuyu durdurur. Ayrıntılar: [yerel konsol rehberi](docs/local-console.tr.md).
-
-Komut satırı yolu da kullanılabilir:
-
-```bash
-git clone https://github.com/metapak/codex-bounded-orchestrator.git
-cd codex-bounded-orchestrator
-
-# Önce yapılacak bütün işlemleri görüntüle.
-python3 scripts/install.py /projenin/tam/yolu --preset balanced --dry-run
-
-# Ön izlemeyi inceledikten sonra kur.
-python3 scripts/install.py /projenin/tam/yolu --preset balanced
-
-# Bilinen proje yolu için profil/model/efor seçim ekranını aç.
-./setup.command /projenizin/tam/yolu
-```
-
-`setup.command` yalnız bir proje yolu alırsa etkileşimli seçim ekranını açar. Açık komut seçenekleri verilen gelişmiş veya otomatik kullanımlar değiştirilmeden doğrudan aktarılır.
-
-Hedef projede yeni bir Codex oturumu aç ve şu biçimde çağır:
-
-```text
-$bounded-orchestrator
-
-Invoice oluşturma akışına idempotency ekle.
-Önce request ve persistence yolunu haritala.
-Push, merge veya deploy yapma.
-```
-
-Gerçek işte bu yönlendirmeye güvenmeden önce [runtime smoke testini](docs/runtime-smoke-test.md) çalıştır.
+Başka görevler de seçilebilir; modelleri ve inceleme düzeyleri seçtiğiniz ekibe bağlıdır. Ayrıntılar: [mimari dokümanı](docs/architecture.md).
 
 ## Platform giriş noktaları
 
@@ -198,7 +188,7 @@ Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo kor
 - [Görev ledger'ı](docs/task-ledger.tr.md) ve [uzmanlık paketleri](docs/expertise-packs.tr.md)
 - [Kullanım raporu ve isteğe bağlı yerel değerlendirme](docs/usage-and-local-eval.tr.md)
 - [Yönlendirme profilleri](docs/profiles.tr.md) ve [haricî sağlayıcı köprüsü](docs/external-providers.tr.md)
-- [v0.6.0 sürüm notları](docs/release-v0.6.0.tr.md) ve [sürüm indirmeleri](https://github.com/metapak/codex-bounded-orchestrator/releases)
+- [Geçmiş v0.6.0 sürüm notları](docs/release-v0.6.0.tr.md); tarayıcı başlatıcısı için yukarıdaki güncel `main` ZIP dosyasını kullanın
 - [Kaynak kökeni](docs/provenance.md)
 
 ## Geliştirme
