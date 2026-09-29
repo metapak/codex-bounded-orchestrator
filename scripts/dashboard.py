@@ -506,6 +506,13 @@ class Server(HTTPServer):
         self.token = secrets.token_urlsafe(32)
         self.origin = 'http://127.0.0.1:'+str(self.server_port)
 
+    def get_request(self):
+        connection, address = super().get_request()
+        # Browsers may open an idle preconnect socket. Keep this single-threaded
+        # server responsive without allowing concurrent settings writes.
+        connection.settimeout(1.0)
+        return connection, address
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass

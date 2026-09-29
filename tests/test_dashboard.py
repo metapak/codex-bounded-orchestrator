@@ -2,6 +2,7 @@ from __future__ import annotations
 import http.client
 import importlib.util
 import json
+import socket
 import subprocess
 import sys
 import tempfile
@@ -345,6 +346,20 @@ class ConsoleTests(unittest.TestCase):
                 result=conn.getresponse();self.assertEqual(result.status,200);self.assertTrue(result.read())
         finally:
             conn.close();server.shutdown();server.server_close();worker.join()
+
+    def test_idle_browser_connection_does_not_block_other_requests(self):
+        server = dashboard.Server(('127.0.0.1', 0), self.console)
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        idle = socket.create_connection(('127.0.0.1', server.server_port), timeout=3)
+        conn = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=3)
+        try:
+            conn.request('GET', '/')
+            response = conn.getresponse()
+            self.assertEqual(response.status, 200)
+            self.assertIn(b'Codex', response.read())
+        finally:
+            idle.close();conn.close();server.shutdown();server.server_close();worker.join()
 
 if __name__ == '__main__':
     unittest.main()
