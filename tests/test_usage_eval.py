@@ -13,7 +13,7 @@ LOCAL_EVAL = ROOT / ".codex/tools/local_eval.py"
 
 
 class UsageAndEvalTests(unittest.TestCase):
-    def test_usage_uses_only_token_record_deltas(self) -> None:
+    def test_usage_uses_only_request_token_records(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             sessions = Path(temporary)
             records = [
@@ -25,7 +25,7 @@ class UsageAndEvalTests(unittest.TestCase):
             result = subprocess.run([sys.executable, str(USAGE), "--sessions", str(sessions), "--json"], text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
             payload = json.loads(result.stdout)
-            self.assertEqual(payload["totals"]["total_tokens"], 19)
+            self.assertEqual(payload["totals"]["total_tokens"], 31)
             self.assertEqual(payload["records_observed"], 2)
             self.assertNotIn("must never appear", result.stdout)
 
@@ -48,6 +48,65 @@ class UsageAndEvalTests(unittest.TestCase):
             self.assertEqual(payload["totals"]["total_tokens"], 14)
             self.assertEqual((payload["groups"][0]["model"], payload["groups"][0]["role"]), ("gpt-nested", "explorer"))
             self.assertNotIn("private prompt text", result.stdout)
+
+    def test_real_request_shape_dedup_and_filters(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("usage", USAGE)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            sessions = Path(temporary)
+            records = [
+                {"type":"session_meta", "payload":{"id":"sanitized-thread", "cwd":"/sample/project", "prompt":"SECRET"}},
+                {"type":"turn_context", "payload":{"model":"gpt-test", "role":"implementer"}},
+                {"timestamp":"2026-09-01T10:00:00Z", "type":"token_usage_record", "payload":{"usage":{"input_tokens":29000,"cached_input_tokens":20000,"output_tokens":268,"total_tokens":29268},"thread_token_usage":{"total_tokens":29268}}},
+                {"timestamp":"2026-09-02T10:00:00Z", "type":"token_usage_record", "payload":{"usage":{"input_tokens":32000,"cached_input_tokens":21000,"output_tokens":426,"total_tokens":32426},"thread_token_usage":{"total_tokens":61694}}},
+                {"timestamp":"2026-09-02T10:00:01Z", "type":"event_msg", "payload":{"type":"token_count", "info":{"total_token_usage":{"total_tokens":61694}}}},
+            ]
+            for filename in ("a.jsonl", "copy.jsonl"):
+                (sessions/filename).write_text("".join(json.dumps(r)+"\n" for r in records))
+            report = module.scan(sessions)
+            self.assertEqual(report["totals"]["total_tokens"], 61694)
+            self.assertEqual(report["totals"]["input_tokens"], 61000)
+            self.assertEqual(report["records_observed"], 2)
+            self.assertEqual(report["duplicates_skipped"], 3)
+            self.assertNotIn("SECRET", json.dumps(report))
+            filtered = module.scan(sessions, date_from="2026-09-02", project="/sample/project", thread="sanitized-thread")
+            self.assertEqual(filtered["totals"]["total_tokens"], 32426)
+            self.assertEqual(module.scan(sessions, project="missing")["status"], "unavailable")
+
+    def test_legacy_cumulative_resets_and_equal_request_values(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("usage", USAGE)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            sessions = Path(temporary)
+            records = [{"timestamp":f"2026-09-01T10:00:0{i}Z", "type":"event_msg", "payload":{"type":"token_count", "info":{"total_token_usage":{"total_tokens":v}}}} for i,v in enumerate((12,19,4,9))]
+            records += [{"type":"token_usage_record", "thread_id":"request-thread", "usage":{"total_tokens":12}}]*2
+            (sessions/"a.jsonl").write_text("".join(json.dumps(r)+"\n" for r in records)+"invalid\n")
+            report = module.scan(sessions)
+            self.assertEqual(report["totals"]["total_tokens"], 52)
+            self.assertEqual(report["counter_resets"], 1)
+            self.assertEqual(report["malformed_lines_skipped"], 1)
+
+    def test_legacy_cumulative_orders_by_time_across_files_before_filter(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("usage", USAGE)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            sessions = Path(temporary)
+            for filename, stamp, total in (("a.jsonl", "2026-09-02T00:00:00Z", 150), ("b.jsonl", "2026-09-01T00:00:00Z", 100)):
+                records = [
+                    {"type":"session_meta", "payload":{"id":"same-session"}},
+                    {"timestamp":stamp, "type":"event_msg", "payload":{"type":"token_count", "info":{"total_token_usage":{"total_tokens":total}}}},
+                ]
+                (sessions/filename).write_text("".join(json.dumps(r)+"\n" for r in records))
+            report = module.scan(sessions)
+            self.assertEqual(report['totals']['total_tokens'], 150)
+            self.assertEqual(report['counter_resets'], 0)
+            self.assertEqual(module.scan(sessions, date_from='2026-09-02')['totals']['total_tokens'], 50)
 
     def test_local_eval_requires_argv_and_writes_ignored_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

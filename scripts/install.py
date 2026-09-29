@@ -109,6 +109,14 @@ PRESETS = {
     "custom": BALANCED_PROFILE,
 }
 
+# Compact context routing, opt-in; preserve existing presets and custom choices.
+PRESETS["focused"] = {
+    role: ("gpt-6-luna", "high") if role in ("fast_lookup", "explorer")
+    else ("gpt-6-astra", "medium") if role == "owner"
+    else ("gpt-6-sol", "medium")
+    for role in ALL_ROLES
+}
+
 MANAGED_RELATIVE_FILES = (
     Path(".codex/tools/candidate.py"),
     Path(".codex/tools/ledger.py"),

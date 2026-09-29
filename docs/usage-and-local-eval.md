@@ -9,7 +9,7 @@ python3 .codex/tools/usage_report.py
 python3 .codex/tools/usage_report.py --json
 ```
 
-The reporter scans `~/.codex/sessions` read-only and aggregates only observed `token_usage_record.usage` counter deltas. It never prints prompt or source content. Model, role, and thread are shown only when those fields are present on the usage record. The totals are local observations; they are not quota percentages, bills, or cost estimates.
+The reporter scans `~/.codex/sessions` read-only and sums observed request `token_usage_record.usage` counters; legacy `token_count` cumulative counters use chronological deltas. It never prints prompt or source content. Model, role, and thread are shown only when those fields are present on token/session metadata (thread filename is a fallback). The totals are local observations; they are not quota percentages, bills, or cost estimates.
 
 ## Explicit local evaluation
 
@@ -25,3 +25,6 @@ The runner does not use a shell, runs in the project root, enforces a bounded ti
 The pass summary is bound to a privacy-safe fingerprint of HEAD plus relevant tracked and untracked worktree content. Any later candidate change makes that pass stale; ignored evaluation summaries are excluded so saving the result does not invalidate itself.
 
 The ledger also records stable attempt and event IDs. `interrupt`, `wait-user`, and `needs-repair` preserve the last short evidence; `retry --evidence ...` permits one bounded retry and routes repair back to the named owner role.
+
+
+[Request accounting, filters and local console](local-console.md). `payload.usage` is per request; only legacy `token_count.info.total_token_usage` uses cumulative deltas.

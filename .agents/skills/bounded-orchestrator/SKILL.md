@@ -192,7 +192,13 @@ Routing rules:
 
 Use `fast_lookup` only when the query is exact and mechanical. Use `explorer` when the root needs flow, boundaries, or interpretation.
 
-Run independent read-only exploration/research in parallel within the configured thread cap. Wait for evidence, resolve contradictions, and let the root decide implementation direction before any writer starts.
+Start with one suitable specialist. Add parallel read-only work only when independent deliverables justify it, within the configured thread cap. Reuse the same relevant agent for follow-ups.
+
+Use a minimal task brief and a fresh context by default when the runtime supports it; attach only evidence needed for the owned scope. Give the independent reviewer a clean brief with the frozen candidate, acceptance criteria, and verification evidence, without the writer's conversational history. If the runtime cannot provide clean context, disclose that limitation.
+
+Bound waits and avoid polling unchanged state. Return short evidence reports: changed paths, actual checks and results, acceptance status, and remaining blockers. These are soft context/report preferences, not enforced token budgets; finite writer and retry limits below remain mandatory.
+
+Run justified independent read-only exploration/research in parallel within the configured thread cap. Wait for evidence, resolve contradictions, and let the root decide implementation direction before any writer starts.
 
 Use `failure_analyst` only after the root can state:
 

@@ -42,6 +42,14 @@ SKIP_NAMES = {
 SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle"}
 WINDOWS_CRLF_SUFFIXES = {".ps1", ".cmd"}
 REQUIRED_SOURCE_FILES = {
+    "scripts/dashboard.py",
+    "scripts/console/index.html",
+    "scripts/console/app.js",
+    "scripts/console/style.css",
+    "docs/local-console.md",
+    "docs/local-console.tr.md",
+    "tests/test_dashboard.py",
+    "tests/fixtures/usage-sanitized/rollout.jsonl",
     ".codex/tools/usage_report.py",
     ".codex/tools/local_eval.py",
     ".codex/bounded-orchestrator.eval.example.json",

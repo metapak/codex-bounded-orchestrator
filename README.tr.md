@@ -210,3 +210,6 @@ Bu akış Codex işlerini daha net veya daha kolay denetlenir hâle getiriyorsa 
 Apache-2.0 ile lisanslanmıştır. Bkz. [LICENSE](LICENSE) ve [NOTICE](NOTICE).
 
 Bu proje, yine Apache-2.0 ile dağıtılan [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator) projesinden ilham alan sıfırdan bir yeniden tasarımdır. Atıf ve bağlam için [NOTICE](NOTICE) ile [tasarım farklarına](docs/from-astra-luna-orchestrator.md) bak.
+
+
+Tarayıcıda yerel ayarlar, istek kullanımı ve thread ayrıntıları: [yerel konsol](docs/local-console.tr.md). Bu installer deposundan `python3 scripts/dashboard.py /hedef/depo` ile başlatın.

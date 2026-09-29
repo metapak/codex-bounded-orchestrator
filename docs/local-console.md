@@ -1,0 +1,32 @@
+[English](local-console.md) | [Türkçe](local-console.tr.md)
+
+# Local console
+
+From the extracted installer repository, with Python 3.11 or newer:
+
+```sh
+python3 scripts/dashboard.py /path/to/target-repository
+# Windows: py -3 scripts/dashboard.py C:\path\to\target-repository
+```
+
+The browser opens by default. `--no-browser` disables opening; `--port 8765` selects the loopback port (`0` requests a free port). Use the printed `http://127.0.0.1:PORT` URL and keep the terminal open. Ctrl+C stops the server. No npm or third-party Python package is required. The launcher and its HTML/CSS/JS are included in source, macOS and Windows packages. Configuration uses the installer repository; it is intentionally not copied into target projects. Installed read-only analytics remains available with `python .codex/tools/usage_report.py --json`.
+
+The Turkish tabs are **Ayarlar**, **Kullanım**, and **Görev Ayrıntıları**. Settings apply only to the selected project; this installer does not support user-global installation. Existing role model/effort values and the thread cap are read from project files. New targets start with `focused`; existing targets keep their current selections. Presets are routing intent, not account capability detection. GPT IDs and model-dependent reasoning availability must be verified in a fresh Codex session. The concurrency cap accepts 1–10; runtime/account limits take precedence.
+
+**Preview** validates selected fields and shows exact setting-line diffs (zero surrounding context to avoid exposing unrelated secrets) plus managed asset actions. **Save** writes only this target, backs up the previous configuration through the installer, records ownership/hashes, and preserves unrelated TOML assignments and AGENTS text. Installer-owned, unchanged assets can be updated. Modified or unowned role/tool/skill conflicts block saving; reconcile them explicitly with the CLI installer first. Symlink destinations are refused. Invalid TOML is an error, never replaced silently. Edits after preview require another preview.
+
+**Restore** restores the immediately preceding console-managed change, including prior file contents and installer manifest. It refuses any saved file that changed since Save. Snapshot/backups remain local in the ignored `.codex/.bounded-orchestrator` runtime directory; they may contain your previous configuration and are never returned by the API. Restoring a first installation removes the newly installed managed files; the runtime ignore is retained when installer backups remain, so their previous configuration contents stay unstageable by Git. CLI uninstall continues using its existing ownership/conflict rules; the console launcher is repository-only and runtime snapshots/backups remain ignored local state.
+
+The server binds only `127.0.0.1`. Writes require a random CSRF token, matching Origin and Host, JSON content type and a bounded body. Web input never enters a shell command. The browser receives only selected setting values and accounting metadata, never credentials or session message text.
+
+Usage counts each `token_usage_record.payload.usage` as request usage, independently of `thread_token_usage`. For example, requests 29,268 and 32,426 produce 61,694 total. Older `event_msg/token_count.info.total_token_usage` records use cumulative deltas with reset detection; request accounting takes precedence for a thread when both formats are present. Timestamp/request-ID duplicates are skipped; anonymous identical request records remain separate because they may be separate requests. Missing metadata is `unknown`. Date/project/thread filters apply only where the metadata exists; unknown timestamps are excluded by date filters. Cache is already included in input and reasoning in output. No quota percentage, benchmark savings or price is inferred. Cost is unavailable without reliable pricing metadata. Mixed-format logs, resets and missing records can limit completeness.
+
+Task detail shows thread groups and timestamped token records. It does not infer task completion or tool usage from token events. Context/report guidance is a **soft preference**, not a hard token limit: one specialist by default, minimal fresh context where supported, clean reviewer context, agent reuse, justified parallelism, bounded waits and short evidence reports. Candidate freezing, single writer, independent checks and finite retries remain mandatory.
+
+Sanitized demo data (no real session content):
+
+```sh
+python3 scripts/dashboard.py /path/to/temporary-target --sessions tests/fixtures/usage-sanitized --no-browser --port 0
+```
+
+Current configuration reference: [official Codex config reference](https://learn.chatgpt.com/docs/config-file/config-reference). Configuration is intent; a live smoke test confirms what the client actually applies.

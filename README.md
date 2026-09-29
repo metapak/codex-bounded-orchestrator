@@ -212,3 +212,6 @@ If this workflow makes your Codex work clearer or safer to review, a GitHub star
 Licensed under Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 This project is a ground-up redesign inspired by [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator), which is also distributed under Apache-2.0. See [NOTICE](NOTICE) and the [design differences](docs/from-astra-luna-orchestrator.md) for attribution and context.
+
+
+Local browser settings, request usage and thread details: [local console](docs/local-console.md). Start from this installer repository with `python3 scripts/dashboard.py /path/to/target`.

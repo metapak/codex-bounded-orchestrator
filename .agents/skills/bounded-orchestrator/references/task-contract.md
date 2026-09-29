@@ -15,7 +15,7 @@ Ownership:
 - Writable paths, or read-only:
 
 Context:
-- Minimum evidence needed to start:
+- Minimum evidence needed to start (fresh context where supported; omit conversation history):
 
 Invariants:
 - Behavior and files that must not change:

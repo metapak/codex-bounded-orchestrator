@@ -1,66 +1,44 @@
 #!/usr/bin/env python3
-"""Report locally observed Codex token deltas without reading prompt content."""
-
+"""Read local accounting metadata; never retain message or prompt content."""
 from __future__ import annotations
-
 import argparse
 import json
-import sys
 from collections import defaultdict
 from pathlib import Path
 
-COUNTERS = ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens")
+COUNTERS = ('input_tokens', 'cached_input_tokens', 'output_tokens', 'reasoning_output_tokens', 'total_tokens')
+META = ('model', 'model_id', 'role', 'agent_role', 'thread_id', 'session_id', 'conversation_id', 'cwd', 'project')
 
+def scalar(obj, *keys):
+    return next((str(obj[k]) for k in keys if isinstance(obj.get(k), (str, int)) and str(obj[k])), 'unknown')
 
-def scalar(obj: dict, *keys: str) -> str:
-    for key in keys:
-        value = obj.get(key)
-        if isinstance(value, (str, int)) and str(value):
-            return str(value)
-    return "unknown"
-
-
-def token_record(obj: dict) -> dict | None:
-    """Return only allowed token-record metadata plus its usage object."""
-    if obj.get("type") == "token_usage_record":
-        payload = obj.get("payload")
-        if isinstance(obj.get("usage"), dict):
-            return obj
-        if isinstance(payload, dict) and isinstance(payload.get("usage"), dict):
-            # Real rollout records keep usage inside payload while the event type
-            # stays on the outer object. Copy only accounting/grouping fields;
-            # never retain prompt, message, source, or other event content.
-            record = {"usage": payload["usage"]}
-            for key in ("model", "model_id", "role", "agent_role", "thread_id", "session_id", "conversation_id"):
-                value = payload.get(key, obj.get(key))
-                if isinstance(value, (str, int)):
-                    record[key] = value
-            context = payload.get("context")
-            if isinstance(context, dict):
-                for key in ("model", "model_id", "role", "agent_role", "thread_id", "session_id", "conversation_id"):
-                    value = context.get(key)
-                    if key not in record and isinstance(value, (str, int)):
-                        record[key] = value
-            return record
-    candidates = [obj]
-    for key in ("payload", "event", "data"):
-        if isinstance(obj.get(key), dict):
-            candidates.append(obj[key])
+def token_record(obj):
+    payload = obj.get('payload', {})
+    candidates = [obj] + [obj[k] for k in ('payload', 'event', 'data') if isinstance(obj.get(k), dict)]
     for item in candidates:
-        if item.get("type") == "token_usage_record" and isinstance(item.get("usage"), dict):
-            return item
+        if item.get('type', obj.get('type')) == 'token_usage_record' and isinstance(item.get('usage'), dict):
+            result = {k: v for source in (obj, item, item.get('context', {})) if isinstance(source, dict) for k, v in source.items() if k in META and isinstance(v, (str, int))}
+            result.update(usage=item['usage'], semantics='request', timestamp=scalar(obj, 'timestamp'), event_id=scalar(item, 'request_id', 'id'))
+            return result
+    # Older CLI event_msg/token_count records are cumulative. Prefer total to last
+    # so repeated last-token snapshots do not become new requests.
+    if isinstance(payload, dict) and payload.get('type') == 'token_count':
+        info = payload.get('info')
+        if isinstance(info, dict) and isinstance(info.get('total_token_usage'), dict):
+            return {'usage': info['total_token_usage'], 'semantics': 'cumulative', 'timestamp': scalar(obj, 'timestamp'), 'event_id': 'unknown'}
     return None
 
-
-def scan(root: Path) -> dict:
-    totals = defaultdict(lambda: defaultdict(int))
-    files = records = malformed = 0
-    for path in sorted(root.rglob("*.jsonl")) if root.exists() else []:
+def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
+    groups = defaultdict(lambda: defaultdict(int))
+    records, raw_records, seen, previous = [], [], set(), {}
+    files = malformed = duplicates = resets = unreadable = 0
+    for path in sorted(root.rglob('*.jsonl')) if root.exists() else []:
         files += 1
-        previous: dict[tuple[str, str, str], dict[str, int]] = {}
+        metadata = {'thread_id': path.stem}
         try:
-            lines = path.open("r", encoding="utf-8", errors="replace")
+            lines = path.open(encoding='utf-8', errors='replace')
         except OSError:
+            unreadable += 1
             continue
         with lines:
             for line in lines:
@@ -71,53 +49,69 @@ def scan(root: Path) -> dict:
                     continue
                 if not isinstance(obj, dict):
                     continue
+                payload = obj.get('payload', {})
+                if obj.get('type') in ('session_meta', 'turn_context') and isinstance(payload, dict):
+                    metadata.update({k: v for k, v in payload.items() if k in META and isinstance(v, (str, int))})
+                    if obj['type'] == 'session_meta' and isinstance(payload.get('id'), str):
+                        metadata['thread_id'] = payload['id']
                 record = token_record(obj)
                 if record is None:
                     continue
-                usage = record["usage"]
-                model = scalar(record, "model", "model_id")
-                role = scalar(record, "role", "agent_role")
-                thread = scalar(record, "thread_id", "session_id", "conversation_id")
-                key = (model, role, thread)
-                current = {name: value for name in COUNTERS
-                           if isinstance((value := usage.get(name)), int) and value >= 0}
+                meta = {**metadata, **record}
+                model = scalar(meta, 'model', 'model_id')
+                role = scalar(meta, 'role', 'agent_role')
+                tid = scalar(meta, 'thread_id', 'session_id', 'conversation_id')
+                proj = scalar(meta, 'project', 'cwd')
+                stamp = record['timestamp']
+                current = {k: v for k, v in record['usage'].items() if k in COUNTERS and type(v) is int and v >= 0}
                 if not current:
                     continue
-                before = previous.get(key, {})
-                for name, value in current.items():
-                    delta = value - before.get(name, 0)
-                    totals[key][name] += delta if delta >= 0 else value
-                previous[key] = current
-                records += 1
-    groups = []
-    grand = defaultdict(int)
-    for (model, role, thread), usage in sorted(totals.items()):
+                raw_records.append({'model': model, 'role': role, 'thread': tid, 'project': proj, 'timestamp': stamp, 'semantics': record['semantics'], 'event_id': record['event_id'], 'usage': current})
+    # Sort accounting events before deltas and date filters. Rollout filenames
+    # are not a chronological contract, including duplicate/exported logs.
+    raw_records.sort(key=lambda r: (r['thread'], r['timestamp']))
+    request_threads = {r['thread'] for r in raw_records if r['semantics'] == 'request'}
+    for record in raw_records:
+        tid, stamp, current = record['thread'], record['timestamp'], record['usage']
+        identity = (tid, record['semantics'], record['event_id'], stamp, tuple(sorted(current.items())))
+        if (stamp != 'unknown' or record['event_id'] != 'unknown') and identity in seen:
+            duplicates += 1
+            continue
+        seen.add(identity)
+        if record['semantics'] == 'cumulative' and tid in request_threads:
+            continue
+        delta = current
+        if record['semantics'] == 'cumulative':
+            before = previous.get(tid, {})
+            reset = any(v < before.get(k, 0) for k, v in current.items())
+            resets += int(reset)
+            delta = current if reset else {k: v - before.get(k, 0) for k, v in current.items()}
+            previous[tid] = current
+        day = stamp[:10] if stamp != 'unknown' else ''
+        if (date_from and (not day or day < date_from)) or (date_to and (not day or day > date_to)) or (project and record['project'] != project) or (thread and tid != thread):
+            continue
+        records.append({k: v for k,v in record.items() if k not in ('event_id', 'usage')} | {'usage': delta})
+    for record in records:
+        key = tuple(record[k] for k in ('model', 'role', 'thread', 'project'))
+        for name, value in record['usage'].items():
+            groups[key][name] += value
+    result_groups, grand = [], defaultdict(int)
+    for key, usage in sorted(groups.items()):
+        result_groups.append(dict(zip(('model', 'role', 'thread', 'project'), key), usage=dict(usage)))
         for name, value in usage.items():
             grand[name] += value
-        groups.append({"model": model, "role": role, "thread": thread, "usage": dict(sorted(usage.items()))})
-    return {"status": "available" if records else "unavailable", "source": "local Codex session token_usage_record.usage deltas",
-            "files_scanned": files, "records_observed": records, "malformed_lines_skipped": malformed,
-            "totals": dict(sorted(grand.items())), "groups": groups,
-            "limitations": "Observed local token counters are not quota percentages, billing totals, or cost estimates."}
+    return {'platform': 'codex', 'status': 'available' if records else 'unavailable', 'source': 'local session request usage; legacy cumulative token_count fallback', 'files_scanned': files, 'records_observed': len(records), 'duplicates_skipped': duplicates, 'counter_resets': resets, 'unreadable_files': unreadable, 'malformed_lines_skipped': malformed, 'totals': dict(grand), 'groups': result_groups, 'records': records, 'cost': None, 'limitations': 'Observed counters only, not quota or billing. Cache is included in input; reasoning is included in output. Unknown metadata is unavailable; thread filename is a fallback. Unknown legacy timestamps cannot be reliably ordered. Legacy resets count a new segment. Request records take precedence per thread; mixed-format logs may be incomplete. No reliable pricing metadata; cost unavailable.'}
 
-
-def main(argv: list[str] | None = None) -> int:
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sessions", type=Path, default=Path.home() / ".codex/sessions")
-    parser.add_argument("--json", action="store_true")
+    parser.add_argument('--sessions', type=Path, default=Path.home()/'.codex/sessions')
+    parser.add_argument('--json', action='store_true')
+    for key in ('date-from', 'date-to', 'project', 'thread'):
+        parser.add_argument('--'+key, default='')
     args = parser.parse_args(argv)
-    report = scan(args.sessions.expanduser())
-    if args.json:
-        print(json.dumps(report, indent=2, sort_keys=True))
-    else:
-        print("Codex local usage report")
-        print(f"Status: {report['status']}; records: {report['records_observed']}; files: {report['files_scanned']}")
-        for group in report["groups"]:
-            values = ", ".join(f"{k}={v}" for k, v in group["usage"].items())
-            print(f"- model={group['model']} role={group['role']} thread={group['thread']}: {values}")
-        print(report["limitations"])
+    report = scan(args.sessions.expanduser(), date_from=args.date_from, date_to=args.date_to, project=args.project, thread=args.thread)
+    print(json.dumps(report, indent=2, sort_keys=True) if args.json else f"Codex local usage: {report['status']}\n{report['totals']}\n{report['limitations']}")
     return 0
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

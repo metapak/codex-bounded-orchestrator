@@ -68,6 +68,14 @@ EXPECTED_AGENTS: dict[str, dict[str, str]] = {
 }
 
 REQUIRED_FILES = (
+    "scripts/dashboard.py",
+    "scripts/console/index.html",
+    "scripts/console/app.js",
+    "scripts/console/style.css",
+    "docs/local-console.md",
+    "docs/local-console.tr.md",
+    "tests/test_dashboard.py",
+    "tests/fixtures/usage-sanitized/rollout.jsonl",
     ".codex/config.toml",
     "presets/sol-owner.config.toml",
     ".codex/tools/candidate.py",

@@ -10,7 +10,7 @@ From the target repository:
 python .codex/tools/candidate.py --help
 ```
 
-Open `.codex/config.toml` and confirm the selected root profile. The default should be:
+Open `.codex/config.toml` and confirm the selected root profile. Read `.codex/.bounded-orchestrator/install.json` (`preset` and `role_settings`) and compare with the selected routing profile, including quota-saver, focused or custom. Do not assume every installation uses Balanced. The Balanced owner example is:
 
 ```toml
 model = "gpt-6-astra"
@@ -41,7 +41,7 @@ push, deploy, or perform external actions.
 
 ## 3. Pass criteria
 
-- The root uses the selected Astra medium profile, or the explicitly selected Sol high fallback.
+- The root and children match the selected manifest `role_settings`, including custom overrides; report any mismatch.
 - `explorer` and `reviewer` are discoverable by their registered names.
 - The explorer performs no write.
 - The reviewer performs no write and returns findings only.
