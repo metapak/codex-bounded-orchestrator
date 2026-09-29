@@ -2,7 +2,7 @@
 
 # Examples
 
-Invoke `$bounded-orchestrator` in a target project after installation. State the outcome and boundaries; the root owner decides whether delegation adds value.
+Invoke `$bounded-orchestrator` in a target project after installation. State the outcome and boundaries; the chief assigns every execution step to a bounded specialist.
 
 ## Feature across multiple files
 
@@ -34,4 +34,4 @@ Use the advisor only for the named architecture decision. Return evidence,
 tradeoffs, and a recommendation; do not modify code or external systems.
 ```
 
-Small, localized, low-risk edits should remain root-only. The skill's delegation gate is intended to avoid agent overhead when independent investigation or verification would add little value.
+Small, localized edits also go to one suitable specialist. The chief stays with user communication and coordination; additional specialists are used only when their independent work adds value.

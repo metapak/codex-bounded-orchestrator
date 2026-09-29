@@ -56,6 +56,8 @@ class ReleaseBuilderTests(unittest.TestCase):
                 )
                 self.assertIn(PREFIX + "setup.command", names)
                 self.assertIn(PREFIX + "setup.cmd", names)
+                for name in ("launchers/Bounded Orchestrator.app/Contents/Info.plist", "launchers/Bounded Orchestrator.app/Contents/MacOS/launch", "launchers/Launch Bounded Orchestrator.vbs", "launchers/launch_dashboard.py"):
+                    self.assertIn(PREFIX + name, names)
                 self.assertFalse(any("/.git/" in name for name in names))
                 self.assertFalse(any(name.endswith(".pyc") for name in names))
 
@@ -64,6 +66,8 @@ class ReleaseBuilderTests(unittest.TestCase):
                 info = archive.getinfo(PREFIX + "setup.command")
                 mode = (info.external_attr >> 16) & 0o777
                 self.assertEqual(mode, 0o755)
+                launcher = archive.getinfo(PREFIX + "launchers/Bounded Orchestrator.app/Contents/MacOS/launch")
+                self.assertEqual((launcher.external_attr >> 16) & 0o777, 0o755)
 
             with zipfile.ZipFile(windows) as archive:
                 self.assertIn(PREFIX + "START-HERE-WINDOWS.txt", archive.namelist())

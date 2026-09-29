@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECT_NAME = "codex-bounded-orchestrator"
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 EXECUTABLE_PATHS = {
+    "launchers/Bounded Orchestrator.app/Contents/MacOS/launch",
     "setup.command",
     "scripts/install.sh",
     "scripts/install.py",
@@ -42,6 +43,10 @@ SKIP_NAMES = {
 SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle"}
 WINDOWS_CRLF_SUFFIXES = {".ps1", ".cmd"}
 REQUIRED_SOURCE_FILES = {
+    "launchers/Bounded Orchestrator.app/Contents/Info.plist",
+    "launchers/Bounded Orchestrator.app/Contents/MacOS/launch",
+    "launchers/Launch Bounded Orchestrator.vbs",
+    "launchers/launch_dashboard.py",
     "scripts/model_catalog.py",
     "scripts/model_catalog.json",
     "scripts/dashboard.py",
@@ -85,9 +90,9 @@ REQUIRED_SOURCE_FILES = {
     "tests/test_vnext.py",
 }
 
-MAC_START = """Codex Bounded Orchestrator {version} - macOS\n\n1. Extract this ZIP completely.\n2. Double-click setup.command.\n3. Drag the target Git repository folder into Terminal.\n4. Choose balanced, quality, economy, quota saver, or custom.\n5. Keep external APIs disabled, or explicitly select a read-only Claude or DeepSeek proposal tool.\n6. Review the final configuration summary.\n\nDetailed instructions: INSTALL-MACOS.md\n"""
+MAC_START = """Codex Bounded Orchestrator {version} - macOS\n\n1. Extract this ZIP completely.\n2. Open launchers/Bounded Orchestrator.app.\n3. Choose the target Git repository folder in the native folder picker.\n4. The local browser console opens. Choose a work style and planned helper team, check the changes, then select Install or Save.\n5. Use Close console when finished. Python 3.11 or newer is required.\n\nTerminal installer remains available through setup.command. Detailed instructions: docs/local-console.md\n"""
 
-WINDOWS_START = """Codex Bounded Orchestrator {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click setup.cmd.\r\n3. Paste the target Git repository folder path.\r\n4. Choose balanced, quality, economy, quota saver, or custom.\r\n5. Keep external APIs disabled, or explicitly select a read-only Claude or DeepSeek proposal tool.\r\n6. Review the final configuration summary.\r\n\r\nDetailed instructions: INSTALL-WINDOWS.md\r\n"""
+WINDOWS_START = """Codex Bounded Orchestrator {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click launchers/Launch Bounded Orchestrator.vbs.\r\n3. Choose the target Git repository folder in the folder picker.\r\n4. The local browser console opens. Choose a work style and planned helper team, check the changes, then select Install or Save.\r\n5. Use Close console when finished. Python 3.11 or newer is required.\r\n\r\nTerminal installer remains available through setup.cmd. Detailed instructions: docs/local-console.md\r\n"""
 
 
 class ReleaseError(RuntimeError):

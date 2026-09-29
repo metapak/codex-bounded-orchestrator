@@ -1,4 +1,4 @@
 {"timestamp":"2026-09-03T09:00:00Z","type":"session_meta","payload":{"id":"demo-helper-one","session_id":"demo-root","parent_thread_id":"demo-root","source":{"subagent":{}},"agent_nickname":"Piko","agent_role":"researcher","cwd":"/sample/project"}}
-{"timestamp":"2026-09-03T09:01:00Z","type":"turn_context","payload":{"turn_id":"demo-helper-turn-one","model":"gpt-6-luna"}}
+{"timestamp":"2026-09-03T09:01:00Z","type":"turn_context","payload":{"turn_id":"demo-helper-turn-one","model":"gpt-6-luna","effort":"high"}}
 {"timestamp":"2026-09-03T09:02:00Z","type":"token_usage_record","payload":{"thread_id":"demo-helper-one","session_id":"demo-root","turn_id":"demo-helper-turn-one","usage":{"input_tokens":11000,"cached_input_tokens":4000,"output_tokens":1000,"total_tokens":12000}}}
 {"timestamp":"2026-09-03T09:03:00Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"demo-helper-turn-one"}}

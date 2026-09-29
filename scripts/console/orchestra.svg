@@ -59,6 +59,17 @@
       <path d="M28 121q-8-17-2-25m60 25q8-17 2-25" fill="none" stroke="#edc16d" stroke-width="3" stroke-linecap="round"/>
       <path d="M35 129h50" stroke="#f7d68e" stroke-width="3"/><circle cx="60" cy="129" r="8" fill="#6c3c2d" stroke="#f7d68e" stroke-width="2"/>
     </symbol>
+    <!-- All duty variants share the 120 × 190 art box and add one readable prop. -->
+    <symbol id="musician-researcher" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><circle cx="90" cy="112" r="13" fill="#d9edf5" stroke="#f4dc9e" stroke-width="5"/><path d="m99 122 13 16" stroke="#f4dc9e" stroke-width="6" stroke-linecap="round"/></symbol>
+    <symbol id="musician-implementer" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><rect x="76" y="111" width="39" height="28" rx="4" fill="#a85e35" stroke="#f4dc9e" stroke-width="3"/><path d="M87 111v-8h16v8m-27 11h39m-20-4v9" fill="none" stroke="#f4dc9e" stroke-width="3"/></symbol>
+    <symbol id="musician-reviewer" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><rect x="79" y="99" width="33" height="45" rx="3" fill="#f8ecd0" stroke="#b7774e" stroke-width="3"/><path d="M86 108h18m-18 8h18m-18 8h14m-14 8h18" stroke="#8a5d4a" stroke-width="2"/></symbol>
+    <symbol id="musician-verifier" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><rect x="78" y="99" width="35" height="46" rx="3" fill="#e8f4d5" stroke="#c9a464" stroke-width="3"/><path d="m84 111 4 4 6-8m-10 19 4 4 6-8m3-10h10m-10 15h10" fill="none" stroke="#54775e" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="musician-explorer" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><circle cx="94" cy="117" r="18" fill="#e8f0db" stroke="#f2d28a" stroke-width="3"/><path d="m94 103-5 18 12-6Z" fill="#9e5739" stroke="#724c36" stroke-width="2"/></symbol>
+    <symbol id="musician-fast-lookup" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><path d="m85 101 19-2 6 16-17 8Z" fill="#e9d8a7" stroke="#815840" stroke-width="3"/><path d="M95 114 78 133" stroke="#f5e4a3" stroke-width="5" stroke-linecap="round"/></symbol>
+    <symbol id="musician-failure-analyst" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><path d="M89 101q-13 7-7 20l-17 18 7 7 19-18q14 5 20-8l-11 3-9-9Z" fill="#c3d0d4" stroke="#f1d59a" stroke-width="2"/></symbol>
+    <symbol id="musician-qa-operator" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><rect x="76" y="102" width="39" height="30" rx="3" fill="#769db0" stroke="#f3d79a" stroke-width="3"/><path d="M95 132v8m-11 0h22" stroke="#f3d79a" stroke-width="3"/><circle cx="95" cy="117" r="5" fill="#f5e5b3"/></symbol>
+    <symbol id="musician-advisor" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><path d="M81 103h31v35H81q-5-5 0-10-5-5 0-10-5-5 0-15Z" fill="#efe3c0" stroke="#b57a50" stroke-width="3"/><path d="m96 109 2 6 6 1-5 4 1 6-5-3-5 3 2-6-5-4 6-1Z" fill="#c18845"/></symbol>
+    <symbol id="musician-unknown" viewBox="0 0 120 190"><use xlink:href="#musician" width="120" height="190"/><circle cx="96" cy="117" r="15" fill="#a8a6aa" stroke="#ded2bc" stroke-width="3"/><path d="M92 111q2-6 8-2 5 4-1 8l-3 3m0 5h0" fill="none" stroke="#fff4dd" stroke-width="3" stroke-linecap="round"/></symbol>
   </defs>
   <rect width="960" height="440" rx="28" fill="url(#backdrop)"/>
   <ellipse cx="485" cy="239" rx="440" ry="260" fill="url(#spot)"/>

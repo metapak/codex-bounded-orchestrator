@@ -1,6 +1,6 @@
 ---
 name: bounded-orchestrator
-description: Coordinate complex Codex repository work with an Astra owner, Terra exploration/research/verification, Sol implementation and root-cause analysis, optional Luna mechanical lookup, and an independent Astra reviewer. Use for multi-file features, cross-component debugging, high-risk changes, parallel read-only investigation, or any task that materially benefits from bounded delegation. Do not use for trivial localized edits.
+description: Coordinate Codex repository execution with a chief who only speaks to the user, plans, delegates, reads concise reports, and decides next assignments. Specialists perform all file, research, build, test, and review work, including trivial edits.
 ---
 
 # Bounded Orchestrator
@@ -9,7 +9,7 @@ The user's explicit instructions take precedence over this skill.
 
 ## 1. Goal
 
-Deliver complex repository work with one accountable owner, bounded subagent contracts, one writer per scope, independent verification, a frozen review candidate, a finite stopping rule, and an optional local ledger for declared work.
+Deliver repository work with one accountable chief who performs coordination only, bounded specialist contracts, one writer per scope, independent verification, a frozen review candidate, a finite stopping rule, and an optional local ledger for declared work.
 
 Default topology:
 
@@ -62,23 +62,11 @@ accepted changes, and runs normal verification. Never send credentials, private 
 or unrelated source to the external API. External use consumes the selected provider's
 API quota and requires `ANTHROPIC_API_KEY` or `DEEPSEEK_API_KEY` in the local environment.
 
-## 2. Delegation gate
+## 2. Execution gate
 
-Classify the task as `root-only` or `delegated` before substantive work.
+Every execution task goes to a suitable specialist, including a tiny localized edit. The chief never reads source, researches facts, writes files, runs commands/builds/tests, or performs the independent review. The chief may answer a conversational question from existing reports without opening a worker. If a delegation tool is unavailable, report the limitation and do not silently take over execution. Use one specialist by default; add more only for independent work that justifies it.
 
-Use root-only when the edit is genuinely small, localized, low-risk, and does not benefit from independent investigation or verification.
-
-Delegate when at least one applies:
-
-- multiple files, modules, services, clients, or platforms are involved
-- two or more independent read-only workstreams exist
-- repository mapping is required before a safe implementation boundary can be chosen
-- debugging requires cross-component causality or state tracing
-- current/version-specific external facts materially affect implementation
-- independent verification or review is valuable
-- the user explicitly asks for agents, delegation, parallelism, or this skill
-
-Do not create agents only to fill a diagram.
+This boundary applies to the chief. A delegated specialist performs the research, implementation, checks, or review in its assigned contract; it does not delegate onward.
 
 ## 3. Root ownership
 
@@ -88,12 +76,12 @@ The root owns:
 2. architecture and risk decisions
 3. decomposition, model routing, and concurrency
 4. each delegated contract and write ownership map
-5. integration and final diff inspection
-6. candidate identity and review inputs
+5. integration decisions from specialists' concise reports and diff evidence
+6. candidate identity and review inputs supplied by specialists
 7. reviewer-finding triage
-8. final verification and user-facing outcome
+8. reading final verification evidence and communicating the user-facing outcome
 
-Subagents return evidence or bounded changes. They never own the project outcome.
+Specialists return concise evidence or bounded changes to the chief. Only the chief communicates with the user. Specialists never own the project outcome.
 
 ## 4. State machine
 
@@ -116,7 +104,7 @@ The only backward edge is one bounded repair cycle after triage.
 
 ### Local task ledger
 
-For delegated work with several acceptance steps, use the metadata-only ledger to make declared work visible:
+For work with several acceptance steps, have an assigned specialist operate the metadata-only ledger to make declared work visible:
 
 ```bash
 python .codex/tools/ledger.py start feature-123 --title "Short goal label"
@@ -127,7 +115,7 @@ python .codex/tools/ledger.py complete map
 python .codex/tools/ledger.py status
 ```
 
-Declare required tasks before implementation, update their states at real transitions, and run `ready-for-review` before freezing. Run `complete-run` only after the workflow completion gate. A justified required skip may pass the ledger gate; record the owner decision in its short reason.
+Have the specialist declare required tasks before implementation, update states at real transitions, and run `ready-for-review` before freezing. Ask it to run `complete-run` only after the workflow completion gate. A justified required skip may pass the ledger gate; provide the chief's decision as a short reason.
 
 Record interruptions, user waits, and verification repairs explicitly. A retry requires new short evidence, is limited to one, and routes repair back to the task's named owner. Local evaluation is opt-in: only when the user explicitly invokes `.codex/tools/local_eval.py` with a reviewed JSON `argv` manifest may the run require its named pass result with `ledger.py require-eval --label LABEL`. The runner is a project-specific check, not a universal benchmark. Never execute repository-controlled evaluation commands automatically.
 
@@ -212,7 +200,7 @@ Use `failure_analyst` only after the root can state:
 
 Give `implementer` exclusive ownership of its paths for the duration of the turn.
 
-The implementer makes the smallest defensible change, adds targeted tests inside scope, and runs focused validation. The root inspects the diff immediately and rejects unrelated changes before verification.
+The implementer makes the smallest defensible change, adds targeted tests inside scope, and runs focused validation. It reports changed paths and a concise diff summary. An independent verifier or reviewer inspects the actual diff; the chief reads that report and decides whether unrelated changes need correction before verification proceeds.
 
 A repair is a new bounded contract referring to accepted evidence. It is not permission to redesign the subsystem.
 
@@ -242,13 +230,13 @@ python .codex/tools/candidate.py freeze --label pre-review
 Before freezing:
 
 1. all writers have stopped
-2. root inspected the final diff
+2. a specialist inspected the final diff and reported findings to the chief
 3. targeted verification completed
 4. accidental non-ignored artifacts were removed
-5. root recorded commit or fingerprint
+5. a specialist recorded commit or fingerprint and reported it to the chief
 6. `ledger.py ready-for-review` passed when a ledger is in use
 
-During review, source writes are prohibited. After review:
+During review, source writes are prohibited. After review, ask a specialist to run:
 
 ```bash
 python .codex/tools/candidate.py verify
@@ -320,8 +308,8 @@ Before claiming success, confirm:
 - no required agent is still running
 - final candidate matches the reviewed candidate, or repaired candidate received narrow re-review
 - accepted material findings were resolved or explicitly deferred
-- highest-value tests ran
-- final diff contains no unintended changes
+- a specialist ran the highest-value tests and reported results
+- a specialist confirmed the final diff contains no unintended changes
 - no external action was implied or performed without authority
 - the active ledger run was completed when a ledger is in use
 

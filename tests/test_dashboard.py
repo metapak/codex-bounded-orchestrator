@@ -287,6 +287,81 @@ class ConsoleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'no longer in the model list'):
             self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-unlisted-new','effort':'medium'}}})
 
+    def test_team_slots_allow_duplicate_duties_and_restore_safe_changes(self):
+        config = self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('private_setting = "keep"\n[unrelated]\nvalue = 7\n')
+        team = [
+            {'slot':'team_slot_01','duty':'researcher','model':'gpt-6-sol','effort':'medium','title':'Sources'},
+            {'slot':'team_slot_02','duty':'researcher','model':'gpt-6-luna','effort':'high','title':'Facts'},
+        ]
+        plan = self.console.preview({'preset':'focused','concurrency':2,'team':team})
+        self.assertTrue(plan['can_save'],plan['conflicts'])
+        self.console.save({'preview_id':plan['preview_id']})
+        saved = self.console.settings()
+        self.assertEqual(saved['team'],team)
+        self.assertEqual(saved['concurrency'],2)
+        self.assertEqual(dashboard.tomllib.loads(config.read_text())['private_setting'],'keep')
+        self.assertEqual(dashboard.tomllib.loads(config.read_text())['agents']['team_slot_02']['config_file'],'./agents/team-slot-02.toml')
+        first = self.target/dashboard.TEAM_SLOTS['team_slot_01']
+        second = self.target/dashboard.TEAM_SLOTS['team_slot_02']
+        self.assertEqual(dashboard.tomllib.loads(first.read_text())['name'],'team_slot_01')
+        self.assertEqual(dashboard.tomllib.loads(second.read_text())['name'],'team_slot_02')
+        self.assertTrue(dashboard.installer.unchanged_owned(dashboard.installer.load_manifest(self.target),dashboard.TEAM_SLOTS['team_slot_02'],second))
+        config.write_text(config.read_text()+'\n[agents.team_slot_02.env]\nNOTE = "keep"\n')
+        reduced = self.console.preview({'preset':'focused','concurrency':1,'team':team[:1]})
+        self.assertTrue(reduced['can_save'],reduced['conflicts'])
+        self.console.save({'preview_id':reduced['preview_id']})
+        self.assertFalse(second.exists())
+        self.assertNotIn('team_slot_02',dashboard.tomllib.loads(config.read_text())['agents'])
+        self.console.restore({})
+        self.assertTrue(second.exists())
+        self.assertEqual(self.console.settings()['team'],team)
+        self.assertEqual(dashboard.tomllib.loads(config.read_text())['agents']['team_slot_02']['env']['NOTE'],'keep')
+        second.write_text(second.read_text()+'\n# personal edit\n')
+        conflict = self.console.preview({'preset':'focused','concurrency':1,'team':team[:1]})
+        self.assertIn(str(dashboard.TEAM_SLOTS['team_slot_02']),conflict['conflicts'])
+
+    def test_team_rejects_invalid_slot_or_effort(self):
+        team = [{'slot':'team_slot_01','duty':'researcher','model':'gpt-6-luna','effort':'ultra','title':''}]
+        with self.assertRaisesRegex(ValueError, 'not supported'):
+            self.console.preview({'preset':'focused','concurrency':1,'team':team})
+        team[0]['effort']='high'
+        team[0]['slot']='other'
+        with self.assertRaisesRegex(ValueError, 'Invalid team slot'):
+            self.console.preview({'preset':'focused','concurrency':1,'team':team})
+
+    def test_backup_symlink_ancestor_refused_before_save(self):
+        config=self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('secret = "keep"\n')
+        backup_root=self.target/dashboard.installer.BACKUP_RELATIVE
+        backup_root.mkdir(parents=True)
+        escape=Path(self.tmp.name)/'escape'
+        escape.mkdir()
+        with mock.patch.object(dashboard.installer,'timestamp_for_path',return_value='20260101T000000Z'):
+            (backup_root/'20260101T000000Z').symlink_to(escape, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, 'Symlink backup path refused'):
+                self.console.preview({'preset':'focused'})
+        self.assertEqual(config.read_text(),'secret = "keep"\n')
+        self.assertEqual(list(escape.iterdir()),[])
+
+    def test_dangling_backup_leaf_symlink_refused_before_save(self):
+        config=self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('secret = "keep"\n')
+        backup_root=self.target/dashboard.installer.BACKUP_RELATIVE
+        leaf=backup_root/'20260101T000000Z'/'.codex/config.toml'
+        leaf.parent.mkdir(parents=True)
+        outside=Path(self.tmp.name)/'stolen.toml'
+        leaf.symlink_to(outside)
+        before=config.read_bytes()
+        with mock.patch.object(dashboard.installer,'timestamp_for_path',return_value='20260101T000000Z'):
+            with self.assertRaisesRegex(ValueError, 'Symlink backup path refused'):
+                self.console.preview({'preset':'focused'})
+        self.assertEqual(config.read_bytes(),before)
+        self.assertFalse(outside.exists())
+
     def test_model_effort_pair_and_existing_legacy_pair(self):
         import model_catalog
         self.console._catalog = model_catalog.catalog()

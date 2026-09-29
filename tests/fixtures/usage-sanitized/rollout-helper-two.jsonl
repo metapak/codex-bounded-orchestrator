@@ -1,4 +1,4 @@
 {"timestamp":"2026-09-03T10:00:00Z","type":"session_meta","payload":{"id":"demo-helper-two","session_id":"demo-root","parent_thread_id":"demo-root","source":{"subagent":{}},"agent_nickname":"Mina","agent_role":"implementer","cwd":"/sample/project"}}
-{"timestamp":"2026-09-03T10:01:00Z","type":"turn_context","payload":{"turn_id":"demo-helper-turn-two","model":"gpt-5.6-sol"}}
+{"timestamp":"2026-09-03T10:01:00Z","type":"turn_context","payload":{"turn_id":"demo-helper-turn-two","model":"gpt-5.6-sol","effort":"medium"}}
 {"timestamp":"2026-09-03T10:02:00Z","type":"token_usage_record","payload":{"thread_id":"demo-helper-two","session_id":"demo-root","turn_id":"demo-helper-turn-two","usage":{"input_tokens":7400,"cached_input_tokens":2500,"output_tokens":600,"total_tokens":8000}}}
 {"timestamp":"2026-09-03T10:03:00Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"demo-helper-turn-two"}}

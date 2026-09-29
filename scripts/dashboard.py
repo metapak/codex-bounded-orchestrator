@@ -10,6 +10,7 @@ import json
 import re
 import secrets
 import sys
+import threading
 import tomllib
 import webbrowser
 from collections import defaultdict
@@ -26,6 +27,7 @@ STATE = Path('.codex/.bounded-orchestrator/console-restore.json')
 HISTORY = Path('.codex/.bounded-orchestrator/console-style-history.json')
 SAFE_PATHS = sorted(installer.ALLOWED_MANIFEST_FILES | {Path('AGENTS.md'), installer.MANIFEST_RELATIVE}, key=str)
 EFFORTS = installer.EFFORTS
+TEAM_SLOTS = installer.TEAM_SLOT_FILES
 
 def load_usage():
     spec = importlib.util.spec_from_file_location('console_usage', ROOT/'.codex/tools/usage_report.py')
@@ -142,12 +144,16 @@ def orchestra_view(report, selected_root='', filters=None):
         actor = actors.setdefault(actor_id, {'id': actor_id, 'name': node.get('name') or '', 'role': node.get('role') or '',
                                              'kind': 'conductor' if actor_id == family(record) else 'helper',
                                              'source': 'session_meta', 'total_tokens': 0, 'input_tokens': 0,
-                                             'cached_input_tokens': 0, 'output_tokens': 0, 'models': {}})
+                                             'cached_input_tokens': 0, 'output_tokens': 0, 'models': {}, 'efforts': {}, 'model_efforts': {}})
         actor['total_tokens'] += amount
         for key in ('input_tokens', 'cached_input_tokens', 'output_tokens'):
             actor[key] += record['usage'].get(key, 0)
         model = record['model']
         actor['models'][model] = actor['models'].get(model, 0) + amount
+        effort = record.get('effort', 'unknown')
+        actor['efforts'][effort] = actor['efforts'].get(effort, 0) + amount
+        pair = (model, effort)
+        actor['model_efforts'][pair] = actor['model_efforts'].get(pair, 0) + amount
     if selected_root:
         for agent_id, node in nodes.items():
             if root_of(agent_id) != selected_root or agent_id in actors or (agent_id != selected_root and not metadata_visible(node)):
@@ -155,10 +161,12 @@ def orchestra_view(report, selected_root='', filters=None):
             actors[agent_id] = {'id': agent_id, 'name': node.get('name') or '', 'role': node.get('role') or '',
                                 'kind': 'conductor' if agent_id == selected_root else 'helper', 'source': 'session_meta',
                                 'total_tokens': None, 'input_tokens': None, 'cached_input_tokens': None,
-                                'output_tokens': None, 'models': {}, 'usage_observed': False}
+                                'output_tokens': None, 'models': {}, 'efforts': {}, 'model_efforts': {}, 'usage_observed': False}
     actor_rows = []
     for actor in actors.values():
         actor['models'] = [{'id': model, 'total_tokens': tokens} for model, tokens in sorted(actor['models'].items(), key=lambda item: (-item[1], item[0]))]
+        actor['efforts'] = [{'id': effort, 'total_tokens': tokens} for effort, tokens in sorted(actor['efforts'].items(), key=lambda item: (-item[1], item[0]))]
+        actor['model_efforts'] = [{'model': model, 'effort': effort, 'total_tokens': tokens} for (model, effort), tokens in sorted(actor['model_efforts'].items(), key=lambda item: (-item[1], item[0]))]
         actor_rows.append(actor)
     actor_rows.sort(key=lambda item: (item['kind'] != 'conductor', -(item['total_tokens'] or 0), item['id']))
     total = sum(record['usage'].get('total_tokens', 0) for record in chosen)
@@ -257,6 +265,26 @@ def patch_values(text, section, values):
             chunk = chunk.rstrip()+'\n'+rendered+'\n'
     return text[:start]+chunk+text[end:]
 
+def without_team_tables(text):
+    """Remove only console-reserved slot tables, retaining unrelated TOML bytes."""
+    headers = table_headers(text)
+    cuts = []
+    for index, (start, _, name, array) in enumerate(headers):
+        parts = name.split('.')
+        if len(parts) >= 2 and parts[0] == 'agents' and parts[1] in TEAM_SLOTS:
+            end = headers[index + 1][0] if index + 1 < len(headers) else len(text)
+            cuts.append((start, end))
+    for start, end in reversed(cuts):
+        text = text[:start] + text[end:]
+    return text
+
+def render_team_slot(slot, duty, model, effort, title):
+    text = installer.render_role_config(ROOT, duty, model, effort)
+    description = f"Team helper {slot[-2:]} · {duty}" + (f" · {title}" if title else '')
+    text = patch_values(text, '', {'name': slot, 'description': description})
+    tomllib.loads(text)
+    return text
+
 class Console:
     def __init__(self, target, sessions):
         self.target = installer.validate_target(target, ROOT)
@@ -275,6 +303,11 @@ class Console:
                     raise ValueError('Symlink destination refused: '+str(relative))
             if path.exists() and not path.is_file():
                 raise ValueError('File destination required: '+str(relative))
+        backup_root = self.target / installer.BACKUP_RELATIVE
+        if backup_root.exists():
+            for path in backup_root.rglob('*'):
+                if path.is_symlink():
+                    raise ValueError('Symlink backup path refused')
 
     def snapshot(self):
         self.validate_paths()
@@ -312,15 +345,23 @@ class Console:
         self.validate_paths()
         config_path = self.target/installer.CONFIG_RELATIVE
         config = tomllib.loads(config_path.read_text()) if config_path.exists() else {}
+        manifest = installer.load_manifest(self.target)
         roles = {}
         for role in installer.ALL_ROLES:
             path = config_path if role == 'owner' else self.target/installer.ROLE_FILES[role]
             data = tomllib.loads(path.read_text()) if path.exists() else {}
             roles[role] = {'model': data.get('model', ''), 'effort': data.get('model_reasoning_effort', '')}
-        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'roles': roles, 'efforts': EFFORTS, 'concurrency': config.get('agents', {}).get('max_concurrent_threads_per_session', 4), 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Custom GPT IDs accepted; no account capability discovery. Context/report preferences are soft instructions, not token limits.'}
+        team = []
+        for item in manifest.get('team_slots', []):
+            if isinstance(item, dict) and item.get('slot') in TEAM_SLOTS:
+                path = self.target/TEAM_SLOTS[item['slot']]
+                if path.is_file():
+                    data = tomllib.loads(path.read_text())
+                    team.append({'slot': item['slot'], 'duty': item.get('duty', ''), 'model': data.get('model', ''), 'effort': data.get('model_reasoning_effort', ''), 'title': item.get('title', '')})
+        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'roles': roles, 'team': team, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': config.get('agents', {}).get('max_concurrent_threads_per_session', 4), 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Custom GPT IDs accepted; no account capability discovery. Context/report preferences are soft instructions, not token limits.'}
 
     def preview(self, payload):
-        if set(payload) - {'preset', 'roles', 'concurrency'}:
+        if set(payload) - {'preset', 'roles', 'concurrency', 'team'}:
             raise ValueError('Unknown setting')
         preset = payload.get('preset', 'focused')
         if preset not in installer.PRESETS:
@@ -330,7 +371,8 @@ class Console:
             raise ValueError('Unknown role')
         models, efforts = [], []
         known_models = {item['id']: item for item in self.models()['models']}
-        saved_models = self.settings()['roles']
+        saved_state = self.settings()
+        saved_models = saved_state['roles']
         for role, value in overrides.items():
             if not isinstance(value, dict) or set(value) != {'model', 'effort'} or not all(isinstance(v,str) for v in value.values()):
                 raise ValueError('Invalid role selection')
@@ -352,6 +394,28 @@ class Console:
         cap = payload.get('concurrency', 4)
         if type(cap) is not int or not 1 <= cap <= 10:
             raise ValueError('Concurrency must be 1–10; runtime/account limits still apply')
+        team = payload.get('team', saved_state['team'])
+        if not isinstance(team, list) or len(team) > 10 or ('team' in payload and len(team) != cap):
+            raise ValueError('Team must have one helper per selected slot')
+        saved_team = {item['slot']: item for item in saved_state['team']}
+        clean_team = []
+        for index, item in enumerate(team, 1):
+            slot = f'team_slot_{index:02d}'
+            if not isinstance(item, dict) or set(item) != {'slot', 'duty', 'model', 'effort', 'title'} or item['slot'] != slot:
+                raise ValueError('Invalid team slot')
+            duty, model, effort, title = (item[key] for key in ('duty', 'model', 'effort', 'title'))
+            if duty not in installer.ROLE_FILES or not all(isinstance(value, str) for value in (model, effort, title)) or len(title) > 48 or any(ord(ch) < 32 for ch in title):
+                raise ValueError('Invalid team choice')
+            installer.validate_native_model(model, slot+' model')
+            if effort not in EFFORTS:
+                raise ValueError('Invalid team reasoning')
+            previous = saved_team.get(slot)
+            if model not in known_models and (not previous or (model, effort) != (previous['model'], previous['effort'])):
+                raise ValueError('Selected team model is no longer in the model list: '+slot)
+            entry = known_models.get(model)
+            if entry and entry['efforts'] and effort not in entry['efforts'] and (not previous or (model, effort) != (previous['model'], previous['effort'])):
+                raise ValueError('Selected team reasoning is not supported by the model: '+slot)
+            clean_team.append({'slot': slot, 'duty': duty, 'model': model, 'effort': effort, 'title': title})
         before = self.snapshot()
         desired = {str(p): (ROOT/p).read_bytes() for p in installer.MANAGED_RELATIVE_FILES}
         for role, relative in installer.ROLE_FILES.items():
@@ -362,16 +426,26 @@ class Console:
             text = patch_values(text, '', {'model': model, 'model_reasoning_effort': effort})
             tomllib.loads(text)
             desired[str(relative)] = text.encode()
+        for slot, relative in TEAM_SLOTS.items():
+            item = next((item for item in clean_team if item['slot'] == slot), None)
+            desired[str(relative)] = render_team_slot(slot, item['duty'], item['model'], item['effort'], item['title']).encode() if item else None
         old = before[str(installer.CONFIG_RELATIVE)]
         if old is None:
             text = installer.render_root_config(ROOT, self.target, settings, 'none', '', '')
         else:
             text = old.decode()
         tomllib.loads(text)
+        existing_slots = {parts[1] for _, _, name, _ in table_headers(text) if (parts := name.split('.')) and len(parts) >= 2 and parts[0] == 'agents' and parts[1] in TEAM_SLOTS}
+        if existing_slots - set(saved_team):
+            raise ValueError('Existing team slot table is not console-managed')
+        text = without_team_tables(text)
         text = patch_values(text, '', {'model': settings['owner'][0], 'model_reasoning_effort': settings['owner'][1], 'review_model': settings['reviewer'][0]})
         text = patch_values(text, 'agents', {'enabled': True, 'max_depth': 1, 'max_concurrent_threads_per_session': cap, 'default_subagent_model': settings['explorer'][0], 'default_subagent_reasoning_effort': settings['explorer'][1]})
         for role, path in installer.ROLE_FILES.items():
             text = patch_values(text, 'agents.'+role, {'config_file': './agents/'+path.name})
+        for item in clean_team:
+            path = TEAM_SLOTS[item['slot']]
+            text = patch_values(text, 'agents.'+item['slot'], {'description': f"Team helper {item['slot'][-2:]} · {item['duty']}" + (f" · {item['title']}" if item['title'] else ''), 'config_file': './agents/'+path.name})
         tomllib.loads(text)
         desired[str(installer.CONFIG_RELATIVE)] = text.encode()
         desired['AGENTS.md'] = installer.merge_agents_text((before['AGENTS.md'] or b'').decode(), (ROOT/'templates/AGENTS.block.md').read_text()).encode()
@@ -385,19 +459,19 @@ class Console:
             if old is not None and name not in ('AGENTS.md', str(installer.CONFIG_RELATIVE)) and not installer.unchanged_owned(manifest, Path(name), self.target/name):
                 conflicts.append(name)
             # Zero context prevents unrelated configuration/credentials being exposed.
-            if name in {str(installer.CONFIG_RELATIVE), *map(str, installer.ROLE_FILES.values())}:
-                diff = ''.join(difflib.unified_diff((old or b'').decode().splitlines(True), data.decode().splitlines(True), fromfile=name, tofile=name, n=0))
+            if name in {str(installer.CONFIG_RELATIVE), *map(str, installer.ROLE_FILES.values()), *map(str, TEAM_SLOTS.values())}:
+                diff = ''.join(difflib.unified_diff((old or b'').decode().splitlines(True), (data or b'').decode().splitlines(True), fromfile=name, tofile=name, n=0))
             else:
                 diff = 'Managed asset '+('update' if old else 'install')
             changes.append({'path': name, 'diff': diff})
         preview_id = secrets.token_urlsafe(24)
-        self.pending = (preview_id, before, desired, settings, preset, conflicts)
+        self.pending = (preview_id, before, desired, settings, preset, clean_team, conflicts)
         return {'preview_id': preview_id, 'changes': changes, 'conflicts': conflicts, 'can_save': not conflicts, 'notice': 'Save backs up existing configuration. Unrelated assignments are preserved. Modified or unowned managed assets must be reconciled using the CLI installer first.'}
 
     def save(self, payload):
         if set(payload) != {'preview_id'} or not self.pending or payload['preview_id'] != self.pending[0]:
             raise ValueError('Preview required before Save')
-        _, before, desired, settings, preset, conflicts = self.pending
+        _, before, desired, settings, preset, team, conflicts = self.pending
         if conflicts:
             raise ValueError('Managed file conflict: '+', '.join(conflicts))
         if self.snapshot() != before:
@@ -410,7 +484,15 @@ class Console:
         ordered = [str(Path('.codex/.bounded-orchestrator/.gitignore'))] + [p for p in desired if p != '.codex/.bounded-orchestrator/.gitignore']
         try:
             for name in ordered:
-                path, text = Path(name), desired[name].decode()
+                path = Path(name)
+                if desired[name] is None:
+                    if before[name] is not None:
+                        if not installer.unchanged_owned(manifest, path, self.target/path):
+                            raise ValueError('Team file changed since preview: '+name)
+                        (self.target/path).unlink()
+                        manifest.get('files', {}).pop(name, None)
+                    continue
+                text = desired[name].decode()
                 if name == str(installer.CONFIG_RELATIVE):
                     installer.backup_file(self.target, self.target/path, False) if before[name] is not None else None
                     installer.install_config(target=self.target, config_text=text, preset=preset, manifest=manifest, force_config=True, dry_run=False, messages=messages)
@@ -421,6 +503,7 @@ class Console:
                     manifest['agents_block'] = True
                 else:
                     installer.install_text_file(target=self.target, relative=path, text=text, manifest=manifest, force=before[name] is not None, dry_run=False, messages=messages)
+            manifest['team_slots'] = team
             installer.write_manifest(root=ROOT, target=self.target, preset=preset, settings=settings, external_provider=manifest.get('external_provider', 'none'), external_model=manifest.get('external_model') or '', external_effort=manifest.get('external_effort') or '', manifest=manifest, dry_run=False)
             after = self.snapshot()
             changed = {p: {'before': base64.b64encode(before[p]).decode() if before[p] is not None else None, 'after': digest(after[p])} for p in before if before[p] != after[p]}
@@ -563,6 +646,12 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(size))
             if not isinstance(payload, dict):
                 raise ValueError('Object required')
+            if self.path == '/api/quit':
+                if payload:
+                    raise ValueError('Quit takes no fields')
+                self.respond(200, {'status': 'closing'})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
             actions = {'/api/preview': self.server.console.preview, '/api/save': self.server.console.save, '/api/restore': self.server.console.restore, '/api/models/refresh': self.server.console.refresh_models}
             if self.path not in actions:
                 return self.respond(404, {'error': 'Not found'})

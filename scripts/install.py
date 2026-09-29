@@ -41,6 +41,10 @@ ROLE_FILES = {
     "reviewer": Path(".codex/agents/reviewer.toml"),
     "advisor": Path(".codex/agents/advisor.toml"),
 }
+TEAM_SLOT_FILES = {
+    f"team_slot_{index:02d}": Path(f".codex/agents/team-slot-{index:02d}.toml")
+    for index in range(1, 11)
+}
 ALL_ROLES = ("owner", *ROLE_FILES)
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 EXTERNAL_EFFORTS = {
@@ -134,7 +138,7 @@ MANAGED_RELATIVE_FILES = (
 )
 
 ALLOWED_MANIFEST_FILES = frozenset(
-    (*MANAGED_RELATIVE_FILES, *ROLE_FILES.values(), CONFIG_RELATIVE,
+    (*MANAGED_RELATIVE_FILES, *ROLE_FILES.values(), *TEAM_SLOT_FILES.values(), CONFIG_RELATIVE,
      CONFIG_EXAMPLE_RELATIVE, *EXTERNAL_BRIDGES.values())
 )
 
@@ -263,15 +267,34 @@ def backup_file(target_root: Path, path: Path, dry_run: bool) -> Path:
     suffix = 1
     original = backup
     while backup.exists():
+        if backup.is_symlink():
+            raise InstallError(f"Refusing symlink backup path: {backup}")
         backup = original.with_name(f"{original.name}.{suffix}")
         suffix += 1
+    if backup.is_symlink():
+        raise InstallError(f"Refusing symlink backup path: {backup}")
+
+    for parent in (backup.parent, *backup.parent.parents):
+        if parent == target_root:
+            break
+        if parent.is_symlink():
+            raise InstallError(f"Refusing symlink backup directory: {parent}")
 
     if not dry_run:
         backup.parent.mkdir(parents=True, exist_ok=True)
         if path.is_symlink():
             backup.symlink_to(os.readlink(path))
         else:
-            shutil.copy2(path, backup)
+            # Exclusive creation refuses even a dangling symlink planted between
+            # preflight and the write; private config backups start mode 0600.
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(backup, flags, 0o600)
+            try:
+                with os.fdopen(descriptor, "wb") as destination, path.open("rb") as source:
+                    shutil.copyfileobj(source, destination)
+            except Exception:
+                backup.unlink(missing_ok=True)
+                raise
     return backup
 
 
@@ -804,11 +827,27 @@ def safe_manifest_relative(value: str) -> Path | None:
     return relative
 
 
+def refuse_symlink_destination(target: Path, relative: Path) -> None:
+    path = target / relative
+    for candidate in (path, *path.parents):
+        if candidate == target:
+            break
+        if candidate.is_symlink():
+            raise InstallError(f"Refusing symlink uninstall path: {relative}")
+
+
 def uninstall(target: Path, dry_run: bool) -> int:
     messages: list[str] = []
     manifest_path = target / MANIFEST_RELATIVE
+    refuse_symlink_destination(target, MANIFEST_RELATIVE)
     manifest = load_manifest(target)
     files = manifest.get("files", {})
+
+    # Validate the complete owned surface before the first removal. A changed
+    # parent directory must never redirect one of the later unlinks outside.
+    for relative in [Path("AGENTS.md"), MANIFEST_RELATIVE, *(safe_manifest_relative(item) for item in files)]:
+        if relative is not None:
+            refuse_symlink_destination(target, relative)
 
     for relative_text, entry in sorted(files.items(), reverse=True):
         relative = safe_manifest_relative(relative_text)

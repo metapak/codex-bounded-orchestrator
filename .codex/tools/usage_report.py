@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 COUNTERS = ('input_tokens', 'cached_input_tokens', 'output_tokens', 'reasoning_output_tokens', 'total_tokens')
-META = ('model', 'model_id', 'role', 'agent_role', 'thread_id', 'session_id', 'conversation_id', 'cwd', 'project')
+META = ('model', 'model_id', 'effort', 'reasoning_effort', 'model_reasoning_effort', 'role', 'agent_role', 'thread_id', 'session_id', 'conversation_id', 'cwd', 'project')
 
 def scalar(obj, *keys):
     return next((str(obj[k]) for k in keys if isinstance(obj.get(k), (str, int)) and str(obj[k])), 'unknown')
@@ -65,6 +65,8 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
                     if obj['type'] == 'turn_context':
                         metadata.pop('model', None)
                         metadata.pop('model_id', None)
+                        for key in ('effort', 'reasoning_effort', 'model_reasoning_effort'):
+                            metadata.pop(key, None)
                     metadata.update({k: v for k, v in payload.items() if k in META and isinstance(v, (str, int))})
                     if obj['type'] == 'session_meta' and isinstance(payload.get('id'), str):
                         metadata['thread_id'] = payload['id']
@@ -105,6 +107,7 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
                     continue
                 meta = {**metadata, **record}
                 model = scalar(meta, 'model', 'model_id')
+                effort = scalar(meta, 'effort', 'reasoning_effort', 'model_reasoning_effort')
                 role = scalar(meta, 'role', 'agent_role')
                 tid = scalar(meta, 'thread_id', 'session_id', 'conversation_id')
                 proj = scalar(meta, 'project', 'cwd')
@@ -112,7 +115,7 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
                 current = {k: v for k, v in record['usage'].items() if k in COUNTERS and type(v) is int and v >= 0}
                 if not current:
                     continue
-                raw_records.append({'model': model, 'role': role, 'thread': tid, 'session_id': scalar(meta, 'session_id'), 'project': proj, 'timestamp': stamp, 'semantics': record['semantics'], 'event_id': record['event_id'], 'turn_id': record.get('turn_id', 'unknown'), 'usage': current})
+                raw_records.append({'model': model, 'effort': effort, 'role': role, 'thread': tid, 'session_id': scalar(meta, 'session_id'), 'project': proj, 'timestamp': stamp, 'semantics': record['semantics'], 'event_id': record['event_id'], 'turn_id': record.get('turn_id', 'unknown'), 'usage': current})
     # Sort accounting events before deltas and date filters. Rollout filenames
     # are not a chronological contract, including duplicate/exported logs.
     for record in raw_records:

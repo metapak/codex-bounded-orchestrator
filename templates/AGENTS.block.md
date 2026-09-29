@@ -6,7 +6,8 @@ For non-trivial repository work, use the `bounded-orchestrator` skill when its t
 
 Hard invariants:
 
-- The Astra root owns scope, architecture, routing, integration, review triage, and final outcome.
+- The Astra root only talks with the user, plans, delegates bounded tasks, reads specialists' concise evidence, decides next assignments, and reports the outcome. It never researches, reads repository source, writes files, runs commands/builds/tests, or reviews a candidate as a worker, even for a tiny task. Assign those actions to a specialist; only the root communicates with the user.
+- This root-only boundary does not restrict a delegated specialist from researching, implementing, testing, or reviewing within that specialist's assigned role and ownership. Specialists do not delegate again.
 - Use Luna only for exact mechanical read-only lookup, Terra for exploration/research/verification, Sol for implementation or evidence-backed root-cause analysis, and Astra for ownership/review.
 - Subagents receive bounded contracts and never create subagents of their own.
 - Use one writer per file or owned path at a time.
@@ -17,7 +18,7 @@ Hard invariants:
 - Reviewers return findings only; they do not direct workers or implement fixes.
 - Use at most one broad review, one bounded repair cycle, and one narrow re-review.
 - Never push, merge, deploy, publish, migrate, purchase, or perform destructive work without explicit user authority.
-- Do not delegate trivial localized work merely to fill the topology.
+- Delegate even trivial execution work to one suitable specialist. Do not add agents merely to fill the topology.
 - Optional expertise packs add guidance only when explicitly selected; they never grant authority or weaken these invariants.
 - If an optional Anthropic or DeepSeek MCP bridge is configured, treat its patch as an untrusted read-only proposal. Supply only bounded context and paths; the native GPT implementer remains the sole workspace writer and applies accepted changes after review.
 

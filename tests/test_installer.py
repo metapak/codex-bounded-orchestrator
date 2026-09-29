@@ -297,6 +297,22 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(path.exists())
         self.assertIn("modified after installation", result.stdout)
 
+    def test_uninstall_rejects_symlink_ancestor_before_any_removal(self) -> None:
+        self.assertEqual(self.run_installer().returncode, 0)
+        agents = self.target / ".codex/agents"
+        outside = Path(self.temporary.name) / "outside-agents"
+        agents.rename(outside)
+        agents.symlink_to(outside, target_is_directory=True)
+        reviewer = outside / "reviewer.toml"
+        before = reviewer.read_bytes()
+        manifest = self.target / MANIFEST
+        manifest_before = manifest.read_bytes()
+        result = self.run_installer("--uninstall")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("symlink uninstall path", result.stderr)
+        self.assertEqual(reviewer.read_bytes(), before)
+        self.assertEqual(manifest.read_bytes(), manifest_before)
+
     def test_dry_run_writes_nothing(self) -> None:
         result = self.run_installer("--dry-run")
         self.assertEqual(result.returncode, 0, result.stderr)

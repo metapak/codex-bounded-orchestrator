@@ -1,0 +1,13 @@
+#!/bin/sh
+
+launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
+launcher="$launcher_dir/launchers/launch_dashboard.py"
+
+for python in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3.13 python3.12 python3.11 python3; do
+    if command -v "$python" >/dev/null 2>&1 &&
+        "$python" -c 'import sys; sys.exit(sys.version_info < (3, 11))' >/dev/null 2>&1; then
+        exec "$python" "$launcher"
+    fi
+done
+
+/usr/bin/osascript -e 'display alert "Python 3.11 or newer is needed" message "Install Python 3.11 or newer, then open Bounded Orchestrator again." as warning'

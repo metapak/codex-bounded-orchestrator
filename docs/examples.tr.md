@@ -2,7 +2,7 @@
 
 # Örnekler
 
-Kurulumdan sonra hedef projede `$bounded-orchestrator` çağrısını kullan. Hedefi ve sınırları yaz; delegation'ın faydalı olup olmadığına root owner karar verir.
+Kurulumdan sonra hedef projede `$bounded-orchestrator` çağrısını kullan. Hedefi ve sınırları yaz; şef her yürütme adımını sınırları belli bir uzmana verir.
 
 ## Birden fazla dosyaya yayılan özellik
 
@@ -34,4 +34,4 @@ Advisor'ı yalnız tanımlanan mimari karar için kullan. Kanıtları, seçenekl
 ve öneriyi döndür; kodu veya dış sistemleri değiştirme.
 ```
 
-Küçük, lokal ve düşük riskli düzenlemeler root-only kalmalıdır. Skill içindeki delegation gate, bağımsız inceleme veya doğrulamanın az değer katacağı işlerde agent yükünü önlemek içindir.
+Küçük, yerel düzenlemeler de tek bir uygun uzmana verilir. Şef kullanıcıyla konuşur ve koordinasyon yapar; ek uzman ancak bağımsız çalışması değer katarsa kullanılır.
