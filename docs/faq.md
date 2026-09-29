@@ -20,7 +20,7 @@ No. It records hashes and Git identity, then `verify` detects whether the frozen
 
 ## Can the task ledger prove that no work was forgotten?
 
-No. It flags unresolved required tasks that were declared. The owner must still declare the right work, inspect the result, run tests, and complete independent review. Keep prompts, source, logs, personal data, credentials, and secrets out of ledger labels and reasons.
+No. It flags unresolved required tasks that were declared. The chief must still assign the right work, read specialists' concise evidence, and ensure a specialist runs tests and an independent specialist reviews the frozen candidate. Keep prompts, source, logs, personal data, credentials, and secrets out of ledger labels and reasons.
 
 ## Do expertise packs grant extra permissions?
 

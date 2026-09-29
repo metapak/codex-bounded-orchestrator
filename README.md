@@ -9,9 +9,9 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**A bounded operating layer for Codex that plans, delegates, implements, verifies, measures, and safely resumes complex repository work.**
+**A local console and bounded specialist workflow for Codex repository work.**
 
-Codex Bounded Orchestrator packages agent profiles, task contracts, review rules, and local integrity tooling into a safe-to-preview installer. Astra owns the outcome, Terra maps and verifies, Sol implements and diagnoses, and Luna is reserved for exact read-only lookups.
+Codex Bounded Orchestrator packages agent profiles, task contracts, review rules, local usage reporting, and integrity tools into a project installer. Its chief speaks with you, plans, delegates, and reads short specialist reports. Specialists do the research, file work, checks, and independent review, even for small tasks. The chief-only boundary is an instruction rule, not a root-specific technical tool lock.
 
 It is designed to make multi-agent work easier to inspect and stop. The repository configures guardrails; prompts alone are not a security boundary, and Codex clients may differ in how they apply settings.
 
@@ -20,13 +20,15 @@ It is designed to make multi-agent work easier to inspect and stop. The reposito
 
 ## What does it do now?
 
-You describe the result in normal language. The owner turns it into bounded tasks, assigns each stage to the appropriate GPT model, keeps one writer responsible for each scope, verifies the result, freezes the exact candidate, and sends it to an independent reviewer. The workflow can also preserve interruption and retry history, show which models and locally observed tokens were used, require an explicit project-specific evaluation, and resume work after the user supplies a missing decision.
+You describe the result in normal language. The chief assigns bounded work to specialists, reads their evidence, and decides the next assignment. A specialist verifies the result and freezes the exact candidate for independent review. The workflow can preserve interruption and retry history, show locally observed token usage, require an explicit project-specific evaluation, and resume after you supply a missing decision.
+
+The local browser console lets you install preferences in a selected Git project without typing commands on macOS or Windows. You can build a planned team of 1–10 helpers, choose each helper's duty, model, and reasoning level, and repeat a duty in several slots. These are real project agent definitions. The chief remains separate; a planned team is capacity, not a command to start every helper. The Usage page shows past observed agents and token shares, which may differ from the planned team. Its orchestra characters distinguish duties; clicking the chief starts a looping illustration until you click elsewhere. The illustration does not show live agent activity.
 
 Prepared profiles let you choose balanced routing, maximum quality, lighter everyday routing, quota-saving behavior, or a custom model/effort map. Native work remains GPT-only. Claude and DeepSeek can be added only as optional proposal APIs without workspace access; the native GPT implementer still owns every accepted change.
 
 ## Why use it?
 
-- Keep one root owner responsible from task intake through final verification.
+- Keep one chief responsible for coordination and user communication, while specialists execute and verify.
 - Give each implementation scope to one writer at a time.
 - Separate investigation, implementation, verification, and review.
 - Freeze a candidate before independent review and detect later file changes.
@@ -55,7 +57,7 @@ flowchart TD
     V --> F[Freeze candidate]
     F --> R["Astra medium<br/>independent review<br/>read-only"]
     R --> T{Root triage}
-    T -->|pass| D[Final verification]
+    T -->|pass| D[Specialist final verification]
     T -->|material finding| B[One bounded repair]
     B --> V2[Narrow verification]
     V2 --> F2[Re-freeze]
@@ -67,7 +69,11 @@ Optional paths: Luna medium for `fast_lookup`, Sol high for `failure_analyst` an
 
 ## Quick start
 
-Requirements: Git, Python 3.11 or newer, a Codex client that supports project-scoped configuration and custom agents, and access to the configured models in your plan or workspace.
+Requirements: Git, Python 3.11 or newer, a Codex client that supports project-scoped configuration and custom agents, and access to the selected models in your plan or workspace. Model lists are discovery aids, not proof of account access. Runtime limits may be lower than the console's 1–10 helper choice.
+
+For a browser-led setup, extract the repository or ZIP, open `launchers/Bounded Orchestrator.app` on macOS or `launchers/Launch Bounded Orchestrator.vbs` on Windows, and choose your Git project in the folder picker. Choose a work style and helper team, select **Check changes**, then **Install** or **Save**. **Undo last change** restores the previous console-managed state if files have not changed since saving. **Close console** stops the local server. See the [local console guide](docs/local-console.md).
+
+The command-line path remains available:
 
 ```bash
 git clone https://github.com/metapak/codex-bounded-orchestrator.git
@@ -103,11 +109,11 @@ These entry points are supplied by the repository. Runtime behavior still depend
 
 | Platform | Supplied entry points | Guide |
 |---|---|---|
-| macOS | `setup.command`, `scripts/install.sh`, `scripts/install.py` | [macOS installation](INSTALL-MACOS.md) |
-| Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows installation](INSTALL-WINDOWS.md) |
-| Linux | `scripts/install.sh`, `scripts/install.py` | Use the [quick start](#quick-start) and `--help` |
+| macOS | `launchers/Bounded Orchestrator.app`; `setup.command` for terminal setup | [macOS installation](INSTALL-MACOS.md) |
+| Windows | `launchers/Launch Bounded Orchestrator.vbs`; `setup.cmd` for terminal setup | [Windows installation](INSTALL-WINDOWS.md) |
+| Linux | `python3 scripts/dashboard.py /path/to/project`; `scripts/install.sh` | [Local console](docs/local-console.md) and `--help` |
 
-The installer uses only the Python standard library. Its guided three-step display explains each choice, states the native brand boundary, and shows a final configuration review before writing files. One-click setup offers `balanced`, `quality`, `economy`, `quota-saver`, and `custom` presets. These names describe routing intent, not benchmarked guarantees. All native roles remain on OpenAI `gpt-*` models, including custom profiles. Other brands are available only as explicit API-backed proposal tools. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.
+The installer and console use only the Python standard library. The console previews exact changes before writing to the selected project, preserves unrelated settings, and tracks managed files and local ignored backups. Its choices include `balanced`, `quality`, `economy`, `quota-saver`, `focused`, and custom routing, depending on the entry point. These names describe intent, not measured savings or speed guarantees. Native roles use OpenAI `gpt-*` models; optional other brands are API-backed proposal tools. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.
 
 See the exact [profile routing table](docs/profiles.md).
 
@@ -135,6 +141,7 @@ See [external provider setup and boundaries](docs/external-providers.md).
 ## What gets installed
 
 - Explicit role registrations and one profile file per role under `.codex/agents/`.
+- When saved through the console, one installer-managed `team-slot-XX.toml` agent file for each selected helper.
 - The `$bounded-orchestrator` skill and its task, review, and escalation contracts.
 - `.codex/tools/candidate.py` for candidate hashes and Git identity.
 - `.codex/tools/ledger.py` for ignored local task metadata and completion gates.
@@ -172,6 +179,7 @@ See the [task ledger guide](docs/task-ledger.md) and [expertise pack guide](docs
 | Control | How it is supplied | Practical limit |
 |---|---|---|
 | No recursive child delegation | Agent config disables child agents; role prompts also prohibit delegation | Depends on the Codex client honoring the loaded project config |
+| Chief only coordinates | Managed AGENTS block and skill instructions | A behavior rule; no verified root-only tool allowlist locks the chief out of worker tools |
 | One writer per scope | Owner and implementer task contracts | A procedural rule; it does not lock files at the operating-system level |
 | Read-only reviewer | Reviewer sandbox default plus findings-only instructions | Live permissions can vary by client, trust state, and parent policy |
 | Finite review loop | Skill state machine and explicit budgets | The root must follow the workflow; prompts do not enforce a global scheduler |
@@ -192,7 +200,7 @@ The underlying Codex sandbox, operating-system permissions, repository protectio
 - [Task ledger](docs/task-ledger.md) and [expertise packs](docs/expertise-packs.md)
 - [Usage reporting and optional local evaluation](docs/usage-and-local-eval.md)
 - [Routing profiles](docs/profiles.md) and [external provider bridge](docs/external-providers.md)
-- [v0.6.0 release notes](docs/release-v0.6.0.md) and [latest release](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.6.0 release notes](docs/release-v0.6.0.md) and [release downloads](https://github.com/metapak/codex-bounded-orchestrator/releases)
 - [Source provenance](docs/provenance.md)
 
 ## Development
@@ -212,6 +220,3 @@ If this workflow makes your Codex work clearer or safer to review, a GitHub star
 Licensed under Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 This project is a ground-up redesign inspired by [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator), which is also distributed under Apache-2.0. See [NOTICE](NOTICE) and the [design differences](docs/from-astra-luna-orchestrator.md) for attribution and context.
-
-
-Local browser settings, request usage and thread details: [local console](docs/local-console.md). Start from this installer repository with `python3 scripts/dashboard.py /path/to/target`.

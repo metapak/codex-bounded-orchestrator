@@ -9,9 +9,9 @@
 [![Lisans: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**Codex’in karmaşık repo işlerini planlamasını, dağıtmasını, uygulamasını, kontrol etmesini, ölçmesini ve güvenle devam ettirmesini sağlayan sınırlı bir çalışma katmanı.**
+**Codex repo işleri için yerel konsol ve sınırları belirli uzman çalışma düzeni.**
 
-Codex Bounded Orchestrator; agent profillerini, görev sözleşmelerini, review kurallarını ve yerel bütünlük araçlarını önceden incelenebilen bir installer içinde sunar. Astra sonucu sahiplenir, Terra haritalar ve doğrular, Sol uygular ve kök neden analizi yapar, Luna ise yalnız kesin ve salt okunur aramalarda kullanılır.
+Codex Bounded Orchestrator; ajan profillerini, görev sözleşmelerini, inceleme kurallarını, yerel kullanım raporunu ve bütünlük araçlarını proje kurulumuyla sunar. Şef kullanıcıyla konuşur, planlar, görev verir ve uzmanların kısa kanıt raporlarını okur. Küçük işler dahil araştırmayı, dosya işlerini, kontrolleri ve bağımsız incelemeyi uzmanlar yapar. Şefin yalnız koordinasyon görevi bir talimat kuralıdır; köke özel teknik araç kilidi değildir.
 
 Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirmektir. Repo guardrail'leri yapılandırır; prompt'lar tek başına güvenlik sınırı değildir ve Codex istemcileri ayarları farklı biçimde uygulayabilir.
 
@@ -20,13 +20,15 @@ Amaç, çok agent'lı işi daha kolay denetlenir ve durdurulabilir hâle getirme
 
 ## Artık ne yapıyor?
 
-Siz istediğiniz sonucu normal şekilde anlatırsınız. Ana yönetici işi sınırlı görevlere ayırır, her aşamayı uygun GPT modeline verir, her çalışma alanında tek bir uygulayıcıyı sorumlu tutar, sonucu kontrol eder, değişmeyecek son hâli sabitler ve bağımsız incelemeye gönderir. Sistem ayrıca kesinti ve yeniden deneme geçmişini saklayabilir, hangi modellerin ve yerel olarak gözlenen tokenların kullanıldığını gösterebilir, açıkça seçilen projeye özel bir son kontrolü zorunlu tutabilir ve siz eksik kararı verdikten sonra bekleyen göreve devam edebilir.
+Siz istediğiniz sonucu normal şekilde anlatırsınız. Şef sınırlı işleri uzmanlara verir, kanıtlarını okur ve sonraki göreve karar verir. Uzman sonucu doğrular, son adayı dondurur ve bağımsız incelemeye sunar. Sistem kesinti ve yeniden deneme geçmişini saklayabilir, yerel kayıtlarda gözlenen token kullanımını gösterebilir, açıkça seçilen projeye özel bir son kontrolü zorunlu tutabilir ve siz eksik kararı verdikten sonra bekleyen göreve devam edebilir.
+
+Yerel tarayıcı konsoluyla macOS ve Windows'ta komut yazmadan seçtiğiniz Git projesine kurulum yapabilirsiniz. 1–10 yardımcıdan oluşan planlanan ekibin her üyesine görev, model ve inceleme düzeyi seçebilir; aynı görevi birkaç üyeye verebilirsiniz. Bunlar gerçek proje ajan tanımlarıdır. Şef bu sayıdan ayrıdır; planlanan ekip bütün yardımcıları başlatma emri değildir. Kullanım sayfası geçmiş kayıtlarda gerçekten görülen ajanları ve token paylarını gösterir; sayı planlanan ekipten farklı olabilir. Orkestra karakterleri görevleri ayırır. Şefe tıklayınca görsel hareket başka yere tıklayana kadar sürer; canlı ajan etkinliği göstermez.
 
 Hazır profillerle dengeli dağılım, en yüksek kalite, daha hafif günlük kullanım, kota tasarrufu veya tamamen özel model ve efor dağılımı seçilebilir. Yerel çalışma yalnızca GPT modelleriyle devam eder. Claude ve DeepSeek, çalışma alanına erişemeyen isteğe bağlı öneri API’leri olarak eklenebilir; kabul edilen değişikliklerin sorumlusu yine yerel GPT uygulayıcıdır.
 
 ## Neden kullanılır?
 
-- Görev başlangıcından son doğrulamaya kadar tek root owner sorumlu kalır.
+- Şef koordinasyon ve kullanıcı iletişiminden sorumlu kalır; yürütme ve doğrulamayı uzmanlar yapar.
 - Her implementasyon kapsamında aynı anda yalnız bir writer çalışır.
 - İnceleme, implementasyon, doğrulama ve review birbirinden ayrılır.
 - Aday review öncesi dondurulur; sonraki dosya değişiklikleri tespit edilir.
@@ -55,7 +57,7 @@ flowchart TD
     V --> F[Adayı dondur]
     F --> R["Astra medium<br/>bağımsız review<br/>salt okunur"]
     R --> T{Root triage}
-    T -->|geçti| D[Son doğrulama]
+    T -->|geçti| D[Uzman son doğrulaması]
     T -->|önemli bulgu| B[Bir sınırlı repair]
     B --> V2[Dar doğrulama]
     V2 --> F2[Yeniden dondur]
@@ -67,7 +69,11 @@ Opsiyonel yollar: `fast_lookup` için Luna medium, `failure_analyst` ve `qa_oper
 
 ## Hızlı başlangıç
 
-Gereksinimler: Git, Python 3.11 veya üzeri, proje kapsamlı config ve custom agent destekleyen bir Codex istemcisi ve plan/workspace içinde yapılandırılan modellere erişim.
+Gereksinimler: Git, Python 3.11 veya üzeri, proje kapsamlı yapılandırma ve özel ajan destekleyen bir Codex istemcisi ve seçilen modellere planınızda ya da çalışma alanınızda erişim. Model listesi hesap erişiminizi kanıtlamaz. Çalışma zamanı, konsoldaki 1–10 yardımcı seçeneğinden daha düşük bir sınır koyabilir.
+
+Tarayıcıyla kurulum için depoyu veya ZIP'i tamamen açın. macOS'ta `launchers/Bounded Orchestrator.app`, Windows'ta `launchers/Launch Bounded Orchestrator.vbs` dosyasını açıp klasör seçicisinden Git projenizi seçin. Çalışma biçimini ve yardımcı ekibi belirleyin, **Değişiklikleri kontrol et**, ardından **Kur** veya **Kaydet** seçin. Dosyalar son kayıttan beri değişmediyse **Son değişikliği geri al** önceki konsol durumunu yükler. **Konsolu kapat** yerel sunucuyu durdurur. Ayrıntılar: [yerel konsol rehberi](docs/local-console.tr.md).
+
+Komut satırı yolu da kullanılabilir:
 
 ```bash
 git clone https://github.com/metapak/codex-bounded-orchestrator.git
@@ -103,11 +109,11 @@ Aşağıdaki giriş noktaları repo içinde sunulur. Gerçek çalışma davranı
 
 | Platform | Sunulan giriş noktaları | Rehber |
 |---|---|---|
-| macOS | `setup.command`, `scripts/install.sh`, `scripts/install.py` | [macOS kurulumu](INSTALL-MACOS.md) |
-| Windows | `setup.cmd`, `setup.ps1`, `scripts/install.ps1`, `scripts/install.py` | [Windows kurulumu](INSTALL-WINDOWS.md) |
-| Linux | `scripts/install.sh`, `scripts/install.py` | [Hızlı başlangıcı](#hızlı-başlangıç) ve `--help` çıktısını kullan |
+| macOS | `launchers/Bounded Orchestrator.app`; terminal için `setup.command` | [macOS kurulumu](INSTALL-MACOS.md) |
+| Windows | `launchers/Launch Bounded Orchestrator.vbs`; terminal için `setup.cmd` | [Windows kurulumu](INSTALL-WINDOWS.md) |
+| Linux | `python3 scripts/dashboard.py /proje/yolu`; `scripts/install.sh` | [Yerel konsol](docs/local-console.tr.md) ve `--help` |
 
-Installer yalnız Python standart kütüphanesini kullanır. Üç adımlı yönlendirmeli ekran her seçeneği açıklar, yerel marka sınırını belirtir ve dosyalar yazılmadan önce son yapılandırma özetini gösterir. Tek tıklamalı kurulum `balanced`, `quality`, `economy`, `quota-saver` ve `custom` seçeneklerini sunar. Bu adlar yönlendirme amacını anlatır; ölçülmüş sonuç garantisi değildir. Özel profil dahil bütün yerel roller yalnız OpenAI `gpt-*` modellerini kabul eder. Diğer markalar ancak açıkça seçilen API destekli öneri araçlarıdır. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.
+Installer ve konsol yalnız Python standart kütüphanesini kullanır. Konsol, seçilen projeye yazmadan önce tam değişiklikleri gösterir, ilgisiz ayarları korur ve yönetilen dosyalarla Git tarafından yok sayılan yerel yedekleri izler. Giriş yoluna göre `balanced`, `quality`, `economy`, `quota-saver`, `focused` ve özel yönlendirme seçenekleri bulunur. Bu adlar niyeti anlatır; ölçülmüş tasarruf veya hız garantisi değildir. Yerel roller OpenAI `gpt-*` modellerini kullanır; başka markalar isteğe bağlı API öneri araçlarıdır. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.
 
 Tam dağılım için [profil yönlendirme tablosuna](docs/profiles.tr.md) bak.
 
@@ -135,6 +141,7 @@ Ayrıntılar için [haricî sağlayıcı kurulumu ve sınırlarına](docs/extern
 ## Neler kurulur?
 
 - `.codex/agents/` altında açık rol kayıtları ve her rol için ayrı profil.
+- Konsoldan kaydedildiğinde seçilen her yardımcı için installer tarafından yönetilen bir `team-slot-XX.toml` ajan dosyası.
 - `$bounded-orchestrator` skill'i ile görev, review ve escalation sözleşmeleri.
 - Candidate hash'leri ve Git kimliği için `.codex/tools/candidate.py`.
 - Ignore edilen yerel görev metadata'sı ve tamamlanma kontrolleri için `.codex/tools/ledger.py`.
@@ -170,6 +177,7 @@ Ayrıntılar için [görev ledger'ı rehberine](docs/task-ledger.tr.md) ve [uzma
 | Kontrol | Nasıl sunulur? | Pratik sınır |
 |---|---|---|
 | Recursive child delegation kapalı | Agent config'i child agent'ları kapatır; rol prompt'ları da delegation'ı yasaklar | Codex istemcisinin yüklenen proje config'ine uymasına bağlıdır |
+| Şef yalnız koordinasyon yapar | Yönetilen AGENTS bloğu ve skill talimatları | Davranış kuralıdır; doğrulanmış köke özel araç izin listesi şefi teknik olarak kilitlemez |
 | Kapsam başına tek writer | Owner ve implementer görev sözleşmeleri | Prosedür kuralıdır; dosyaları işletim sistemi düzeyinde kilitlemez |
 | Salt okunur reviewer | Reviewer sandbox varsayılanı ve yalnız bulgu talimatı | Gerçek izinler istemciye, trust durumuna ve parent politikasına göre değişebilir |
 | Sonlu review döngüsü | Skill state machine'i ve açık bütçeler | Root akışı izlemelidir; prompt'lar global scheduler uygulamaz |
@@ -190,7 +198,7 @@ Asıl uygulama katmanları Codex sandbox'ı, işletim sistemi izinleri, repo kor
 - [Görev ledger'ı](docs/task-ledger.tr.md) ve [uzmanlık paketleri](docs/expertise-packs.tr.md)
 - [Kullanım raporu ve isteğe bağlı yerel değerlendirme](docs/usage-and-local-eval.tr.md)
 - [Yönlendirme profilleri](docs/profiles.tr.md) ve [haricî sağlayıcı köprüsü](docs/external-providers.tr.md)
-- [v0.6.0 sürüm notları](docs/release-v0.6.0.tr.md) ve [son sürüm](https://github.com/metapak/codex-bounded-orchestrator/releases/latest)
+- [v0.6.0 sürüm notları](docs/release-v0.6.0.tr.md) ve [sürüm indirmeleri](https://github.com/metapak/codex-bounded-orchestrator/releases)
 - [Kaynak kökeni](docs/provenance.md)
 
 ## Geliştirme
@@ -210,6 +218,3 @@ Bu akış Codex işlerini daha net veya daha kolay denetlenir hâle getiriyorsa 
 Apache-2.0 ile lisanslanmıştır. Bkz. [LICENSE](LICENSE) ve [NOTICE](NOTICE).
 
 Bu proje, yine Apache-2.0 ile dağıtılan [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator) projesinden ilham alan sıfırdan bir yeniden tasarımdır. Atıf ve bağlam için [NOTICE](NOTICE) ile [tasarım farklarına](docs/from-astra-luna-orchestrator.md) bak.
-
-
-Tarayıcıda yerel ayarlar, istek kullanımı ve thread ayrıntıları: [yerel konsol](docs/local-console.tr.md). Bu installer deposundan `python3 scripts/dashboard.py /hedef/depo` ile başlatın.

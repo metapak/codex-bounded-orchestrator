@@ -20,7 +20,7 @@ Hayır. Hash'leri ve Git kimliğini kaydeder; `verify` daha sonra dondurulmuş a
 
 ## Görev ledger'ı hiçbir işin unutulmadığını kanıtlayabilir mi?
 
-Hayır. Tanımlanmış zorunlu görevler arasındaki çözülmemiş işleri gösterir. Owner yine de doğru işleri tanımlamalı, sonucu incelemeli, testleri çalıştırmalı ve bağımsız review'ı tamamlamalıdır. Ledger etiketlerine ve nedenlerine prompt, kaynak, log, kişisel veri, kullanıcı bilgisi veya secret yazma.
+Hayır. Tanımlanmış zorunlu görevler arasındaki çözülmemiş işleri gösterir. Şef yine de doğru işleri uzmana vermeli, uzmanların kısa kanıt raporlarını okumalı ve testleri bir uzmanın, dondurulmuş adayın bağımsız incelemesini başka bir uzmanın yapmasını sağlamalıdır. Ledger etiketlerine ve nedenlerine prompt, kaynak, log, kişisel veri, kullanıcı bilgisi veya secret yazma.
 
 ## Uzmanlık paketleri ek izin verir mi?
 
