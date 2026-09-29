@@ -12,6 +12,8 @@ import secrets
 import sys
 import tomllib
 import webbrowser
+from collections import defaultdict
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -21,6 +23,7 @@ import model_catalog
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = Path(__file__).resolve().parent / 'console'
 STATE = Path('.codex/.bounded-orchestrator/console-restore.json')
+HISTORY = Path('.codex/.bounded-orchestrator/console-style-history.json')
 SAFE_PATHS = sorted(installer.ALLOWED_MANIFEST_FILES | {Path('AGENTS.md'), installer.MANIFEST_RELATIVE}, key=str)
 EFFORTS = installer.EFFORTS
 
@@ -37,6 +40,43 @@ def contents(path):
 
 def digest(data):
     return hashlib.sha256(data).hexdigest() if data is not None else None
+
+def instant(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return parsed.timestamp() if parsed.tzinfo else None
+    except ValueError:
+        return None
+
+def usage_breakdowns(report, history, project):
+    """Group observed totals; style is an explicitly labelled timeline estimate."""
+    models, styles = defaultdict(int), defaultdict(int)
+    events = sorted(((instant(event.get('at')), event) for event in history if isinstance(event, dict)), key=lambda row: row[0] if row[0] is not None else -1)
+    events = [(when, event) for when, event in events if when is not None]
+    for record in report['records']:
+        amount = record['usage'].get('total_tokens', 0)
+        if type(amount) is not int or amount < 0:
+            continue
+        model = record['model'] if record['model'] != 'unknown' else 'unknown'
+        models[model] += amount
+        style = 'unknown'
+        start, end = instant(record.get('turn_start')), instant(record.get('turn_end'))
+        same_project = record['project'] != 'unknown' and Path(record['project']).resolve() == Path(project).resolve()
+        if start is not None and end is not None and end >= start and same_project:
+            earlier = [(index, event) for index, (when, event) in enumerate(events) if when < start]
+            if earlier:
+                index, event = earlier[-1]
+                next_at = events[index + 1][0] if index + 1 < len(events) else None
+                if event.get('action') == 'save' and (next_at is None or end < next_at):
+                    style = event.get('preset', 'unknown')
+        styles[style] += amount
+    def rows(values):
+        return [{'id': key, 'total_tokens': value} for key, value in sorted(values.items(), key=lambda pair: (-pair[1], pair[0]))]
+    return {'model': {'basis': 'observed_turn_context', 'rows': rows(models)},
+            'style': {'basis': 'estimated_from_console_save_history', 'rows': rows(styles)},
+            'total_tokens': report['totals'].get('total_tokens', 0)}
 
 def visible_lines(text):
     """Locate structural lines outside multiline strings."""
@@ -121,7 +161,7 @@ class Console:
         self.validate_paths()
 
     def validate_paths(self):
-        for relative in [*SAFE_PATHS, STATE, installer.BACKUP_RELATIVE / "probe"]:
+        for relative in [*SAFE_PATHS, STATE, HISTORY, installer.BACKUP_RELATIVE / "probe"]:
             path = self.target/relative
             for parent in (path, *path.parents):
                 if parent == self.target:
@@ -134,6 +174,24 @@ class Console:
     def snapshot(self):
         self.validate_paths()
         return {str(p): contents(self.target/p) for p in SAFE_PATHS}
+
+    def style_history(self):
+        self.validate_paths()
+        path = self.target/HISTORY
+        if not path.exists():
+            return []
+        data = json.loads(path.read_text())
+        if data.get('schema') != 1 or not isinstance(data.get('events'), list) or len(data['events']) > 1000:
+            raise ValueError('Invalid style history')
+        return data['events']
+
+    def append_style_history(self, action, preset=None, settings=None):
+        events = self.style_history()
+        event = {'at': datetime.now(timezone.utc).isoformat(), 'action': action}
+        if action == 'save':
+            event.update(preset=preset, roles={role: {'model': model, 'effort': effort} for role, (model, effort) in settings.items()})
+        events.append(event)
+        installer.atomic_write_text(self.target/HISTORY, json.dumps({'schema': 1, 'events': events[-1000:]}, separators=(',', ':')), False)
 
     def models(self, refresh=False):
         if self._catalog is None or refresh:
@@ -242,6 +300,7 @@ class Console:
             raise ValueError('Files changed since preview; preview again')
         manifest = installer.load_manifest(self.target)
         messages = []
+        old_state, old_history = contents(self.target/STATE), contents(self.target/HISTORY)
         # Runtime ignore comes first so backups and snapshots stay local.
         ordered = [str(Path('.codex/.bounded-orchestrator/.gitignore'))] + [p for p in desired if p != '.codex/.bounded-orchestrator/.gitignore']
         try:
@@ -261,10 +320,13 @@ class Console:
             after = self.snapshot()
             changed = {p: {'before': base64.b64encode(before[p]).decode() if before[p] is not None else None, 'after': digest(after[p])} for p in before if before[p] != after[p]}
             installer.atomic_write_text(self.target/STATE, json.dumps({'schema': 1, 'files': changed}), False)
+            self.append_style_history('save', preset, settings)
         except Exception:
             for name, data in before.items():
                 if contents(self.target/name) != data:
                     self.restore_bytes(name, data)
+            self.restore_bytes(str(STATE), old_state)
+            self.restore_bytes(str(HISTORY), old_history)
             raise
         self.pending = None
         return {'status': 'saved', 'changed_files': list(changed), 'restart_required': True}
@@ -296,6 +358,9 @@ class Console:
             if digest(snapshot[name]) != entry['after']:
                 raise ValueError('File changed after Save; restore refused: '+name)
         decoded = {name: base64.b64decode(entry['before'], validate=True) if entry['before'] is not None else None for name,entry in data['files'].items()}
+        # Record the transition before changing settings; a failed restore then
+        # leaves future attribution unknown rather than falsely assigning a style.
+        self.append_style_history('restore')
         for name, value in decoded.items():
             self.restore_bytes(name, value)
         path.unlink()
@@ -313,6 +378,13 @@ class Console:
         result = usage.scan(self.sessions, **filters)
         result['sample_data'] = self.sessions == (ROOT/'tests/fixtures/usage-sanitized').resolve()
         result['source_path'] = str(self.sessions)
+        if result['sample_data']:
+            history = json.loads((ROOT/'tests/fixtures/usage-sanitized/style-history.json').read_text())['events']
+            project = '/sample/project'
+        else:
+            history = self.style_history()
+            project = str(self.target)
+        result['breakdowns'] = usage_breakdowns(result, history, project)
         return result
 
 class Server(HTTPServer):

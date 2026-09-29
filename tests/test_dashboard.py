@@ -135,7 +135,80 @@ class ConsoleTests(unittest.TestCase):
         self.assertTrue(report['sample_data'])
         self.assertEqual(report['source_path'], str(sample.resolve()))
         self.assertEqual(report['totals']['total_tokens'], 61694)
+        self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['model']['rows']}, {'gpt-6-sol':29268, 'gpt-6-astra':32426})
+        self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['style']['rows']}, {'focused':29268, 'quality':32426})
+        filtered = console.report({'date_from':['2026-09-02'], 'thread':['sanitized-thread-two']})
+        self.assertEqual(filtered['breakdowns']['total_tokens'], 32426)
+        self.assertEqual(filtered['breakdowns']['model']['rows'], [{'id':'gpt-6-astra','total_tokens':32426}])
+        self.assertEqual(filtered['breakdowns']['style']['rows'], [{'id':'quality','total_tokens':32426}])
         self.assertFalse(self.console.report({})['sample_data'])
+
+    def test_style_attribution_requires_bounded_turn_and_exact_project(self):
+        rows = [
+            {'model':'gpt-one','project':str(self.target),'turn_start':'2026-09-01T10:00:00Z','turn_end':'2026-09-01T10:01:00Z','usage':{'input_tokens':15,'cached_input_tokens':10,'output_tokens':5,'total_tokens':20}},
+            {'model':'unknown','project':str(self.target),'turn_start':'2026-09-01T10:30:00Z','turn_end':'2026-09-01T11:01:00Z','usage':{'total_tokens':10}},
+            {'model':'gpt-two','project':str(self.target),'turn_start':'unknown','turn_end':'2026-09-01T12:00:00Z','usage':{'total_tokens':5}},
+            {'model':'gpt-two','project':'/other/project','turn_start':'2026-09-01T12:00:00Z','turn_end':'2026-09-01T12:01:00Z','usage':{'total_tokens':15}},
+        ]
+        events = [{'at':'2026-09-01T09:00:00Z','action':'save','preset':'focused'}, {'at':'2026-09-01T11:00:00Z','action':'restore'}]
+        result = dashboard.usage_breakdowns({'records':rows,'totals':{'total_tokens':50}},events,str(self.target))
+        self.assertEqual(sum(row['total_tokens'] for row in result['model']['rows']),50)
+        self.assertEqual(sum(row['total_tokens'] for row in result['style']['rows']),50)
+        self.assertEqual({row['id']:row['total_tokens'] for row in result['style']['rows']},{'focused':20,'unknown':30})
+        self.assertEqual(next(row['total_tokens'] for row in result['model']['rows'] if row['id']=='unknown'),10)
+
+    def test_save_restore_writes_private_style_transitions(self):
+        plan = self.console.preview({'preset':'quality'})
+        self.console.save({'preview_id':plan['preview_id']})
+        history = self.console.style_history()
+        self.assertEqual(history[-1]['action'],'save')
+        self.assertEqual(history[-1]['preset'],'quality')
+        self.assertEqual(history[-1]['roles']['owner']['model'],'gpt-6-astra')
+        ignored = subprocess.run(['git','check-ignore',str(self.target/dashboard.HISTORY)],cwd=self.target,capture_output=True)
+        self.assertEqual(ignored.returncode,0)
+        self.console.restore({})
+        self.assertEqual(self.console.style_history()[-1]['action'],'restore')
+
+    def test_unfinished_turn_is_unknown_until_matching_task_complete_marker(self):
+        history = self.target/dashboard.HISTORY
+        history.parent.mkdir(parents=True)
+        history.write_text(json.dumps({'schema':1,'events':[{'at':'2026-09-01T09:00:00Z','action':'save','preset':'focused'}]}))
+        log = self.sessions/'rollout.jsonl'
+        rows = [
+            {'timestamp':'2026-09-01T10:00:00Z','type':'session_meta','payload':{'id':'session-one','cwd':str(self.target)}},
+            {'timestamp':'2026-09-01T10:01:00Z','type':'turn_context','payload':{'turn_id':'turn-one','model':'gpt-6-sol'}},
+            {'timestamp':'2026-09-01T10:02:00Z','type':'token_usage_record','payload':{'turn_id':'turn-one','usage':{'total_tokens':25}}},
+        ]
+        log.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        self.assertEqual(self.console.report({})['breakdowns']['style']['rows'],[{'id':'unknown','total_tokens':25}])
+        rows.append({'timestamp':'2026-09-01T10:03:00Z','type':'event_msg','payload':{'type':'task_complete','turn_id':'turn-one'}})
+        log.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        self.assertEqual(self.console.report({})['breakdowns']['style']['rows'],[{'id':'focused','total_tokens':25}])
+
+    def test_same_session_turns_split_across_saves_and_ambiguous_turns_unknown(self):
+        history = self.target/dashboard.HISTORY
+        history.parent.mkdir(parents=True)
+        history.write_text(json.dumps({'schema':1,'events':[
+            {'at':'2026-09-01T09:00:00Z','action':'save','preset':'focused'},
+            {'at':'2026-09-01T11:00:00Z','action':'save','preset':'quality'},
+        ]}))
+        rows = [{'timestamp':'2026-09-01T08:00:00Z','type':'session_meta','payload':{'id':'shared-session','cwd':str(self.target)}}]
+        def turn(turn_id, start, usage_at, end, model, tokens):
+            rows.extend([
+                {'timestamp':start,'type':'turn_context','payload':{'turn_id':turn_id,'model':model}},
+                {'timestamp':usage_at,'type':'token_usage_record','payload':{'turn_id':turn_id,'usage':{'input_tokens':tokens-1,'cached_input_tokens':1,'output_tokens':1,'total_tokens':tokens}}},
+            ])
+            if end:
+                rows.append({'timestamp':end,'type':'event_msg','payload':{'type':'task_complete','turn_id':turn_id}})
+        turn('turn-focused','2026-09-01T10:00:00Z','2026-09-01T10:01:00Z','2026-09-01T10:05:00Z','gpt-6-sol',10)
+        turn('turn-crossing','2026-09-01T10:59:00Z','2026-09-01T11:00:00Z','2026-09-01T11:01:00Z','gpt-6-sol',7)
+        turn('turn-quality','2026-09-01T11:10:00Z','2026-09-01T11:11:00Z','2026-09-01T11:15:00Z','gpt-6-astra',20)
+        turn('turn-open','2026-09-01T11:20:00Z','2026-09-01T11:21:00Z',None,'gpt-6-astra',5)
+        (self.sessions/'rollout.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        report = self.console.report({})
+        self.assertEqual(report['totals']['total_tokens'],42)
+        self.assertEqual({row['id']:row['total_tokens'] for row in report['breakdowns']['style']['rows']},{'focused':10,'quality':20,'unknown':12})
+        self.assertEqual(sum(row['total_tokens'] for row in report['breakdowns']['model']['rows']),42)
 
     def test_model_catalog_merges_runtime_and_offline_documentation(self):
         import model_catalog

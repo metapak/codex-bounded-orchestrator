@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 
 COUNTERS = ('input_tokens', 'cached_input_tokens', 'output_tokens', 'reasoning_output_tokens', 'total_tokens')
@@ -18,7 +19,7 @@ def token_record(obj):
     for item in candidates:
         if item.get('type', obj.get('type')) == 'token_usage_record' and isinstance(item.get('usage'), dict):
             result = {k: v for source in (obj, item, item.get('context', {})) if isinstance(source, dict) for k, v in source.items() if k in META and isinstance(v, (str, int))}
-            result.update(usage=item['usage'], semantics='request', timestamp=scalar(obj, 'timestamp'), event_id=scalar(item, 'request_id', 'id'))
+            result.update(usage=item['usage'], semantics='request', timestamp=scalar(obj, 'timestamp'), event_id=scalar(item, 'request_id', 'id'), turn_id=scalar(item, 'turn_id'))
             return result
     # Older CLI event_msg/token_count records are cumulative. Prefer total to last
     # so repeated last-token snapshots do not become new requests.
@@ -28,9 +29,19 @@ def token_record(obj):
             return {'usage': info['total_token_usage'], 'semantics': 'cumulative', 'timestamp': scalar(obj, 'timestamp'), 'event_id': 'unknown'}
     return None
 
+def instant(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return parsed.timestamp() if parsed.tzinfo else None
+    except ValueError:
+        return None
+
 def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
     groups = defaultdict(lambda: defaultdict(int))
     records, raw_records, seen, previous = [], [], set(), {}
+    turns = {}
     files = malformed = duplicates = resets = unreadable = 0
     for path in sorted(root.rglob('*.jsonl')) if root.exists() else []:
         files += 1
@@ -51,9 +62,32 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
                     continue
                 payload = obj.get('payload', {})
                 if obj.get('type') in ('session_meta', 'turn_context') and isinstance(payload, dict):
+                    if obj['type'] == 'turn_context':
+                        metadata.pop('model', None)
+                        metadata.pop('model_id', None)
                     metadata.update({k: v for k, v in payload.items() if k in META and isinstance(v, (str, int))})
                     if obj['type'] == 'session_meta' and isinstance(payload.get('id'), str):
                         metadata['thread_id'] = payload['id']
+                    if obj['type'] == 'turn_context' and isinstance(payload.get('turn_id'), str):
+                        started = scalar(obj, 'timestamp')
+                        when = instant(started)
+                        if when is not None:
+                            key = (scalar(metadata, 'thread_id', 'session_id', 'conversation_id'), payload['turn_id'])
+                            turn = turns.setdefault(key, {})
+                            if 'start' in turn and turn['start'][0] != when:
+                                turn['ambiguous'] = True
+                            turn['start'] = (when, started)
+                event_stamp = scalar(obj, 'timestamp')
+                event_time = instant(event_stamp)
+                if event_time is not None:
+                    event_tid = scalar(metadata, 'thread_id', 'session_id', 'conversation_id')
+                    terminal = obj.get('type') == 'event_msg' and isinstance(payload, dict) and payload.get('type') in ('task_complete', 'turn_aborted')
+                    if terminal and isinstance(payload.get('turn_id'), str):
+                        key = (event_tid, payload['turn_id'])
+                        turn = turns.setdefault(key, {})
+                        if 'end' in turn and turn['end'][0] != event_time:
+                            turn['ambiguous'] = True
+                        turn['end'] = (event_time, event_stamp)
                 record = token_record(obj)
                 if record is None:
                     continue
@@ -66,14 +100,26 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
                 current = {k: v for k, v in record['usage'].items() if k in COUNTERS and type(v) is int and v >= 0}
                 if not current:
                     continue
-                raw_records.append({'model': model, 'role': role, 'thread': tid, 'project': proj, 'timestamp': stamp, 'semantics': record['semantics'], 'event_id': record['event_id'], 'usage': current})
+                raw_records.append({'model': model, 'role': role, 'thread': tid, 'project': proj, 'timestamp': stamp, 'semantics': record['semantics'], 'event_id': record['event_id'], 'turn_id': record.get('turn_id', 'unknown'), 'usage': current})
     # Sort accounting events before deltas and date filters. Rollout filenames
     # are not a chronological contract, including duplicate/exported logs.
+    for record in raw_records:
+        turn = turns.get((record['thread'], record['turn_id']))
+        if turn is not None:
+            when = instant(record['timestamp'])
+            if when is None or 'start' not in turn or 'end' not in turn or not turn['start'][0] <= when <= turn['end'][0]:
+                turn['ambiguous'] = True
+    for record in raw_records:
+        turn = turns.get((record['thread'], record['turn_id']), {})
+        when = instant(record['timestamp'])
+        bounded = not turn.get('ambiguous') and 'start' in turn and 'end' in turn and when is not None and turn['start'][0] <= when <= turn['end'][0]
+        record['turn_start'] = turn['start'][1] if bounded else 'unknown'
+        record['turn_end'] = turn['end'][1] if bounded else 'unknown'
     raw_records.sort(key=lambda r: (r['thread'], r['timestamp']))
     request_threads = {r['thread'] for r in raw_records if r['semantics'] == 'request'}
     for record in raw_records:
         tid, stamp, current = record['thread'], record['timestamp'], record['usage']
-        identity = (tid, record['semantics'], record['event_id'], stamp, tuple(sorted(current.items())))
+        identity = (tid, record['turn_id'], record['semantics'], record['event_id'], stamp, tuple(sorted(current.items())))
         if (stamp != 'unknown' or record['event_id'] != 'unknown') and identity in seen:
             duplicates += 1
             continue
@@ -90,7 +136,7 @@ def scan(root: Path, *, date_from='', date_to='', project='', thread=''):
         day = stamp[:10] if stamp != 'unknown' else ''
         if (date_from and (not day or day < date_from)) or (date_to and (not day or day > date_to)) or (project and record['project'] != project) or (thread and tid != thread):
             continue
-        records.append({k: v for k,v in record.items() if k not in ('event_id', 'usage')} | {'usage': delta})
+        records.append({k: v for k,v in record.items() if k not in ('event_id', 'usage', 'turn_id')} | {'usage': delta})
     for record in records:
         key = tuple(record[k] for k in ('model', 'role', 'thread', 'project'))
         for name, value in record['usage'].items():

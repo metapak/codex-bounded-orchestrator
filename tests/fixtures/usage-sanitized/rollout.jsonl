@@ -1,4 +1,4 @@
-{"type":"session_meta","payload":{"id":"sanitized-thread","cwd":"/sample/project"}}
-{"type":"turn_context","payload":{"model":"gpt-6-sol","role":"implementer"}}
-{"timestamp":"2026-09-01T10:00:00Z","type":"token_usage_record","payload":{"usage":{"input_tokens":29000,"cached_input_tokens":20000,"output_tokens":268,"total_tokens":29268},"thread_token_usage":{"total_tokens":29268}}}
-{"timestamp":"2026-09-02T10:00:00Z","type":"token_usage_record","payload":{"usage":{"input_tokens":32000,"cached_input_tokens":21000,"output_tokens":426,"total_tokens":32426},"thread_token_usage":{"total_tokens":61694}}}
+{"timestamp":"2026-09-01T09:59:00Z","type":"session_meta","payload":{"id":"sanitized-thread","cwd":"/sample/project"}}
+{"timestamp":"2026-09-01T09:59:30Z","type":"turn_context","payload":{"turn_id":"demo-turn-one","model":"gpt-6-sol","role":"implementer"}}
+{"timestamp":"2026-09-01T10:00:00Z","type":"token_usage_record","payload":{"turn_id":"demo-turn-one","usage":{"input_tokens":29000,"cached_input_tokens":20000,"output_tokens":268,"total_tokens":29268},"thread_token_usage":{"total_tokens":29268}}}
+{"timestamp":"2026-09-01T10:00:01Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"demo-turn-one"}}

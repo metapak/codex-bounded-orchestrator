@@ -52,6 +52,8 @@ REQUIRED_SOURCE_FILES = {
     "docs/local-console.tr.md",
     "tests/test_dashboard.py",
     "tests/fixtures/usage-sanitized/rollout.jsonl",
+    "tests/fixtures/usage-sanitized/rollout-two.jsonl",
+    "tests/fixtures/usage-sanitized/style-history.json",
     ".codex/tools/usage_report.py",
     ".codex/tools/local_eval.py",
     ".codex/bounded-orchestrator.eval.example.json",

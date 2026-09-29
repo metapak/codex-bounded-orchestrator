@@ -75,6 +75,29 @@ class UsageAndEvalTests(unittest.TestCase):
             self.assertEqual(filtered["totals"]["total_tokens"], 32426)
             self.assertEqual(module.scan(sessions, project="missing")["status"], "unavailable")
 
+    def test_turn_context_model_switch_and_missing_model_are_not_guessed(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('usage_context', USAGE)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            sessions = Path(temporary)
+            rows = [
+                {'timestamp':'2026-09-01T09:00:00Z','type':'session_meta','payload':{'id':'thread-one','cwd':'/project'}},
+                {'timestamp':'2026-09-01T09:01:00Z','type':'turn_context','payload':{'turn_id':'turn-1','model':'gpt-one'}},
+                {'timestamp':'2026-09-01T09:02:00Z','type':'token_usage_record','payload':{'turn_id':'turn-1','usage':{'input_tokens':8,'cached_input_tokens':3,'output_tokens':2,'total_tokens':10}}},
+                {'timestamp':'2026-09-01T09:02:01Z','type':'event_msg','payload':{'type':'task_complete','turn_id':'turn-1'}},
+                {'timestamp':'2026-09-01T09:03:00Z','type':'turn_context','payload':{'turn_id':'turn-2','model_id':'gpt-two'}},
+                {'timestamp':'2026-09-01T09:04:00Z','type':'token_usage_record','payload':{'turn_id':'turn-2','usage':{'total_tokens':20}}},
+                {'timestamp':'2026-09-01T09:04:01Z','type':'event_msg','payload':{'type':'task_complete','turn_id':'turn-2'}},
+                {'timestamp':'2026-09-01T09:05:00Z','type':'turn_context','payload':{'turn_id':'turn-3'}},
+                {'timestamp':'2026-09-01T09:06:00Z','type':'token_usage_record','payload':{'turn_id':'turn-3','usage':{'total_tokens':5}}},
+            ]
+            (sessions/'rollout.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in rows))
+            report = module.scan(sessions)
+            self.assertEqual([(row['model'],row['usage']['total_tokens']) for row in report['records']],[('gpt-one',10),('gpt-two',20),('unknown',5)])
+            self.assertEqual([(row['turn_start'],row['turn_end']) for row in report['records']],[('2026-09-01T09:01:00Z','2026-09-01T09:02:01Z'),('2026-09-01T09:03:00Z','2026-09-01T09:04:01Z'),('unknown','unknown')])
+
     def test_legacy_cumulative_resets_and_equal_request_values(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location("usage", USAGE)

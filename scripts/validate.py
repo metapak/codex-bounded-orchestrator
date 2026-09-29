@@ -78,6 +78,8 @@ REQUIRED_FILES = (
     "docs/local-console.tr.md",
     "tests/test_dashboard.py",
     "tests/fixtures/usage-sanitized/rollout.jsonl",
+    "tests/fixtures/usage-sanitized/rollout-two.jsonl",
+    "tests/fixtures/usage-sanitized/style-history.json",
     ".codex/config.toml",
     "presets/sol-owner.config.toml",
     ".codex/tools/candidate.py",
