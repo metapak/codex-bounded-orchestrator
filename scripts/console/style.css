@@ -29,7 +29,7 @@
 @keyframes baton-swing{0%,100%{transform:rotate(-8deg)}48%{transform:rotate(15deg)}}
 @keyframes note-float{0%{opacity:0;transform:translateY(8px)}25%{opacity:.95}80%{opacity:.65}100%{opacity:0;transform:translateY(-18px)}}
 @media(prefers-reduced-motion:reduce){.is-conducting .baton-arm,.is-conducting .music-note{animation:none}.music-note{display:none}}
-.stage-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;color:#745d50;font-size:.78rem}.stage-controls button{min-height:36px;padding:6px 12px}.stage-controls button:focus-visible{outline:3px solid #b77c3c;outline-offset:3px}
+.stage-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;color:#745d50;font-size:.78rem}
 .stage-actor{grid-template-rows:132px minmax(2.4em,auto) minmax(1.5em,auto) minmax(2.5em,auto) minmax(2.5em,auto) 1.5em}
 .stage-chief .stage-actor{grid-template-rows:184px minmax(2.4em,auto) minmax(1.5em,auto) minmax(2.5em,auto) minmax(2.5em,auto) 1.5em}
 .stage-model,.stage-effort{display:block;min-width:0;max-width:100%;font-size:.66rem;line-height:1.22;overflow-wrap:anywhere;text-align:center;color:#f7dcba}
