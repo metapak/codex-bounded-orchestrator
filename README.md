@@ -38,6 +38,12 @@ python3 scripts/dashboard.py /absolute/path/to/your-git-project
 
 To change the team later, open the launcher again (or repeat the Linux command) and use **Save**. It updates the project settings without uninstalling. You may need to reopen an active Codex session before it uses the changes. If setup does not open, see the [Mac](INSTALL-MACOS.md) or [Windows](INSTALL-WINDOWS.md) guide. Your Codex client must support project settings and custom agents, and your account must have access to the selected models.
 
+## Watch the 8-second video
+
+<p><a href="docs/assets/bounded-orchestrator-intro-8s.mp4"><img src="docs/assets/bounded-orchestrator-intro-thumbnail.png" alt="Video thumbnail: a conductor and four helpers on the sample Codex orchestra stage" width="480"></a></p>
+
+[Open or download the video](docs/assets/bounded-orchestrator-intro-8s.mp4). It is silent, has Turkish titles, and shows illustrative Codex Usage data—not a live session.
+
 ![Sample Codex Usage page with an orchestra stage and observed helper breakdown](docs/assets/console-en.png)
 
 *Illustrative demo screen; it does not show your project or usage data.*
