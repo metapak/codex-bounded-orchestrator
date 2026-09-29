@@ -30,3 +30,6 @@ python3 scripts/dashboard.py /path/to/temporary-target --sessions tests/fixtures
 ```
 
 Current configuration reference: [official Codex config reference](https://learn.chatgpt.com/docs/config-file/config-reference). Configuration is intent; a live smoke test confirms what the client actually applies.
+
+
+Advanced model selectors use the local Codex CLI app-server `model/list` response when available and list additional officially documented models separately as **access unverified**. The offline list in `scripts/model_catalog.json` records its source and review date and is packaged for disconnected use. **Refresh models** repeats the bounded local discovery; it does not change saved settings. The local CLI list can differ from another Codex client or workspace. A previously saved model missing from the list remains selectable and unchanged; a new unlisted ID cannot be entered or saved through the console. Exact model and reasoning changes appear in the save preview. See [Codex app-server model/list](https://learn.chatgpt.com/docs/app-server#models) and [Codex models](https://learn.chatgpt.com/docs/models).

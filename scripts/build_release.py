@@ -42,6 +42,8 @@ SKIP_NAMES = {
 SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle"}
 WINDOWS_CRLF_SUFFIXES = {".ps1", ".cmd"}
 REQUIRED_SOURCE_FILES = {
+    "scripts/model_catalog.py",
+    "scripts/model_catalog.json",
     "scripts/dashboard.py",
     "scripts/console/index.html",
     "scripts/console/app.js",

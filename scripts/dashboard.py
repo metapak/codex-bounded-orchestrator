@@ -16,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 import install as installer
+import model_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = Path(__file__).resolve().parent / 'console'
@@ -116,6 +117,7 @@ class Console:
         self.target = installer.validate_target(target, ROOT)
         self.sessions = sessions.expanduser().resolve()
         self.pending = None
+        self._catalog = None
         self.validate_paths()
 
     def validate_paths(self):
@@ -132,6 +134,16 @@ class Console:
     def snapshot(self):
         self.validate_paths()
         return {str(p): contents(self.target/p) for p in SAFE_PATHS}
+
+    def models(self, refresh=False):
+        if self._catalog is None or refresh:
+            self._catalog = model_catalog.catalog()
+        return self._catalog
+
+    def refresh_models(self, payload):
+        if payload:
+            raise ValueError('Model refresh takes no fields')
+        return self.models(refresh=True)
 
     def settings(self):
         self.validate_paths()
@@ -154,14 +166,25 @@ class Console:
         if not isinstance(overrides, dict) or set(overrides)-set(installer.ALL_ROLES):
             raise ValueError('Unknown role')
         models, efforts = [], []
+        known_models = {item['id']: item for item in self.models()['models']}
+        saved_models = self.settings()['roles']
         for role, value in overrides.items():
             if not isinstance(value, dict) or set(value) != {'model', 'effort'} or not all(isinstance(v,str) for v in value.values()):
                 raise ValueError('Invalid role selection')
+            if value['model'] not in known_models and value['model'] != saved_models[role]['model']:
+                raise ValueError('Selected model is no longer in the model list: '+role)
             models.append(role+'='+value['model'])
             efforts.append(role+'='+value['effort'])
         settings = installer.resolve_profile(preset, None, models, efforts)
-        for model, effort in settings.values():
-            if model == 'gpt-6-astra' and effort in ('none', 'minimal'):
+        for role, (model, effort) in settings.items():
+            saved = saved_models[role]
+            if (model, effort) != (saved['model'], saved['effort']):
+                entry = known_models.get(model)
+                if entry is None:
+                    raise ValueError('Selected model is no longer in the model list: '+role)
+                if entry['efforts'] and effort not in entry['efforts']:
+                    raise ValueError('Selected reasoning effort is not supported by the model: '+role)
+            if model == 'gpt-6-astra' and effort in ('none', 'minimal') and (model, effort) != (saved['model'], saved['effort']):
                 raise ValueError('GPT-6 Astra requires low or higher reasoning')
         cap = payload.get('concurrency', 4)
         if type(cap) is not int or not 1 <= cap <= 10:
@@ -323,6 +346,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(403, {'error': 'Invalid Host'})
         parsed = urlsplit(self.path)
         try:
+            if parsed.path == '/api/models':
+                return self.respond(200, self.server.console.models())
             if parsed.path == '/api/settings':
                 return self.respond(200, {**self.server.console.settings(), 'csrf_token': self.server.token})
             if parsed.path == '/api/usage':
@@ -347,7 +372,7 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(size))
             if not isinstance(payload, dict):
                 raise ValueError('Object required')
-            actions = {'/api/preview': self.server.console.preview, '/api/save': self.server.console.save, '/api/restore': self.server.console.restore}
+            actions = {'/api/preview': self.server.console.preview, '/api/save': self.server.console.save, '/api/restore': self.server.console.restore, '/api/models/refresh': self.server.console.refresh_models}
             if self.path not in actions:
                 return self.respond(404, {'error': 'Not found'})
             return self.respond(200, actions[self.path](payload))

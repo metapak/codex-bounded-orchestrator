@@ -30,3 +30,6 @@ python3 scripts/dashboard.py /gecici/hedef --sessions tests/fixtures/usage-sanit
 ```
 
 Güncel başvuru: [resmî Codex yapılandırması](https://learn.chatgpt.com/docs/config-file/config-reference). Yapılandırma niyeti gösterir; istemcinin gerçekten uyguladığını canlı smoke testi doğrular.
+
+
+İleri ayarlardaki model listesi mümkünse yerel Codex CLI `model/list` yanıtından gelir. Resmî belgede bulunan diğer modeller **erişim doğrulanmadı** etiketiyle ayrılır. Bağlantısız kullanım için paketlenen `scripts/model_catalog.json` kaynak ve inceleme tarihini içerir. **Güncel modelleri yenile**, sınırlı yerel keşfi tekrarlar; kayıtlı ayarları değiştirmez. Yerel CLI listesi başka bir Codex istemcisi veya çalışma alanından farklı olabilir. Listede olmayan kayıtlı model korunur; konsolda listede olmayan yeni model kimliği girilemez veya kaydedilemez. Kaydetme önizlemesi tam eski/yeni model ve inceleme düzeyini gösterir. Kaynak: [Codex app-server model/list](https://learn.chatgpt.com/docs/app-server#models) ve [Codex modelleri](https://learn.chatgpt.com/docs/models).

@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -136,6 +137,54 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(report['totals']['total_tokens'], 61694)
         self.assertFalse(self.console.report({})['sample_data'])
 
+    def test_model_catalog_merges_runtime_and_offline_documentation(self):
+        import model_catalog
+        with mock.patch.object(model_catalog, 'discover_cli', return_value=[{'id':'gpt-6-astra','label':'GPT-6 Astra','efforts':['low','medium'],'origin':'local_cli'}]):
+            catalog = model_catalog.catalog()
+        entries = {item['id']:item for item in catalog['models']}
+        self.assertEqual(catalog['discovery'], 'local_cli')
+        self.assertEqual(entries['gpt-6-astra']['origin'], 'local_cli')
+        self.assertEqual(entries['gpt-6.1-sol']['origin'], 'documentation')
+        self.assertFalse(catalog['account_access_verified'])
+        with mock.patch.object(model_catalog, 'discover_cli', return_value=None):
+            fallback = model_catalog.catalog()
+        self.assertEqual(fallback['discovery'], 'documentation_fallback')
+        self.assertTrue(fallback['documentation_reviewed_at'])
+        self.assertIn('gpt-6-luna', {item['id'] for item in fallback['models']})
+
+    def test_saved_unlisted_model_is_preserved_but_new_unlisted_rejected(self):
+        config = self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('model = "gpt-private-legacy"\nmodel_reasoning_effort = "medium"\n')
+        saved = self.console.settings()['roles']['owner']
+        self.assertEqual(saved['model'], 'gpt-private-legacy')
+        plan = self.console.preview({'preset':'balanced', 'roles':{'owner':saved}})
+        self.assertTrue(plan['can_save'])
+        self.console.save({'preview_id':plan['preview_id']})
+        self.assertEqual(self.console.settings()['roles']['owner']['model'], 'gpt-private-legacy')
+        with self.assertRaisesRegex(ValueError, 'no longer in the model list'):
+            self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-unlisted-new','effort':'medium'}}})
+
+    def test_model_effort_pair_and_existing_legacy_pair(self):
+        import model_catalog
+        self.console._catalog = model_catalog.catalog()
+        with self.assertRaisesRegex(ValueError, 'reasoning effort is not supported'):
+            self.console.preview({'preset':'balanced', 'roles':{'explorer':{'model':'gpt-6-luna','effort':'ultra'}}})
+        self.assertTrue(self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-6-astra','effort':'ultra'}}})['can_save'])
+        role = self.target/'.codex/agents/explorer.toml'
+        role.parent.mkdir(parents=True)
+        role.write_text('model="gpt-6-luna"\nmodel_reasoning_effort="ultra"\n')
+        self.console.preview({'preset':'balanced', 'roles':{'explorer':{'model':'gpt-6-luna','effort':'ultra'}}})
+        with self.assertRaisesRegex(ValueError, 'reasoning effort is not supported'):
+            self.console.preview({'preset':'balanced', 'roles':{'explorer':{'model':'gpt-6-luna','effort':'minimal'}}})
+
+    def test_every_builtin_preset_uses_catalog_supported_efforts(self):
+        import model_catalog
+        self.console._catalog = model_catalog.catalog()
+        for preset in dashboard.installer.PRESETS:
+            with self.subTest(preset=preset):
+                self.assertTrue(self.console.preview({'preset':preset})['can_save'])
+
     def test_http_security_api_and_assets(self):
         server = dashboard.Server(('127.0.0.1',0), self.console)
         worker = threading.Thread(target=server.serve_forever, daemon=True)
@@ -146,12 +195,18 @@ class ConsoleTests(unittest.TestCase):
             result = conn.getresponse()
             self.assertEqual(result.status, 200)
             token=json.loads(result.read())['csrf_token']
+            conn.request('GET','/api/models')
+            result=conn.getresponse();self.assertEqual(result.status,200)
+            models=json.loads(result.read())
+            self.assertIn('gpt-6.1-sol',{item['id'] for item in models['models']})
             conn.request('GET','/api/usage')
             result=conn.getresponse()
             self.assertEqual(json.loads(result.read())['status'],'unavailable')
             conn.request('POST','/api/save', '{}', {'Content-Type':'application/json'})
             result=conn.getresponse(); self.assertEqual(result.status,403);result.read()
             headers={'Content-Type':'application/json','Origin':server.origin,'X-CSRF-Token':token}
+            conn.request('POST','/api/models/refresh','{}',headers)
+            result=conn.getresponse();self.assertEqual(result.status,200);result.read()
             conn.request('POST','/api/preview', '{}', headers)
             result=conn.getresponse();self.assertEqual(result.status,200);plan=json.loads(result.read())
             conn.request('POST','/api/save', json.dumps({'preview_id':plan['preview_id']}),headers)

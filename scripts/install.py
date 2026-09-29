@@ -96,7 +96,7 @@ PRESETS = {
     "quota-saver": {
         **BALANCED_PROFILE,
         "owner": ("gpt-6-astra", "low"),
-        "fast_lookup": ("gpt-5.6-luna", "minimal"),
+        "fast_lookup": ("gpt-5.6-luna", "low"),
         "explorer": ("gpt-5.6-terra", "low"),
         "researcher": ("gpt-5.6-terra", "low"),
         "implementer": ("gpt-5.6-sol", "medium"),

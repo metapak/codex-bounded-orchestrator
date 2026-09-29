@@ -68,6 +68,8 @@ EXPECTED_AGENTS: dict[str, dict[str, str]] = {
 }
 
 REQUIRED_FILES = (
+    "scripts/model_catalog.py",
+    "scripts/model_catalog.json",
     "scripts/dashboard.py",
     "scripts/console/index.html",
     "scripts/console/app.js",
