@@ -3,7 +3,6 @@
 from __future__ import annotations
 import argparse
 import base64
-import difflib
 import hashlib
 import importlib.util
 import json
@@ -242,11 +241,13 @@ def table_headers(text):
 
 def patch_values(text, section, values):
     """Edit only named assignments in one TOML section, retaining other bytes."""
+    newline = '\r\n' if '\r\n' in text and '\n' not in text.replace('\r\n', '') else '\n'
     headers = table_headers(text)
     if section:
         header = next((h for h in headers if h[2] == section and not h[3]), None)
         if header is None:
-            return text.rstrip() + '\n\n['+section+']\n' + ''.join(k+' = '+json.dumps(v)+'\n' for k,v in values.items())
+            separator = '' if not text or text.endswith(('\n', '\r')) else newline
+            return text + separator + newline + '['+section+']'+newline + ''.join(k+' = '+json.dumps(v)+newline for k,v in values.items())
         start = header[1]
         end = next((h[0] for h in headers if h[0] > header[0]), len(text))
     else:
@@ -260,10 +261,43 @@ def patch_values(text, section, values):
             if '"""' in existing[2] or "'" * 3 in existing[2]:
                 raise ValueError('Multiline selected setting requires manual reconciliation: '+key)
             a, b, line = existing
-            chunk = chunk[:a]+rendered+('\n' if line.endswith('\n') else '')+chunk[b:]
+            ending = '\r\n' if line.endswith('\r\n') else '\n' if line.endswith('\n') else ''
+            chunk = chunk[:a]+rendered+ending+chunk[b:]
         else:
-            chunk = chunk.rstrip()+'\n'+rendered+'\n'
+            if chunk and not chunk.endswith(('\n', '\r')):
+                chunk += newline
+            chunk += rendered+newline
     return text[:start]+chunk+text[end:]
+
+def managed_preview_diff(name, old, new):
+    """Show only managed TOML settings, never surrounding user configuration."""
+    if name == str(installer.CONFIG_RELATIVE):
+        paths = [('model',), ('model_reasoning_effort',), ('review_model',)]
+        paths += [('agents', key) for key in ('enabled', 'max_depth', 'max_concurrent_threads_per_session',
+                                               'default_subagent_model', 'default_subagent_reasoning_effort')]
+        paths += [('agents', role, 'config_file') for role in installer.ROLE_FILES]
+        paths += [('agents', slot, key) for slot in TEAM_SLOTS for key in ('description', 'config_file')]
+    elif name in {str(path) for path in TEAM_SLOTS.values()}:
+        paths = [(key,) for key in ('name', 'description', 'model', 'model_reasoning_effort')]
+    else:
+        paths = [('model',), ('model_reasoning_effort',)]
+    before = tomllib.loads(old.decode()) if old is not None else {}
+    after = tomllib.loads(new.decode()) if new is not None else {}
+    missing = object()
+    def value(document, path):
+        for part in path:
+            if not isinstance(document, dict) or part not in document:
+                return missing
+            document = document[part]
+        return document
+    def describe(item):
+        return '(unset)' if item is missing else json.dumps(item, ensure_ascii=False)
+    lines = []
+    for path in paths:
+        earlier, later = value(before, path), value(after, path)
+        if earlier != later:
+            lines.append('.'.join(path)+': '+describe(earlier)+' → '+describe(later))
+    return '\n'.join(lines) if lines else 'Managed settings update'
 
 def without_team_tables(text):
     """Remove only console-reserved slot tables, retaining unrelated TOML bytes."""
@@ -458,9 +492,10 @@ class Console:
                 continue
             if old is not None and name not in ('AGENTS.md', str(installer.CONFIG_RELATIVE)) and not installer.unchanged_owned(manifest, Path(name), self.target/name):
                 conflicts.append(name)
-            # Zero context prevents unrelated configuration/credentials being exposed.
+            # Preview only explicitly managed settings; even a zero-context file diff
+            # can expose unrelated values when line endings or nearby tables change.
             if name in {str(installer.CONFIG_RELATIVE), *map(str, installer.ROLE_FILES.values()), *map(str, TEAM_SLOTS.values())}:
-                diff = ''.join(difflib.unified_diff((old or b'').decode().splitlines(True), (data or b'').decode().splitlines(True), fromfile=name, tofile=name, n=0))
+                diff = managed_preview_diff(name, old, data)
             else:
                 diff = 'Managed asset '+('update' if old else 'install')
             changes.append({'path': name, 'diff': diff})

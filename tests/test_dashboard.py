@@ -50,6 +50,25 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(agents.read_text(), 'Personal instruction\n')
         self.assertFalse((self.target/'.codex/tools/usage_report.py').exists())
 
+    def test_crlf_preview_hides_unrelated_secret_and_save_preserves_bytes(self):
+        config = self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        unrelated = b'secret = "PRIVATE_VALUE"\r\n\r\n[unrelated]\r\nnote = "keep"\r\n'
+        original = b'model = "gpt-user"\r\n' + unrelated
+        config.write_bytes(original)
+        preview = self.console.preview({'preset': 'focused'})
+        self.assertTrue(preview['can_save'])
+        self.assertNotIn('PRIVATE_VALUE', json.dumps(preview))
+        self.assertIn('model:', json.dumps(preview))
+        self.assertEqual(config.read_bytes(), original)
+        self.console.save({'preview_id': preview['preview_id']})
+        saved = config.read_bytes()
+        self.assertIn(b'secret = "PRIVATE_VALUE"\r\n', saved)
+        self.assertIn(b'[unrelated]\r\nnote = "keep"\r\n', saved)
+        self.assertNotIn(b'\n', saved.replace(b'\r\n', b''))
+        self.console.restore({})
+        self.assertEqual(config.read_bytes(), original)
+
     def test_array_tables_and_multiline_strings_preserve_unrelated_fields(self):
         config = self.target/'.codex/config.toml'
         config.parent.mkdir()
@@ -105,7 +124,7 @@ class ConsoleTests(unittest.TestCase):
         role.parent.mkdir(parents=True)
         role.write_text('model="gpt-personal"\nmodel_reasoning_effort="low"\n')
         plan = self.console.preview({'preset': 'balanced'})
-        self.assertIn('.codex/agents/explorer.toml', plan['conflicts'])
+        self.assertIn('.codex/agents/explorer.toml', [path.replace('\\', '/') for path in plan['conflicts']])
         with self.assertRaises(ValueError):
             self.console.save({'preview_id': plan['preview_id']})
         role.unlink()

@@ -38,11 +38,11 @@ python3 scripts/dashboard.py /projenizin/tam/yolu
 
 Ekibi daha sonra değiştirmek için başlatıcıyı yeniden açıp (Linux'ta komutu yineleyip) **Kaydet** düğmesini kullanın. Ayarlar projeye hemen yazılır; silip yeniden kurmanız gerekmez. Açık Codex oturumunun yeni ayarları kullanması için oturumu yeniden açmanız gerekebilir. Kurulum açılmazsa [Mac](INSTALL-MACOS.md) veya [Windows](INSTALL-WINDOWS.md) rehberine bakın. Codex istemciniz proje ayarlarını ve özel ajanları desteklemeli, seçtiğiniz modellere hesabınızdan erişilebilmelidir.
 
-## 8 saniyelik videoyu izleyin
+## 8 saniyelik hareketli önizleme
 
-<p><a href="docs/assets/bounded-orchestrator-intro-8s.mp4"><img src="docs/assets/bounded-orchestrator-intro-thumbnail.png" alt="Video küçük resmi: örnek Codex orkestra sahnesinde şef ve dört yardımcı" width="480"></a></p>
+<p><img src="docs/assets/bounded-orchestrator-intro-8s.gif" alt="Şef ve dört yardımcıyla örnek Codex orkestrasının hareketli görüntüsü" width="480"></p>
 
-[Videoyu açın veya indirin](docs/assets/bounded-orchestrator-intro-8s.mp4). Sessizdir ve örnek Codex Kullanım verilerini gösterir; canlı oturum değildir.
+Sessizdir; Türkçe başlıklar içerir. Örnek Codex Kullanım ekranıdır; canlı veri değildir. [Orijinal MP4 dosyasını indirin](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/bounded-orchestrator-intro-8s.mp4).
 
 ![Orkestra sahnesini ve gözlenen yardımcı dağılımını gösteren örnek Codex Kullanım sayfası](docs/assets/console-tr.png)
 
