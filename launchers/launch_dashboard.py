@@ -36,7 +36,8 @@ def choose_project() -> Path | None:
         alert("Choose a project", "Open this launcher with a project folder selected.")
         return None
     script = (
-        'POSIX path of (choose folder with prompt "Choose the project folder to configure")'
+        'display dialog "Şimdi Codex ile çalıştığınız projenin klasörünü seçeceksiniz. Kurulum ayarları bu projeye yazılacak. Seçimden sonra tarayıcı açılır; önerilen ekibi inceleyin, Değişiklikleri kontrol edin ve Kur düğmesine basın. / Now choose the project where you use Codex. Setup saves settings there. In the browser, review the team, check changes, then click Install." buttons {"Vazgeç / Cancel", "Devam / Continue"} default button "Devam / Continue" cancel button "Vazgeç / Cancel" with title "2/2 Çalışacağınız proje / Your project"\n'
+        'POSIX path of (choose folder with prompt "2/2 Çalışacağınız Git projesini seçin / Select the Git project where you will work")'
     )
     result = subprocess.run(
         ["/usr/bin/osascript", "-e", script], capture_output=True, text=True, check=False

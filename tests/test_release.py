@@ -63,6 +63,9 @@ class ReleaseBuilderTests(unittest.TestCase):
 
             with zipfile.ZipFile(macos) as archive:
                 self.assertIn(PREFIX + "START-HERE-MACOS.txt", archive.namelist())
+                start_here = archive.read(PREFIX + "START-HERE-MACOS.txt").decode("utf-8")
+                self.assertIn("outer extracted folder containing launchers and scripts", start_here)
+                self.assertIn("Git project where you use Codex", start_here)
                 info = archive.getinfo(PREFIX + "setup.command")
                 mode = (info.external_attr >> 16) & 0o777
                 self.assertEqual(mode, 0o755)

@@ -4,27 +4,36 @@ launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
 launcher="$launcher_dir/launchers/launch_dashboard.py"
 
 if [ ! -f "$launcher" ]; then
-    selected=$(/usr/bin/osascript -e 'POSIX path of (choose folder with prompt "Choose the extracted Codex Bounded Orchestrator folder containing launchers and scripts / launchers ve scripts klasörlerini içeren çıkarılmış Codex Bounded Orchestrator klasörünü seçin")' 2>&1)
-    choice_status=$?
-    if [ "$choice_status" -ne 0 ]; then
+    guide=$(/usr/bin/osascript -e 'display dialog "Önce İndirilenler klasöründe ZIP dosyasından çıkan kurulum paketini bulacağız. Bu klasör uygulamanın çalışması için gereken launchers ve scripts klasörlerini içerir. Sonraki adımda Codex ile çalıştığınız projeyi seçeceksiniz. / First find the extracted setup package in Downloads. It contains launchers and scripts. Next, choose the project where you use Codex." buttons {"Vazgeç / Cancel", "Devam / Continue"} default button "Devam / Continue" cancel button "Vazgeç / Cancel" with title "1/2 Kurulum paketi / Setup package"' 2>&1)
+    guide_status=$?
+    if [ "$guide_status" -ne 0 ]; then
+        case "$guide" in *-128*) exit 0 ;; esac
+        /usr/bin/osascript -e 'display alert "Kurulum konsolu açılamadı / Setup console unavailable" message "Kurulum adımı açılamadı / Could not show the setup step." as warning'
+        exit 1
+    fi
+    while :; do
+        selected=$(/usr/bin/osascript -e 'POSIX path of (choose folder with prompt "1/2 Kurulum paketinin klasörünü seçin (içinde launchers ve scripts var) / Select the extracted setup folder containing launchers and scripts")' 2>&1)
+        choice_status=$?
+        if [ "$choice_status" -ne 0 ]; then
+            case "$selected" in
+                *-128*)
+                    /usr/bin/osascript -e 'display alert "Kurulum iptal edildi / Setup canceled" message "Kurulum paketinin klasörünü seçerek yeniden deneyebilirsiniz / Reopen the app to choose the setup folder."'
+                    exit 0
+                    ;;
+            esac
+            /usr/bin/osascript -e 'display alert "Kurulum konsolu açılamadı / Setup console unavailable" message "Kurulum paketinin klasörü seçilemedi / Could not choose the setup folder." as warning'
+            exit 1
+        fi
         case "$selected" in
-            *-128*)
-                /usr/bin/osascript -e 'display alert "Setup canceled / Kurulum iptal edildi" message "Choose the extracted folder to open the setup console / Kurulum konsolunu açmak için çıkarılmış klasörü seçin."'
-                exit 0
-                ;;
+            */launchers/) selected=${selected%/launchers/} ;;
+            */launchers) selected=${selected%/launchers} ;;
         esac
-        /usr/bin/osascript -e 'display alert "Setup console unavailable / Kurulum konsolu açılamadı" message "Could not choose the extracted folder / Çıkarılmış klasör seçilemedi." as warning'
-        exit 1
-    fi
-    case "$selected" in
-        */launchers/) selected=${selected%/launchers/} ;;
-        */launchers) selected=${selected%/launchers} ;;
-    esac
-    if [ ! -f "$selected/launchers/launch_dashboard.py" ] || [ ! -f "$selected/scripts/dashboard.py" ]; then
-        /usr/bin/osascript -e 'display alert "Wrong folder / Yanlış klasör" message "Choose the extracted folder containing both launchers and scripts / launchers ve scripts klasörlerini içeren çıkarılmış klasörü seçin." as warning'
-        exit 1
-    fi
-    launcher="$selected/launchers/launch_dashboard.py"
+        if [ -f "$selected/launchers/launch_dashboard.py" ] && [ -f "$selected/scripts/dashboard.py" ]; then
+            launcher="$selected/launchers/launch_dashboard.py"
+            break
+        fi
+        /usr/bin/osascript -e 'display alert "Yanlış klasör / Wrong folder" message "Bu ilk adımda Git projenizi değil, içinde launchers ve scripts bulunan çıkarılmış kurulum paketini seçin. Ardından Git projenizi seçeceksiniz. / First select the extracted setup folder containing launchers and scripts. The Git project comes next." as warning'
+    done
 fi
 
 for python in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3.13 python3.12 python3.11 python3; do
