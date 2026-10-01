@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,7 +36,6 @@ def choose_project() -> Path | None:
         alert("Choose a project", "Open this launcher with a project folder selected.")
         return None
     script = (
-        'tell current application to activate\n'
         'POSIX path of (choose folder with prompt "Choose the project folder to configure")'
     )
     result = subprocess.run(
@@ -45,6 +46,45 @@ def choose_project() -> Path | None:
             alert("Could not choose a folder", result.stderr.strip() or "Please try again.")
         return None
     return Path(result.stdout.removesuffix("\n"))
+
+
+def run_mac_console(entry: Path, project: Path) -> int:
+    """Wait for the local server before asking Launch Services to show it."""
+    with tempfile.TemporaryDirectory() as directory:
+        log_path = Path(directory) / "console.log"
+        with log_path.open("w", encoding="utf-8") as log:
+            server = subprocess.Popen(
+                [sys.executable, str(entry), str(project), "--port", "0", "--no-browser"],
+                cwd=ROOT,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
+        deadline = time.monotonic() + 15
+        origin = None
+        while time.monotonic() < deadline and server.poll() is None:
+            match = re.search(r"Codex yerel konsol: (http://127\.0\.0\.1:\d+)", log_path.read_text(encoding="utf-8"))
+            if match:
+                origin = match.group(1)
+                break
+            time.sleep(0.1)
+        if origin is None:
+            if server.poll() is None:
+                server.terminate()
+            server.wait(timeout=5)
+            detail = log_path.read_text(encoding="utf-8")[-1800:].strip()
+            alert("Setup console could not start", detail or "The local server did not become ready.")
+            return 1
+        opened = subprocess.run(["/usr/bin/open", origin], capture_output=True, text=True, check=False)
+        if opened.returncode:
+            detail = opened.stderr.strip()
+            alert("Browser could not open", f"Open {origin} in your browser. {detail}".strip())
+            server.wait()
+            return 1
+        result = server.wait()
+        if result:
+            detail = log_path.read_text(encoding="utf-8")[-1800:].strip()
+            alert("Setup console stopped", detail or "The local server stopped unexpectedly.")
+        return result
 
 
 def main() -> int:
@@ -68,6 +108,8 @@ def main() -> int:
         alert("Project folder unavailable", "Choose an existing local project folder.")
         return 1
     try:
+        if sys.platform == "darwin":
+            return run_mac_console(entry, project)
         with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as log:
             result = subprocess.run(
                 [sys.executable, str(entry), str(project), "--port", "0"],

@@ -3,6 +3,11 @@
 launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
 launcher="$launcher_dir/launchers/launch_dashboard.py"
 
+if [ ! -f "$launcher" ]; then
+    /usr/bin/osascript -e 'display alert "Setup console unavailable" message "Keep Bounded Orchestrator.app inside the launchers folder of the extracted download." as warning'
+    exit 1
+fi
+
 for python in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3.13 python3.12 python3.11 python3; do
     if command -v "$python" >/dev/null 2>&1 &&
         "$python" -c 'import sys; sys.exit(sys.version_info < (3, 11))' >/dev/null 2>&1; then

@@ -2,7 +2,7 @@
 
 # Local console
 
-[Download the current `main` ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and extract it completely; older release packages may lack the GUI launcher. Open **launchers/Bounded Orchestrator.app** on macOS or **launchers/Launch Bounded Orchestrator.vbs** on Windows. Choose the target Git project in the folder picker. The browser opens the local console, where you can choose a work style and helper team, preview the changes, and select **Install** (first setup) or **Save**. Use **Close console** when finished. Local Python 3.11 or newer is required; the launcher displays an error if it is missing. No terminal commands are required for this flow.
+[Download the current `main` ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and extract it completely; older release packages may lack the GUI launcher. Open **launchers/Bounded Orchestrator.app** on macOS or **launchers/Launch Bounded Orchestrator.vbs** on Windows. Keep the Mac app inside the extracted folder. Choose the target Git project in the folder picker. The browser opens the local console, where you can choose a work style and helper team, preview the changes, and select **Install** (first setup) or **Save**. Use **Close console** when finished. Local Python 3.11 or newer is required; the launcher displays an error if it is missing. On Mac, a browser opening failure displays the local address to open manually. No terminal commands are required for this flow.
 
 The terminal alternative from the extracted installer repository is:
 

@@ -9,6 +9,6 @@
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleExecutable</key><string>launch</string>
-    <key>LSUIElement</key><true/>
+    <key>LSUIElement</key><false/>
 </dict>
 </plist>

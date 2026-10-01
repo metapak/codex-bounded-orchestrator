@@ -2,7 +2,7 @@
 
 # Yerel konsol
 
-[Güncel `main` ZIP dosyasını indirin](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) ve tamamen açın; eski sürüm paketlerinde GUI başlatıcısı bulunmayabilir. macOS'ta **launchers/Bounded Orchestrator.app**, Windows'ta **launchers/Launch Bounded Orchestrator.vbs** dosyasını açın. Yerel klasör seçicisinden hedef Git projesini seçin. Açılan tarayıcı konsolunda çalışma biçimini ve yardımcı ekibi belirleyin, değişiklikleri kontrol edin, ardından ilk kurulum için **Kur**, sonraki değişiklikler için **Kaydet** seçin. İşiniz bitince **Konsolu kapat** düğmesini kullanın. Yerel Python 3.11 veya yenisi gerekir; eksikse başlatıcı hata gösterir. Bu akışta terminal komutu yazmanız gerekmez.
+[Güncel `main` ZIP dosyasını indirin](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) ve tamamen açın; eski sürüm paketlerinde GUI başlatıcısı bulunmayabilir. macOS'ta **launchers/Bounded Orchestrator.app**, Windows'ta **launchers/Launch Bounded Orchestrator.vbs** dosyasını açın. Mac uygulamasını açılan klasörün içinde tutun. Yerel klasör seçicisinden hedef Git projesini seçin. Açılan tarayıcı konsolunda çalışma biçimini ve yardımcı ekibi belirleyin, değişiklikleri kontrol edin, ardından ilk kurulum için **Kur**, sonraki değişiklikler için **Kaydet** seçin. İşiniz bitince **Konsolu kapat** düğmesini kullanın. Yerel Python 3.11 veya yenisi gerekir; eksikse başlatıcı hata gösterir. Mac'te tarayıcı açılamazsa başlatıcı, elle açılabilecek yerel adresi gösterir. Bu akışta terminal komutu yazmanız gerekmez.
 
 Açılmış installer deposundan terminal alternatifi:
 
