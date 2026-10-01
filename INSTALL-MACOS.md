@@ -7,7 +7,7 @@ Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](htt
 
 1. **Download:** [Get the current ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
 2. **Open:** Open `launchers` and double-click **Bounded Orchestrator.app**.
-3. **Choose a project:** Pick the Git project folder where you use Codex.
+3. **Choose a project:** If macOS first asks for the extracted Codex Bounded Orchestrator folder, choose the outer folder containing `launchers` and `scripts`. Then pick the Git project folder where you use Codex.
 4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
 
 For later changes, reopen the app and click **Save**; no uninstall is needed. An already-open Codex session may need to be reopened before it uses the changes. If macOS blocks the unsigned app, Control-click it and choose **Open**. Keep the app inside the extracted folder: it needs the neighboring `launch_dashboard.py` and `scripts` files. If no folder picker appears, check whether macOS is still showing a security prompt for the app. If the browser cannot open, the launcher shows an alert with the local address to open manually. See the [local console guide](docs/local-console.md) for more help.

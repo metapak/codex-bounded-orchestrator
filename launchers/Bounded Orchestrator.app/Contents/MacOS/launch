@@ -4,8 +4,27 @@ launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
 launcher="$launcher_dir/launchers/launch_dashboard.py"
 
 if [ ! -f "$launcher" ]; then
-    /usr/bin/osascript -e 'display alert "Setup console unavailable" message "Keep Bounded Orchestrator.app inside the launchers folder of the extracted download." as warning'
-    exit 1
+    selected=$(/usr/bin/osascript -e 'POSIX path of (choose folder with prompt "Choose the extracted Codex Bounded Orchestrator folder containing launchers and scripts / launchers ve scripts klasörlerini içeren çıkarılmış Codex Bounded Orchestrator klasörünü seçin")' 2>&1)
+    choice_status=$?
+    if [ "$choice_status" -ne 0 ]; then
+        case "$selected" in
+            *-128*)
+                /usr/bin/osascript -e 'display alert "Setup canceled / Kurulum iptal edildi" message "Choose the extracted folder to open the setup console / Kurulum konsolunu açmak için çıkarılmış klasörü seçin."'
+                exit 0
+                ;;
+        esac
+        /usr/bin/osascript -e 'display alert "Setup console unavailable / Kurulum konsolu açılamadı" message "Could not choose the extracted folder / Çıkarılmış klasör seçilemedi." as warning'
+        exit 1
+    fi
+    case "$selected" in
+        */launchers/) selected=${selected%/launchers/} ;;
+        */launchers) selected=${selected%/launchers} ;;
+    esac
+    if [ ! -f "$selected/launchers/launch_dashboard.py" ] || [ ! -f "$selected/scripts/dashboard.py" ]; then
+        /usr/bin/osascript -e 'display alert "Wrong folder / Yanlış klasör" message "Choose the extracted folder containing both launchers and scripts / launchers ve scripts klasörlerini içeren çıkarılmış klasörü seçin." as warning'
+        exit 1
+    fi
+    launcher="$selected/launchers/launch_dashboard.py"
 fi
 
 for python in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3.13 python3.12 python3.11 python3; do
