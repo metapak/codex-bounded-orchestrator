@@ -172,6 +172,25 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(filtered['orchestra']['helper_count'],0)
         self.assertFalse(self.console.report({})['sample_data'])
 
+    def test_time_strip_uses_deduped_cumulative_deltas_and_keeps_unknown_time(self):
+        rows = [{'timestamp':'2026-09-01T09:00:00Z','type':'session_meta','payload':{'id':'legacy-thread','cwd':str(self.target),'source':'cli'}}]
+        rows += [{'timestamp':stamp,'type':'event_msg','payload':{'type':'token_count','info':{'total_token_usage':{'total_tokens':total}}}}
+                 for stamp,total in [('2026-09-01T10:00:00Z',12),('2026-09-02T10:00:00Z',19),
+                                     ('2026-09-02T11:00:00Z',4),('2026-09-02T12:00:00Z',9)]]
+        for name in ('a.jsonl','duplicate.jsonl'):
+            (self.sessions/name).write_text(''.join(json.dumps(row)+'\n' for row in rows))
+        (self.sessions/'unknown.jsonl').write_text(json.dumps({'type':'token_usage_record','thread_id':'other-thread','usage':{'total_tokens':3}})+'\n')
+        report = self.console.report({})
+        timeline = report['time_breakdown']
+        self.assertEqual(report['totals']['total_tokens'],31)
+        self.assertEqual(report['counter_resets'],1)
+        self.assertEqual(timeline['days'],[{'day':'2026-09-01','total_tokens':12},{'day':'2026-09-02','total_tokens':16}])
+        self.assertEqual(timeline['unknown_time_tokens'],3)
+        self.assertEqual(sum(row['total_tokens'] for row in timeline['days'])+timeline['unknown_time_tokens'],timeline['total_tokens'])
+        filtered = self.console.report({'date_from':['2026-09-02']})['time_breakdown']
+        self.assertEqual(filtered['days'],[{'day':'2026-09-02','total_tokens':16}])
+        self.assertEqual(filtered['unknown_time_tokens'],0)
+
     def test_style_attribution_requires_bounded_turn_and_exact_project(self):
         rows = [
             {'model':'gpt-one','project':str(self.target),'turn_start':'2026-09-01T10:00:00Z','turn_end':'2026-09-01T10:01:00Z','usage':{'input_tokens':15,'cached_input_tokens':10,'output_tokens':5,'total_tokens':20}},

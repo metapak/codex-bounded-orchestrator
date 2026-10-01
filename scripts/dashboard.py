@@ -79,6 +79,24 @@ def usage_breakdowns(report, history, project):
             'style': {'basis': 'estimated_from_console_save_history', 'rows': rows(styles)},
             'total_tokens': report['totals'].get('total_tokens', 0)}
 
+def usage_time_breakdown(report):
+    """Bucket already-normalized token deltas by their observed record day."""
+    days = defaultdict(int)
+    unknown = 0
+    for record in report['records']:
+        amount = record['usage'].get('total_tokens', 0)
+        if type(amount) is not int or amount < 0:
+            continue
+        stamp = record.get('timestamp', '')
+        if instant(stamp) is None:
+            unknown += amount
+        else:
+            days[stamp[:10]] += amount
+    return {'basis': 'observed_normalized_token_records',
+            'days': [{'day': day, 'total_tokens': amount} for day, amount in sorted(days.items())],
+            'unknown_time_tokens': unknown,
+            'total_tokens': report['totals'].get('total_tokens', 0)}
+
 def orchestra_view(report, selected_root='', filters=None):
     """Attribute each observed record once through explicit session identities."""
     nodes = {item['id']: item for item in report.get('agents', []) if isinstance(item, dict) and isinstance(item.get('id'), str)}
@@ -615,6 +633,7 @@ class Console:
             history = self.style_history()
             project = str(self.target)
         result['breakdowns'] = usage_breakdowns(result, history, project)
+        result['time_breakdown'] = usage_time_breakdown(result)
         return result
 
 class Server(HTTPServer):
