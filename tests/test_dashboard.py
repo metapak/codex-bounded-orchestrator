@@ -56,6 +56,327 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(agents.read_text(), 'Personal instruction\n')
         self.assertFalse((self.target/'.codex/tools/usage_report.py').exists())
 
+    def test_browser_uninstall_after_two_saves_uses_full_manifest(self):
+        for preset in ('focused', 'balanced'):
+            plan = self.console.preview({'preset': preset})
+            self.console.save({'preview_id': plan['preview_id']})
+        self.assertTrue((self.target/'.codex/agents/explorer.toml').exists())
+        removal = self.console.uninstall_preview({})
+        self.assertTrue(any(row == 'REMOVE .codex/agents/explorer.toml' for row in removal['actions']))
+        self.assertTrue((self.target/'.codex/agents/explorer.toml').exists())
+        with self.assertRaisesRegex(ValueError, 'confirmation'):
+            self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': False})
+        result = self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertEqual(result['status'], 'uninstalled')
+        self.assertFalse((self.target/'.codex/agents/explorer.toml').exists())
+        self.assertFalse((self.target/dashboard.installer.MANIFEST_RELATIVE).exists())
+        self.assertTrue((self.target/dashboard.STATE).exists())
+
+    def test_browser_uninstall_preserves_modified_file_and_backup(self):
+        config = self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('model="gpt-personal"\nprivate_fixture="SECRET_LIKE_TEST_VALUE"\n')
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        role = self.target/'.codex/agents/explorer.toml'
+        role.write_text(role.read_text()+'# personal change\n')
+        removal = self.console.uninstall_preview({})
+        self.assertIn('KEEP .codex/agents/explorer.toml: modified after installation', removal['actions'])
+        self.assertIn('KEEP .codex/.bounded-orchestrator/.gitignore: local backups or runtime data remain', removal['actions'])
+        self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertIn('# personal change', role.read_text())
+        backups = list((self.target/dashboard.installer.BACKUP_RELATIVE).rglob('config.toml'))
+        self.assertTrue(backups)
+        self.assertTrue((self.target/'.codex/.bounded-orchestrator/.gitignore').exists())
+        for backup in backups:
+            self.assertIn('SECRET_LIKE_TEST_VALUE', backup.read_text())
+            self.assertEqual(subprocess.run(['git', 'check-ignore', str(backup)], cwd=self.target, capture_output=True).returncode, 0)
+        subprocess.run(['git', 'add', '-A'], cwd=self.target, check=True)
+        self.assertEqual(subprocess.check_output(['git', 'ls-files', '--', '.codex/.bounded-orchestrator/backups'], cwd=self.target), b'')
+
+    def test_browser_uninstall_rejects_stale_preview_and_missing_manifest(self):
+        with self.assertRaisesRegex(ValueError, 'No install manifest'):
+            self.console.uninstall_preview({})
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        (self.target/'.codex/agents/explorer.toml').write_text('changed\n')
+        with self.assertRaisesRegex(ValueError, 'since uninstall preview'):
+            self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertTrue((self.target/dashboard.installer.MANIFEST_RELATIVE).exists())
+
+    def test_browser_uninstall_reports_first_removal_when_later_unlink_fails(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        original_unlink = dashboard.installer.os.unlink
+        removed = []
+
+        def fail_after_first(path, *args, **kwargs):
+            if '.bounded-uninstall-' not in str(path):
+                return original_unlink(path, *args, **kwargs)
+            if removed:
+                raise OSError('injected second removal failure')
+            result = original_unlink(path, *args, **kwargs)
+            removed.append(next(row.removeprefix('REMOVE ') for row in removal['actions'] if row.startswith('REMOVE ')))
+            return result
+
+        with mock.patch.object(dashboard.installer.os, 'unlink', fail_after_first):
+            with self.assertRaises(dashboard.UninstallPartialError) as caught:
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        failure = caught.exception
+        self.assertTrue(failure.state_verified)
+        self.assertEqual(failure.removed_paths, removed)
+        self.assertTrue(failure.manifest_present)
+        self.assertFalse(self.target.joinpath(removed[0]).exists())
+
+    def test_browser_uninstall_rechecks_file_after_hash_before_unlink(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        manifest = dashboard.installer.load_manifest(self.target)
+        first = next(name for name, entry in sorted(manifest['files'].items(), reverse=True)
+                     if entry.get('owned') and (self.target/name).is_file())
+        destination = self.console.target/first
+        original_hash = dashboard.installer.sha256_path
+        calls = 0
+
+        def change_after_hash(path):
+            nonlocal calls
+            digest = original_hash(path)
+            if path == destination:
+                calls += 1
+                if calls == 2:
+                    path.write_bytes(path.read_bytes() + b'\n# concurrent edit\n')
+            return digest
+
+        with mock.patch.object(dashboard.installer, 'sha256_path', side_effect=change_after_hash):
+            with self.assertRaises(dashboard.UninstallPartialError) as caught:
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertIn('changed during uninstall', str(caught.exception))
+        self.assertEqual(caught.exception.removed_paths, [])
+        self.assertTrue(destination.exists())
+        self.assertIn(b'concurrent edit', destination.read_bytes())
+
+    def test_browser_uninstall_rejects_edit_after_final_hash(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        destination = self.console.target/'.codex/tools/usage_report.py'
+        original_hash = dashboard.installer.sha256_path
+        calls = 0
+
+        def edit_after_hash(path):
+            nonlocal calls
+            digest = original_hash(path)
+            if path == destination:
+                calls += 1
+                if calls == 3:
+                    path.write_bytes(path.read_bytes() + b'\n# concurrent user edit\n')
+            return digest
+
+        with mock.patch.object(dashboard.installer, 'sha256_path', side_effect=edit_after_hash):
+            with self.assertRaises(dashboard.UninstallPartialError) as caught:
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertEqual(calls, 3)
+        self.assertEqual(caught.exception.removed_paths, [])
+        self.assertTrue(destination.exists())
+        self.assertIn(b'concurrent user edit', destination.read_bytes())
+
+    def test_browser_uninstall_cannot_follow_redirected_parent_after_final_hash(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        destination = self.console.target/'.codex/tools/usage_report.py'
+        outside = Path(self.tmp.name)/'outside'
+        outside.mkdir()
+        victim = outside/'usage_report.py'
+        victim.write_bytes(b'outside user file\n')
+        original_hash = dashboard.installer.sha256_path
+        calls = 0
+
+        def redirect_after_hash(path):
+            nonlocal calls
+            digest = original_hash(path)
+            if path == destination:
+                calls += 1
+                if calls == 3:
+                    tools = destination.parent
+                    tools.rename(tools.with_name('tools-original'))
+                    tools.symlink_to(outside, target_is_directory=True)
+            return digest
+
+        with mock.patch.object(dashboard.installer, 'sha256_path', side_effect=redirect_after_hash):
+            with self.assertRaises(dashboard.UninstallPartialError):
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertEqual(calls, 3)
+        self.assertEqual(victim.read_bytes(), b'outside user file\n')
+        self.assertTrue(destination.parent.with_name('tools-original').joinpath('usage_report.py').exists())
+
+    def test_browser_uninstall_restores_file_changed_during_quarantine_rename(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        destination = self.console.target/'.codex/tools/usage_report.py'
+        original_rename = dashboard.installer.os.rename
+        changed = False
+
+        def edit_before_stage(source, destination_name, *args, **kwargs):
+            nonlocal changed
+            if source == 'usage_report.py' and not changed:
+                destination.write_bytes(destination.read_bytes() + b'\n# stage-time edit\n')
+                changed = True
+            return original_rename(source, destination_name, *args, **kwargs)
+
+        with mock.patch.object(dashboard.installer.os, 'rename', edit_before_stage):
+            with self.assertRaises(dashboard.UninstallPartialError) as caught:
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertTrue(changed, str(caught.exception))
+        self.assertEqual(caught.exception.removed_paths, [])
+        self.assertTrue(destination.exists())
+        self.assertIn(b'stage-time edit', destination.read_bytes())
+
+    def test_browser_uninstall_rejects_file_appearing_after_approved_actions(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        destination = self.console.target/'.codex/tools/usage_report.py'
+        destination.unlink()
+        removal = self.console.uninstall_preview({})
+        self.assertNotIn('REMOVE .codex/tools/usage_report.py', removal['actions'])
+        original_uninstall = dashboard.installer.uninstall
+        inserted = False
+
+        def appear_after_check(target, dry_run, expected_files=None):
+            nonlocal inserted
+            result = original_uninstall(target, dry_run, expected_files)
+            if dry_run and not inserted:
+                destination.write_bytes(b'new user file after preview\n')
+                inserted = True
+            return result
+
+        with mock.patch.object(dashboard.installer, 'uninstall', side_effect=appear_after_check):
+            with self.assertRaises(dashboard.UninstallPartialError) as caught:
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertTrue(inserted)
+        self.assertEqual(caught.exception.removed_paths, [])
+        self.assertEqual(destination.read_bytes(), b'new user file after preview\n')
+
+    def test_browser_uninstall_recovers_edit_at_final_file_unlink(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        destination = self.console.target/'.codex/tools/usage_report.py'
+        original_unlink = dashboard.installer.os.unlink
+        injected = False
+
+        def edit_before_unlink(name, *args, **kwargs):
+            nonlocal injected
+            if str(name).startswith('.usage_report.py.bounded-uninstall-') and not injected:
+                fd = dashboard.installer.os.open(name, dashboard.installer.os.O_WRONLY | dashboard.installer.os.O_APPEND,
+                                                  dir_fd=kwargs['dir_fd'])
+                try:
+                    dashboard.installer.os.write(fd, b'\n# final user edit\n')
+                finally:
+                    dashboard.installer.os.close(fd)
+                injected = True
+            return original_unlink(name, *args, **kwargs)
+
+        with mock.patch.object(dashboard.installer.os, 'unlink', edit_before_unlink):
+            with self.assertRaises(dashboard.UninstallPartialError):
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertTrue(injected)
+        backups = list((self.console.target/dashboard.installer.BACKUP_RELATIVE).rglob('*usage_report.py'))
+        self.assertTrue(any(b'final user edit' in path.read_bytes() for path in backups))
+        self.assertTrue(destination.exists())
+        self.assertIn(b'final user edit', destination.read_bytes())
+
+    def test_browser_uninstall_recovers_agents_edit_at_final_replace(self):
+        agents = self.console.target/'AGENTS.md'
+        agents.write_text('Personal intro\n')
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        original_unlink = dashboard.installer.os.unlink
+        injected = False
+
+        def edit_before_unlink(name, *args, **kwargs):
+            nonlocal injected
+            if str(name).startswith('.AGENTS.md.bounded-uninstall-') and not injected:
+                fd = dashboard.installer.os.open(name, dashboard.installer.os.O_WRONLY | dashboard.installer.os.O_APPEND,
+                                                  dir_fd=kwargs['dir_fd'])
+                try:
+                    dashboard.installer.os.write(fd, b'\nPersonal last-minute instruction\n')
+                finally:
+                    dashboard.installer.os.close(fd)
+                injected = True
+            return original_unlink(name, *args, **kwargs)
+
+        with mock.patch.object(dashboard.installer.os, 'unlink', edit_before_unlink):
+            with self.assertRaises(dashboard.UninstallPartialError) as caught:
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertTrue(injected)
+        backups = list((self.console.target/dashboard.installer.BACKUP_RELATIVE).rglob('AGENTS.md'))
+        self.assertTrue(any(b'Personal last-minute instruction' in path.read_bytes() for path in backups))
+        self.assertIn('rollback incomplete', str(caught.exception))
+        self.assertTrue(agents.exists())
+
+    def test_browser_uninstall_keeps_both_agents_edits_during_rollback(self):
+        agents = self.console.target/'AGENTS.md'
+        agents.write_text('Personal intro\n')
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        removal = self.console.uninstall_preview({})
+        original_unlink = dashboard.installer.os.unlink
+        original_edit = replacement_edit = atomic_save = False
+
+        def edit_both_versions(name, *args, **kwargs):
+            nonlocal original_edit, replacement_edit, atomic_save
+            if name == 'AGENTS.md':
+                self.fail('rollback must not unlink the current AGENTS.md path')
+            if str(name).startswith('.AGENTS.md.bounded-uninstall-') and not original_edit:
+                marker = b'\nOriginal last-minute edit\n'
+                original_edit = True
+                replacement_fd = dashboard.installer.os.open('AGENTS.md', dashboard.installer.os.O_WRONLY | dashboard.installer.os.O_APPEND,
+                                                              dir_fd=kwargs['dir_fd'])
+                try:
+                    dashboard.installer.os.write(replacement_fd, b'\nReplacement last-minute edit\n')
+                finally:
+                    dashboard.installer.os.close(replacement_fd)
+                replacement_edit = True
+                temporary = agents.with_name('AGENTS.md.concurrent')
+                temporary.write_bytes(b'Atomic saved personal instruction\n')
+                dashboard.installer.os.replace(temporary, agents)
+                atomic_save = True
+            else:
+                marker = None
+            if marker:
+                fd = dashboard.installer.os.open(name, dashboard.installer.os.O_WRONLY | dashboard.installer.os.O_APPEND,
+                                                  dir_fd=kwargs['dir_fd'])
+                try:
+                    dashboard.installer.os.write(fd, marker)
+                finally:
+                    dashboard.installer.os.close(fd)
+            return original_unlink(name, *args, **kwargs)
+
+        with mock.patch.object(dashboard.installer.os, 'unlink', edit_both_versions):
+            with self.assertRaises(dashboard.UninstallPartialError) as caught:
+                self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
+        self.assertTrue(original_edit and replacement_edit and atomic_save)
+        self.assertEqual(agents.read_bytes(), b'Atomic saved personal instruction\n')
+        original_backups = list((self.console.target/dashboard.installer.BACKUP_RELATIVE).rglob('AGENTS.md'))
+        self.assertTrue(any(b'Original last-minute edit' in path.read_bytes() for path in original_backups))
+        backups = list((self.console.target/dashboard.installer.BACKUP_RELATIVE).rglob('AGENTS.md.replacement'))
+        self.assertTrue(any(b'Replacement last-minute edit' in path.read_bytes() for path in backups))
+        self.assertIn('rollback incomplete', str(caught.exception))
+
+    def test_browser_uninstall_preview_refuses_unsupported_platform(self):
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        with mock.patch.object(dashboard.installer, 'SAFE_UNINSTALL_SUPPORTED', False):
+            self.assertFalse(self.console.settings()['uninstall_available'])
+            with self.assertRaisesRegex(ValueError, 'requires POSIX'):
+                self.console.uninstall_preview({})
+
     def test_crlf_preview_hides_unrelated_secret_and_save_preserves_bytes(self):
         config = self.target/'.codex/config.toml'
         config.parent.mkdir()

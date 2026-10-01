@@ -11,6 +11,7 @@ import re
 import secrets
 import sys
 import threading
+import time
 import tomllib
 import webbrowser
 from collections import defaultdict
@@ -19,6 +20,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 import install as installer
+import contextlib
+import io
 import model_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +31,15 @@ HISTORY = Path('.codex/.bounded-orchestrator/console-style-history.json')
 SAFE_PATHS = sorted(installer.ALLOWED_MANIFEST_FILES | {Path('AGENTS.md'), installer.MANIFEST_RELATIVE}, key=str)
 EFFORTS = installer.EFFORTS
 TEAM_SLOTS = installer.TEAM_SLOT_FILES
+
+
+class UninstallPartialError(RuntimeError):
+    def __init__(self, cause, changed_paths, removed_paths, state_verified, manifest_present):
+        super().__init__(str(cause))
+        self.changed_paths = changed_paths
+        self.removed_paths = removed_paths
+        self.state_verified = state_verified
+        self.manifest_present = manifest_present
 ADVISORY_MODELS = {
     'anthropic': ('claude-fable-5-1', 'claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5-20251001'),
     'deepseek': ('deepseek-flash',),
@@ -442,6 +454,7 @@ class Console:
         self.target = installer.validate_target(target, ROOT)
         self.sessions = sessions.expanduser().resolve()
         self.pending = None
+        self.pending_uninstall = None
         self._catalog = None
         self.validate_paths()
 
@@ -516,7 +529,7 @@ class Console:
             servers = {}
         advisory = {name: isinstance(servers.get(server), dict) and servers[server].get('enabled', True) is not False
                     for name, server in ADVISORY_SERVERS.items()}
-        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'advisory': advisory, 'advisory_selection': advisory_selection(config, manifest), 'advisory_key_available': {'anthropic': 'ANTHROPIC_API_KEY' in os.environ, 'deepseek': 'DEEPSEEK_API_KEY' in os.environ}, 'advisory_models': ADVISORY_MODELS, 'advisory_efforts': ADVISORY_EFFORTS, 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
+        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'uninstall_supported': installer.SAFE_UNINSTALL_SUPPORTED, 'uninstall_available': installer.SAFE_UNINSTALL_SUPPORTED and (self.target/installer.MANIFEST_RELATIVE).is_file(), 'restore_available': (self.target/STATE).is_file(), 'advisory': advisory, 'advisory_selection': advisory_selection(config, manifest), 'advisory_key_available': {'anthropic': 'ANTHROPIC_API_KEY' in os.environ, 'deepseek': 'DEEPSEEK_API_KEY' in os.environ}, 'advisory_models': ADVISORY_MODELS, 'advisory_efforts': ADVISORY_EFFORTS, 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
 
     def preview(self, payload):
         if set(payload) - {'preset', 'roles', 'concurrency', 'team', 'team_count', 'advisory'}:
@@ -784,6 +797,56 @@ class Console:
         self.pending = None
         return {'status': 'restored', 'restart_required': True}
 
+    def uninstall_preview(self, payload):
+        if payload:
+            raise ValueError('Uninstall preview takes no fields')
+        if not installer.SAFE_UNINSTALL_SUPPORTED:
+            raise ValueError('Safe uninstall requires POSIX no-follow directory operations on this platform')
+        self.validate_paths()
+        if not (self.target/installer.MANIFEST_RELATIVE).is_file():
+            raise ValueError('No install manifest for this project; nothing can be safely removed')
+        before = self.snapshot()
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            installer.uninstall(self.target, True)
+        actions = output.getvalue().splitlines()
+        preview_id = secrets.token_urlsafe(24)
+        self.pending_uninstall = (preview_id, time.monotonic() + 300, before, actions)
+        return {'preview_id': preview_id, 'target': str(self.target), 'actions': actions,
+                'backups_preserved': True, 'can_uninstall': True}
+
+    def uninstall_confirm(self, payload):
+        if set(payload) != {'preview_id', 'target', 'confirmed'} or payload['confirmed'] is not True:
+            raise ValueError('Explicit uninstall confirmation required')
+        if not self.pending_uninstall or payload['preview_id'] != self.pending_uninstall[0] or payload['target'] != str(self.target):
+            raise ValueError('Uninstall preview required for this project')
+        _, expires_at, before, actions = self.pending_uninstall
+        self.pending_uninstall = None
+        if time.monotonic() > expires_at:
+            raise ValueError('Uninstall preview expired; review again')
+        if self.snapshot() != before:
+            raise ValueError('Project files changed since uninstall preview; review again')
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            installer.uninstall(self.target, True)
+        if output.getvalue().splitlines() != actions:
+            raise ValueError('Uninstall actions changed since preview; review again')
+        try:
+            with contextlib.redirect_stdout(output := io.StringIO()):
+                installer.uninstall(self.target, False, expected_files=before)
+        except Exception as exc:
+            try:
+                after = self.snapshot()
+                changed = [name for name in before if before[name] != after[name]]
+                removed = [name for name in changed if before[name] is not None and after[name] is None]
+                manifest_present = after[str(installer.MANIFEST_RELATIVE)] is not None
+                verified = True
+            except Exception:
+                changed, removed, manifest_present, verified = [], [], None, False
+            raise UninstallPartialError(exc, changed, removed, verified, manifest_present) from exc
+        self.pending = None
+        return {'status': 'uninstalled', 'actions': output.getvalue().splitlines(), 'restart_required': True}
+
     def report(self, query):
         allowed = {'date_from', 'date_to', 'project', 'thread', 'root'}
         if set(query)-allowed or any(len(v) != 1 or len(v[0]) > 4096 for v in query.values()):
@@ -882,10 +945,14 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(200, {'status': 'closing'})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
                 return
-            actions = {'/api/preview': self.server.console.preview, '/api/save': self.server.console.save, '/api/restore': self.server.console.restore, '/api/models/refresh': self.server.console.refresh_models}
+            actions = {'/api/preview': self.server.console.preview, '/api/save': self.server.console.save, '/api/restore': self.server.console.restore, '/api/uninstall/preview': self.server.console.uninstall_preview, '/api/uninstall': self.server.console.uninstall_confirm, '/api/models/refresh': self.server.console.refresh_models}
             if self.path not in actions:
                 return self.respond(404, {'error': 'Not found'})
             return self.respond(200, actions[self.path](payload))
+        except UninstallPartialError as exc:
+            return self.respond(409, {'error': str(exc), 'partial': {'changed_paths': exc.changed_paths,
+                'removed_paths': exc.removed_paths, 'state_verified': exc.state_verified,
+                'manifest_present': exc.manifest_present}})
         except (ValueError, OSError, installer.InstallError, KeyError, TypeError) as exc:
             return self.respond(400, {'error': str(exc)})
 

@@ -8,19 +8,24 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
+import stat
 import sys
 import tempfile
 import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 SCHEMA_VERSION = 1
 START_MARKER = "<!-- codex-bounded-orchestrator:start -->"
 END_MARKER = "<!-- codex-bounded-orchestrator:end -->"
 MANIFEST_RELATIVE = Path(".codex/.bounded-orchestrator/install.json")
 BACKUP_RELATIVE = Path(".codex/.bounded-orchestrator/backups")
+SAFE_UNINSTALL_SUPPORTED = (all(hasattr(os, name) for name in ('O_DIRECTORY', 'O_NOFOLLOW', 'pread')) and
+                            all(operation in os.supports_dir_fd for operation in (os.open, os.stat, os.rename,
+                                                                                   os.unlink, os.mkdir, os.link)))
 CONFIG_EXAMPLE_RELATIVE = Path(".codex/bounded-orchestrator.config.example.toml")
 CONFIG_RELATIVE = Path(".codex/config.toml")
 ANTHROPIC_BRIDGE_RELATIVE = Path(".codex/tools/anthropic_mcp.py")
@@ -819,11 +824,15 @@ def write_manifest(
     )
 
 
-def remove_managed_block(target: Path, dry_run: bool, messages: list[str]) -> None:
+def remove_managed_block(target: Path, dry_run: bool, messages: list[str], expected_bytes: bytes | None = None,
+                         recovery_run: str | None = None) -> None:
     path = target / "AGENTS.md"
+    if expected_bytes is not None:
+        require_uninstall_snapshot(path, expected_bytes, Path('AGENTS.md'))
     if not path.exists() or path.is_dir():
         return
-    existing = path.read_text(encoding="utf-8")
+    current_bytes = path.read_bytes()
+    existing = current_bytes.decode("utf-8")
     start = existing.find(START_MARKER)
     end = existing.find(END_MARKER)
     if start == -1 and end == -1:
@@ -836,11 +845,15 @@ def remove_managed_block(target: Path, dry_run: bool, messages: list[str]) -> No
     if updated:
         updated += "\n"
         messages.append("REMOVE AGENTS.md managed block")
-        atomic_write_text(path, updated, dry_run)
+        if not dry_run:
+            require_uninstall_snapshot(path, current_bytes, Path('AGENTS.md'))
+            unlink_uninstall_file(target, Path('AGENTS.md'), current_bytes,
+                                  replacement_bytes=updated.encode('utf-8'), recovery_run=recovery_run)
     else:
         messages.append("REMOVE empty AGENTS.md")
         if not dry_run:
-            path.unlink()
+            require_uninstall_snapshot(path, current_bytes, Path('AGENTS.md'))
+            unlink_uninstall_file(target, Path('AGENTS.md'), current_bytes, recovery_run=recovery_run)
 
 
 def prune_empty_directories(target: Path, relative_files: Iterable[Path]) -> None:
@@ -873,10 +886,166 @@ def refuse_symlink_destination(target: Path, relative: Path) -> None:
             raise InstallError(f"Refusing symlink uninstall path: {relative}")
 
 
-def uninstall(target: Path, dry_run: bool) -> int:
+def require_uninstall_snapshot(path: Path, expected: bytes | None, relative: Path) -> None:
+    refuse_symlink_destination(path.parents[len(relative.parts) - 1], relative)
+    if (path.read_bytes() if path.is_file() else None) != expected:
+        raise InstallError(f"Project file changed during uninstall: {relative}")
+
+
+def read_uninstall_fd(fd: int) -> bytes:
+    chunks = []
+    offset = 0
+    while chunk := os.pread(fd, 1024 * 1024, offset):
+        chunks.append(chunk)
+        offset += len(chunk)
+    return b''.join(chunks)
+
+
+def write_uninstall_fd(fd: int, data: bytes) -> None:
+    view = memoryview(data)
+    while view:
+        view = view[os.write(fd, view):]
+    os.fsync(fd)
+
+
+def link_uninstall_recovery(root_fd: int, parent_fd: int, staged_name: str,
+                            relative: Path, recovery_run: str) -> None:
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    fd = os.dup(root_fd)
+    try:
+        for part in ('.codex', '.bounded-orchestrator', 'backups', recovery_run):
+            if part in ('backups', recovery_run):
+                try:
+                    os.mkdir(part, 0o700, dir_fd=fd)
+                except FileExistsError:
+                    pass
+            next_fd = os.open(part, directory_flags, dir_fd=fd)
+            os.close(fd)
+            fd = next_fd
+        backup_name = str(relative).replace('/', '__')
+        os.link(staged_name, backup_name, src_dir_fd=parent_fd, dst_dir_fd=fd,
+                follow_symlinks=False)
+    finally:
+        os.close(fd)
+
+
+def unlink_uninstall_file(target: Path, relative: Path, expected_bytes: bytes | None,
+                          expected_digest: str | None = None,
+                          replacement_bytes: bytes | None = None,
+                          recovery_run: str | None = None) -> None:
+    """Unlink through no-follow directory handles after checking the exact file."""
+    if recovery_run is None:
+        recovery_run = 'uninstall-' + secrets.token_hex(8)
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    descriptors = [os.open(target, directory_flags)]
+    try:
+        for part in relative.parts[:-1]:
+            descriptors.append(os.open(part, directory_flags, dir_fd=descriptors[-1]))
+        parent_fd = descriptors[-1]
+        leaf = relative.name
+        file_fd = os.open(leaf, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        try:
+            initial = os.fstat(file_fd)
+            if not stat.S_ISREG(initial.st_mode):
+                raise InstallError(f"Project file changed during uninstall: {relative}")
+            current = read_uninstall_fd(file_fd)
+            after_read = os.fstat(file_fd)
+            if (initial.st_dev, initial.st_ino, initial.st_size, initial.st_mtime_ns, initial.st_ctime_ns) != (
+                    after_read.st_dev, after_read.st_ino, after_read.st_size, after_read.st_mtime_ns, after_read.st_ctime_ns):
+                raise InstallError(f"Project file changed during uninstall: {relative}")
+            if (expected_bytes is not None and current != expected_bytes) or (
+                    expected_digest is not None and hashlib.sha256(current).hexdigest() != expected_digest):
+                raise InstallError(f"Project file changed during uninstall: {relative}")
+            # Reopen the parent path from the project root. A renamed parent or
+            # a substituted symlink must not redirect the pending unlink.
+            check_fd = descriptors[0]
+            for index, part in enumerate(relative.parts[:-1], 1):
+                reopened = os.open(part, directory_flags, dir_fd=check_fd)
+                try:
+                    current_dir = os.fstat(reopened)
+                    original_dir = os.fstat(descriptors[index])
+                    if (current_dir.st_dev, current_dir.st_ino) != (original_dir.st_dev, original_dir.st_ino):
+                        raise InstallError(f"Project file changed during uninstall: {relative}")
+                finally:
+                    os.close(reopened)
+                check_fd = descriptors[index]
+            linked = os.stat(leaf, dir_fd=parent_fd, follow_symlinks=False)
+            latest = os.fstat(file_fd)
+            if (linked.st_dev, linked.st_ino, linked.st_size, linked.st_mtime_ns, linked.st_ctime_ns) != (
+                    initial.st_dev, initial.st_ino, initial.st_size, initial.st_mtime_ns, initial.st_ctime_ns) or (
+                    latest.st_size, latest.st_mtime_ns, latest.st_ctime_ns) != (
+                    initial.st_size, initial.st_mtime_ns, initial.st_ctime_ns):
+                raise InstallError(f"Project file changed during uninstall: {relative}")
+            quarantine = f'.{leaf}.bounded-uninstall-{secrets.token_hex(16)}'
+            os.rename(leaf, quarantine, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            replacement_created = False
+            try:
+                staged = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
+                latest = os.fstat(file_fd)
+                if (staged.st_dev, staged.st_ino) != (initial.st_dev, initial.st_ino) or (
+                        latest.st_size, latest.st_mtime_ns, latest.st_ctime_ns) != (
+                        staged.st_size, staged.st_mtime_ns, staged.st_ctime_ns) or (
+                        staged.st_size, staged.st_mtime_ns) != (initial.st_size, initial.st_mtime_ns) or (
+                        read_uninstall_fd(file_fd) != current):
+                    raise InstallError(f"Project file changed during uninstall: {relative}")
+                link_uninstall_recovery(descriptors[0], parent_fd, quarantine, relative, recovery_run)
+                if replacement_bytes is not None:
+                    replacement_fd = os.open(leaf, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                                             stat.S_IMODE(initial.st_mode), dir_fd=parent_fd)
+                    replacement_created = True
+                    try:
+                        link_uninstall_recovery(descriptors[0], parent_fd, leaf,
+                                                relative.with_name(relative.name + '.replacement'), recovery_run)
+                        write_uninstall_fd(replacement_fd, replacement_bytes)
+                    finally:
+                        os.close(replacement_fd)
+                    if read_uninstall_fd(file_fd) != current:
+                        raise InstallError(f"Project file changed during uninstall: {relative}")
+                os.unlink(quarantine, dir_fd=parent_fd)
+                latest = os.fstat(file_fd)
+                # Unlink updates ctime, but a concurrent content write must
+                # still prevent a successful uninstall response.
+                if (latest.st_size, latest.st_mtime_ns) != (initial.st_size, initial.st_mtime_ns) or (
+                        read_uninstall_fd(file_fd) != current):
+                    raise InstallError(f"Project file changed during uninstall: {relative}")
+            except Exception as exc:
+                if replacement_created:
+                    raise InstallError(f"Uninstall rollback incomplete; {relative} left in place and original retained in backups/{recovery_run}") from exc
+                try:
+                    os.stat(leaf, dir_fd=parent_fd, follow_symlinks=False)
+                except FileNotFoundError:
+                    try:
+                        os.link(quarantine, leaf, src_dir_fd=parent_fd, dst_dir_fd=parent_fd,
+                                follow_symlinks=False)
+                    except FileExistsError as restore_exc:
+                        raise InstallError(f"Uninstall rollback incomplete; original retained in backups/{recovery_run}") from restore_exc
+                    except FileNotFoundError:
+                        restored_fd = os.open(leaf, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                                              stat.S_IMODE(initial.st_mode), dir_fd=parent_fd)
+                        try:
+                            write_uninstall_fd(restored_fd, read_uninstall_fd(file_fd))
+                        finally:
+                            os.close(restored_fd)
+                    else:
+                        os.unlink(quarantine, dir_fd=parent_fd)
+                else:
+                    raise InstallError(f"Uninstall rollback incomplete; original retained in backups/{recovery_run}") from exc
+                raise
+        finally:
+            os.close(file_fd)
+    finally:
+        for fd in reversed(descriptors):
+            os.close(fd)
+
+
+def uninstall(target: Path, dry_run: bool, expected_files: Mapping[str, bytes | None] | None = None) -> int:
+    if not dry_run and not SAFE_UNINSTALL_SUPPORTED:
+        raise InstallError('Safe uninstall requires POSIX no-follow directory operations on this platform')
     messages: list[str] = []
+    recovery_run = 'uninstall-' + secrets.token_hex(8)
     manifest_path = target / MANIFEST_RELATIVE
     refuse_symlink_destination(target, MANIFEST_RELATIVE)
+    manifest_bytes = manifest_path.read_bytes() if manifest_path.is_file() else None
     manifest = load_manifest(target)
     files = manifest.get("files", {})
 
@@ -886,11 +1055,30 @@ def uninstall(target: Path, dry_run: bool) -> int:
         if relative is not None:
             refuse_symlink_destination(target, relative)
 
+    # Bind the apply step to the complete reviewed snapshot before changing
+    # any file, including manifest-listed paths absent during the preview.
+    if expected_files is not None and not dry_run:
+        for relative in [Path('AGENTS.md'), MANIFEST_RELATIVE, *(safe_manifest_relative(item) for item in files)]:
+            if relative is not None:
+                require_uninstall_snapshot(target / relative, expected_files.get(str(relative)), relative)
+
+    runtime_root = target / MANIFEST_RELATIVE.parent
+    runtime_ignore = MANIFEST_RELATIVE.parent / '.gitignore'
+    # Backups and console snapshots may contain previous private settings.
+    # Keep their local ignore rule after the manifest is removed.
+    keep_runtime_ignore = runtime_root.is_dir() and any(
+        child.name not in {MANIFEST_RELATIVE.name, runtime_ignore.name}
+        for child in runtime_root.iterdir()
+    )
+
     for relative_text, entry in sorted(files.items(), reverse=True):
         relative = safe_manifest_relative(relative_text)
         if relative is None:
             messages.append(f"KEEP invalid manifest path: {relative_text}")
             continue
+        refuse_symlink_destination(target, relative)
+        if expected_files is not None:
+            require_uninstall_snapshot(target / relative, expected_files.get(str(relative)), relative)
         if not isinstance(entry, dict):
             messages.append(f"KEEP {relative}: invalid manifest entry")
             continue
@@ -908,16 +1096,32 @@ def uninstall(target: Path, dry_run: bool) -> int:
         if expected != actual:
             messages.append(f"KEEP {relative}: modified after installation")
             continue
+        if relative == runtime_ignore and (keep_runtime_ignore or (target / BACKUP_RELATIVE).exists()):
+            messages.append(f"KEEP {relative}: local backups or runtime data remain")
+            continue
         messages.append(f"REMOVE {relative}")
         if not dry_run:
-            destination.unlink()
+            if expected_files is not None:
+                require_uninstall_snapshot(destination, expected_files.get(str(relative)), relative)
+            if sha256_path(destination) != expected:
+                raise InstallError(f"Project file changed during uninstall: {relative}")
+            unlink_uninstall_file(target, relative, expected_files.get(str(relative)) if expected_files is not None else None,
+                                  expected, recovery_run=recovery_run)
 
-    remove_managed_block(target, dry_run, messages)
+    refuse_symlink_destination(target, Path('AGENTS.md'))
+    if expected_files is not None:
+        require_uninstall_snapshot(target / 'AGENTS.md', expected_files.get('AGENTS.md'), Path('AGENTS.md'))
+    remove_managed_block(target, dry_run, messages,
+                         expected_files.get('AGENTS.md') if expected_files is not None else None,
+                         recovery_run=recovery_run)
 
     if manifest_path.exists():
+        if expected_files is not None:
+            require_uninstall_snapshot(manifest_path, expected_files.get(str(MANIFEST_RELATIVE)), MANIFEST_RELATIVE)
         messages.append(f"REMOVE {MANIFEST_RELATIVE}")
         if not dry_run:
-            manifest_path.unlink()
+            require_uninstall_snapshot(manifest_path, manifest_bytes, MANIFEST_RELATIVE)
+            unlink_uninstall_file(target, MANIFEST_RELATIVE, manifest_bytes, recovery_run=recovery_run)
 
     if not dry_run:
         prune_empty_directories(
