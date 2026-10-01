@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
-  <title id="title">Codex Bounded Orchestrator</title>
-  <desc id="desc">Planlanan ekip ve üç adım: seç, kontrol et, geçmiş kullanıma bak.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">Codex ekibini seçin</title>
+  <desc id="desc">An illustrated guide to duties, model selection and past observed usage.</desc>
   <defs>
     <linearGradient id="background" x2="1" y2="1">
       <stop stop-color="#21191B"/>
@@ -98,39 +98,49 @@
     </symbol>
   </defs>
   <g font-family="Arial,Helvetica,sans-serif">
-    <rect x="0" y="0" width="1600" height="900" rx="0" fill="#201619" stroke="#201619"/>
-    <text x="70" y="78" font-size="22" fill="#E5BE7A" font-weight="700" letter-spacing="3">CODEX / BOUNDED ORCHESTRATOR</text>
-    <text x="70" y="270" font-size="66" fill="#FFF1D9" font-weight="700">Sizin projeniz.</text>
-    <text x="70" y="348" font-size="66" fill="#FFF1D9" font-weight="700">Sizin orkestranız.</text>
-    <path d="M70 391h80" stroke="#E5BE7A" stroke-width="3"/>
-    <text x="70" y="445" font-size="25" fill="#D7BDAB" font-weight="400">Ekibi seçin. Çalışma biçimini belirleyin.</text>
-    <text x="70" y="483" font-size="25" fill="#D7BDAB" font-weight="400">Şef hepsini bir araya getirsin.</text>
-    <text x="70" y="596" font-size="18" fill="#E5BE7A" font-weight="700" letter-spacing="2">BİR ŞEF. FARKLI UZMANLAR.</text>
-    <rect x="740" y="124" width="790" height="534" rx="26" fill="#302024" stroke="#A87550"/>
-    <ellipse cx="1130" cy="377" rx="370" ry="255" fill="url(#light)"/>
-    <path d="M754 138h762v77q-76 45-152 0-76 45-152 0-76 45-152 0-76 45-152 0-76 45-152 0Z" fill="url(#curtain)"/>
-    <path d="M754 138h67l-67 283m762-283h-67l67 283" fill="#793039"/>
-    <path d="M754 547q380-70 762 0v96H754Z" fill="url(#floor)"/>
-    <use xlink:href="#conductor" x="780" y="245" width="240" height="327"/>
-    <use xlink:href="#musician-researcher" x="1010" y="362" width="113" height="179"/>
-    <use xlink:href="#musician-implementer" x="1131" y="334" width="113" height="179"/>
-    <use xlink:href="#musician-verifier" x="1252" y="362" width="113" height="179"/>
-    <use xlink:href="#musician-reviewer" x="1373" y="334" width="113" height="179"/>
-    <text x="880" y="611" font-size="15" fill="#E5BE7A" font-weight="700">ŞEF</text>
-    <text x="1165" y="611" font-size="15" fill="#E5BE7A" font-weight="700">UZMANLAR</text>
-    <text x="1135" y="173" font-size="16" fill="#FFF1D9" font-weight="700" text-anchor="middle" letter-spacing="3">PLANLANAN EKİP</text>
-    <rect x="70" y="714" width="466" height="122" rx="16" fill="#302124" stroke="#65483C"/>
-    <text x="94" y="756" font-size="20" fill="#E5BE7A" font-weight="700">01</text>
-    <text x="140" y="756" font-size="22" fill="#FFF1D9" font-weight="700">Ekibinizi seçin</text>
-    <text x="140" y="796" font-size="18" fill="#D7BDAB" font-weight="400">Görev, model ve inceleme</text>
-    <rect x="568" y="714" width="466" height="122" rx="16" fill="#302124" stroke="#65483C"/>
-    <text x="592" y="756" font-size="20" fill="#E5BE7A" font-weight="700">02</text>
-    <text x="638" y="756" font-size="22" fill="#FFF1D9" font-weight="700">Değişiklikleri kontrol edin</text>
-    <text x="638" y="796" font-size="18" fill="#D7BDAB" font-weight="400">Kurulumdan önce önizleme</text>
-    <rect x="1066" y="714" width="466" height="122" rx="16" fill="#302124" stroke="#65483C"/>
-    <text x="1090" y="756" font-size="20" fill="#E5BE7A" font-weight="700">03</text>
-    <text x="1136" y="756" font-size="22" fill="#FFF1D9" font-weight="700">Geçmiş kullanımı görün</text>
-    <text x="1136" y="796" font-size="18" fill="#D7BDAB" font-weight="400">Kayıtlı ajanlar ve token payları</text>
-    <text x="1530" y="875" font-size="13" fill="#AC8B75" font-weight="400" text-anchor="end" letter-spacing="2">TOPLULUK PROJESİ · YEREL KONSOL</text>
+    <rect x="0" y="0" width="1600" height="760" rx="0" fill="#201619" stroke="#201619"/>
+    <text x="65" y="72" font-size="19" fill="#E5BE7A" font-weight="700" letter-spacing="3">İŞİNİZE UYGUN BİR EKİP</text>
+    <text x="65" y="133" font-size="46" fill="#FFF1D9" font-weight="700">Her uzmana belirli bir görev verin.</text>
+    <rect x="65" y="185" width="470" height="490" rx="20" fill="#302124" stroke="#79503F"/>
+    <text x="90" y="234" font-size="18" fill="#E5BE7A" font-weight="700">01</text>
+    <text x="90" y="284" font-size="30" fill="#FFF1D9" font-weight="700">Görevleri seçin</text>
+    <use xlink:href="#conductor" x="85" y="310" width="140" height="191"/>
+    <use xlink:href="#musician-researcher" x="231" y="369" width="90" height="143"/>
+    <use xlink:href="#musician-implementer" x="322" y="369" width="90" height="143"/>
+    <use xlink:href="#musician-verifier" x="413" y="369" width="90" height="143"/>
+    <text x="90" y="557" font-size="22" fill="#D7BDAB" font-weight="400">Şef koordinasyonu yürütür.</text>
+    <text x="90" y="590" font-size="22" fill="#D7BDAB" font-weight="400">Uzmanlar verilen işleri yapar.</text>
+    <text x="90" y="646" font-size="16" fill="#E5BE7A" font-weight="700">Araştır · Uygula · Doğrula · İncele</text>
+    <rect x="565" y="185" width="470" height="490" rx="20" fill="#302124" stroke="#79503F"/>
+    <text x="590" y="234" font-size="18" fill="#E5BE7A" font-weight="700">02</text>
+    <text x="590" y="284" font-size="30" fill="#FFF1D9" font-weight="700">Modelleri seçin</text>
+    <rect x="590" y="328" width="420" height="44" rx="10" fill="#442B2D" stroke="#79503F"/>
+    <text x="608" y="357" font-size="20" fill="#FFF1D9" font-weight="700">Sol</text>
+    <text x="960" y="357" font-size="22" fill="#E5BE7A" font-weight="400">›</text>
+    <rect x="590" y="383" width="420" height="44" rx="10" fill="#442B2D" stroke="#79503F"/>
+    <text x="608" y="412" font-size="20" fill="#FFF1D9" font-weight="700">Astra</text>
+    <text x="960" y="412" font-size="22" fill="#E5BE7A" font-weight="400">›</text>
+    <rect x="590" y="438" width="420" height="44" rx="10" fill="#442B2D" stroke="#79503F"/>
+    <text x="608" y="467" font-size="20" fill="#FFF1D9" font-weight="700">Luna</text>
+    <text x="960" y="467" font-size="22" fill="#E5BE7A" font-weight="400">›</text>
+    <text x="590" y="557" font-size="22" fill="#D7BDAB" font-weight="400">Şef ve her yardımcı için</text>
+    <text x="590" y="590" font-size="22" fill="#D7BDAB" font-weight="400">model ve inceleme düzeyini seçin.</text>
+    <text x="590" y="646" font-size="16" fill="#E5BE7A" font-weight="700">Sol · Astra · Luna</text>
+    <rect x="1065" y="185" width="470" height="490" rx="20" fill="#302124" stroke="#79503F"/>
+    <text x="1090" y="234" font-size="18" fill="#E5BE7A" font-weight="700">03</text>
+    <text x="1090" y="284" font-size="30" fill="#FFF1D9" font-weight="700">Geçmiş kullanımı okuyun</text>
+    <text x="1090" y="339" font-size="16" fill="#D7BDAB" font-weight="400">Şef</text>
+    <rect x="1090" y="350" width="420" height="14" rx="7" fill="#493233" stroke="#493233"/>
+    <rect x="1090" y="350" width="280" height="14" rx="7" fill="#E5BE7A" stroke="#E5BE7A"/>
+    <text x="1090" y="394" font-size="16" fill="#D7BDAB" font-weight="400">Araştırma</text>
+    <rect x="1090" y="405" width="420" height="14" rx="7" fill="#493233" stroke="#493233"/>
+    <rect x="1090" y="405" width="182" height="14" rx="7" fill="#B27168" stroke="#B27168"/>
+    <text x="1090" y="449" font-size="16" fill="#D7BDAB" font-weight="400">Uygulama</text>
+    <rect x="1090" y="460" width="420" height="14" rx="7" fill="#493233" stroke="#493233"/>
+    <rect x="1090" y="460" width="226" height="14" rx="7" fill="#AC9074" stroke="#AC9074"/>
+    <text x="1090" y="557" font-size="22" fill="#D7BDAB" font-weight="400">Kayıtlı ajan ve modelleri, token</text>
+    <text x="1090" y="590" font-size="22" fill="#D7BDAB" font-weight="400">paylarını ve tarihli toplamları görün.</text>
+    <text x="1090" y="646" font-size="16" fill="#E5BE7A" font-weight="700">Yerel kayıtlar · Örnek görünüm</text>
+    <text x="65" y="720" font-size="18" fill="#AC8B75" font-weight="400">Resimli rehber · Ekip sayısı planlanan kapasitedir; kullanım geçmiş kayıtları gösterir.</text>
   </g>
 </svg>

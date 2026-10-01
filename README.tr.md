@@ -38,6 +38,16 @@ python3 scripts/dashboard.py /projenizin/tam/yolu
 
 Ekibi daha sonra değiştirmek için başlatıcıyı yeniden açıp (Linux'ta komutu yineleyip) **Kaydet** düğmesini kullanın. Ayarlar projeye hemen yazılır; silip yeniden kurmanız gerekmez. Açık Codex oturumunun yeni ayarları kullanması için oturumu yeniden açmanız gerekebilir. Kurulum açılmazsa [Mac](INSTALL-MACOS.md) veya [Windows](INSTALL-WINDOWS.md) rehberine bakın. Codex istemciniz proje ayarlarını ve özel ajanları desteklemeli, seçtiğiniz modellere hesabınızdan erişilebilmelidir.
 
+## Orkestranızı kurun
+
+![Görev ve model seçimini, ardından geçmiş kullanım okumayı anlatan resimli rehber](docs/assets/team-guide-tr.svg)
+
+Sahnede şefi veya bir yardımcıyı seçip modelini ve inceleme düzeyini belirleyin. Her yardımcının ayrıca bir görevi vardır; planlanan ekip şefe ihtiyaç duyduğunda çağırabileceği uzmanlar sağlar.
+
+![Şefin model ve inceleme seçeneklerini gösteren güncel ekip kurulum konsolu](docs/assets/preferences-tr.png)
+
+*Örnek projeyle güncel konsol. Vurgulanan model bir kurulum tercihidir; erişim Codex hesabınıza bağlıdır.*
+
 ## 8 saniyelik hareketli önizleme
 
 <p><img src="docs/assets/bounded-orchestrator-intro-8s.gif" alt="Şef ve dört yardımcıyla örnek Codex orkestrasının hareketli görüntüsü" width="480"></p>
@@ -46,7 +56,7 @@ Sessizdir; Türkçe başlıklar içerir. Örnek Codex Kullanım ekranıdır; can
 
 ![Orkestra sahnesini ve gözlenen yardımcı dağılımını gösteren örnek Codex Kullanım sayfası](docs/assets/console-tr.png)
 
-*Temsili demo ekranı; projenizin veya kullanımınızın verilerini göstermez.*
+*Ayıklanmış örnek kayıtlarla güncel konsol. Token toplamları geçmiş kullanımı anlatır; orkestra hareketi bir çizimdir.*
 
 <details>
 <summary>İleri kullanım: komut satırı kurulumu ve skill çağrısı</summary>

@@ -38,6 +38,16 @@ python3 scripts/dashboard.py /absolute/path/to/your-git-project
 
 To change the team later, open the launcher again (or repeat the Linux command) and use **Save**. It updates the project settings without uninstalling. You may need to reopen an active Codex session before it uses the changes. If setup does not open, see the [Mac](INSTALL-MACOS.md) or [Windows](INSTALL-WINDOWS.md) guide. Your Codex client must support project settings and custom agents, and your account must have access to the selected models.
 
+## Build your orchestra
+
+![Illustrated guide to choosing duties and models, then reading past usage](docs/assets/team-guide-en.svg)
+
+Choose a chief or helper on the stage to set their model and reasoning. Each helper also has a duty; the planned team gives the chief capacity to call specialists when needed.
+
+![Current team setup console with the conductor model and reasoning choices](docs/assets/preferences-en.png)
+
+*Current console with an example project. The highlighted model is a setup choice; access depends on your Codex account.*
+
 ## Watch the 8-second preview
 
 <p><img src="docs/assets/bounded-orchestrator-intro-8s.gif" alt="Animated sample Codex orchestra with conductor and four helpers" width="480"></p>
@@ -46,7 +56,7 @@ Silent, with Turkish titles. Illustrative sample Codex Usage screen, not live da
 
 ![Sample Codex Usage page with an orchestra stage and observed helper breakdown](docs/assets/console-en.png)
 
-*Illustrative demo screen; it does not show your project or usage data.*
+*Current console with sanitized sample records. Token totals describe past usage; the orchestra animation is an illustration.*
 
 <details>
 <summary>Advanced: command-line setup and skill invocation</summary>
