@@ -341,6 +341,141 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(state['advisory'], {'anthropic': True, 'deepseek': False})
         self.assertNotIn('PRIVATE_KEY', json.dumps(state))
 
+    def test_adviser_preview_save_switch_remove_and_restore(self):
+        anthropic = {'provider':'anthropic','model':'claude-sonnet-5-5','effort':'high'}
+        deepseek = {'provider':'deepseek','model':'deepseek-flash','effort':'low'}
+        first = self.console.preview({'preset':'focused','advisory':anthropic})
+        self.assertTrue(first['can_save'], first['conflicts'])
+        self.assertIn('adviser: none → anthropic', '\n'.join(item['diff'] for item in first['changes']))
+        self.assertNotIn('API_KEY=', json.dumps(first))
+        self.console.save({'preview_id':first['preview_id']})
+        self.assertEqual(self.console.settings()['advisory_selection'], anthropic)
+        config = dashboard.tomllib.loads((self.target/dashboard.installer.CONFIG_RELATIVE).read_text())
+        self.assertEqual(config['mcp_servers']['anthropic_claude']['env_vars'], ['ANTHROPIC_API_KEY'])
+        self.assertIn('claude-sonnet-5-5', config['mcp_servers']['anthropic_claude']['args'])
+        self.assertTrue((self.target/dashboard.installer.ANTHROPIC_BRIDGE_RELATIVE).is_file())
+        second = self.console.preview({'preset':'focused','advisory':deepseek})
+        self.assertTrue(second['can_save'], second['conflicts'])
+        self.console.save({'preview_id':second['preview_id']})
+        self.assertEqual(self.console.settings()['advisory_selection'], deepseek)
+        self.assertFalse((self.target/dashboard.installer.ANTHROPIC_BRIDGE_RELATIVE).exists())
+        self.assertTrue((self.target/dashboard.installer.DEEPSEEK_BRIDGE_RELATIVE).is_file())
+        third = self.console.preview({'preset':'focused','advisory':{'provider':'none','model':'','effort':''}})
+        self.console.save({'preview_id':third['preview_id']})
+        self.assertEqual(self.console.settings()['advisory_selection']['provider'], 'none')
+        self.assertFalse((self.target/dashboard.installer.DEEPSEEK_BRIDGE_RELATIVE).exists())
+        self.console.restore({})
+        self.assertEqual(self.console.settings()['advisory_selection'], deepseek)
+        self.assertTrue((self.target/dashboard.installer.DEEPSEEK_BRIDGE_RELATIVE).is_file())
+
+    def test_adviser_exact_allowlist_and_haiku_auto(self):
+        for provider, model, effort in [('anthropic','claude-opus-5-5','high'),
+                                         ('anthropic','claude-fable-5-1','max'),
+                                         ('anthropic','claude-haiku-4-5-20251001','auto'),
+                                         ('deepseek','deepseek-flash','none')]:
+            with self.subTest(model=model):
+                plan = self.console.preview({'preset':'focused','advisory':{'provider':provider,'model':model,'effort':effort}})
+                self.assertTrue(plan['can_save'])
+        for provider, model, effort in [('anthropic','claude-haiku-4-5-20251001','high'),
+                                         ('anthropic','claude-opus-5-5','auto'),
+                                         ('deepseek','deepseek-flash','medium'),
+                                         ('anthropic','claude-unlisted','high')]:
+            with self.subTest(model=model, effort=effort), self.assertRaisesRegex(ValueError, 'Unsupported adviser'):
+                self.console.preview({'preset':'focused','advisory':{'provider':provider,'model':model,'effort':effort}})
+
+    def test_adviser_user_changed_table_refused_and_unrelated_root_retained(self):
+        choice = {'provider':'anthropic','model':'claude-sonnet-5-5','effort':'high'}
+        first = self.console.preview({'preset':'focused','advisory':choice})
+        self.console.save({'preview_id':first['preview_id']})
+        path = self.target/dashboard.installer.CONFIG_RELATIVE
+        path.write_text('private_setting = "KEEP"\n'+path.read_text())
+        next_choice = {'provider':'deepseek','model':'deepseek-flash','effort':'high'}
+        plan = self.console.preview({'preset':'focused','advisory':next_choice})
+        self.assertTrue(plan['can_save'])
+        self.console.save({'preview_id':plan['preview_id']})
+        self.assertIn('private_setting = "KEEP"', path.read_text())
+        path.write_text(path.read_text().replace('enabled = true', 'enabled = false'))
+        with self.assertRaisesRegex(ValueError, 'adviser configuration was changed'):
+            self.console.preview({'preset':'focused','advisory':choice})
+
+    def test_adviser_switch_refuses_comments_without_changing_files(self):
+        choice = {'provider':'anthropic','model':'claude-sonnet-5-5','effort':'high'}
+        switched = {'provider':'deepseek','model':'deepseek-flash','effort':'low'}
+        first = self.console.preview({'preset':'focused','advisory':choice})
+        self.console.save({'preview_id':first['preview_id']})
+        pending = self.console.preview({'preset':'focused','advisory':switched})
+        path = self.target/dashboard.installer.CONFIG_RELATIVE
+        with path.open('ab') as config:
+            config.write(b'\n# PERSONAL COMMENT KEEP\n[unrelated]\nnote = "KEEP"\n')
+        before = self.console.snapshot()
+        with self.assertRaisesRegex(ValueError, 'since preview'):
+            self.console.save({'preview_id':pending['preview_id']})
+        self.assertEqual(self.console.snapshot(), before)
+        with self.assertRaisesRegex(ValueError, 'personal comments'):
+            self.console.preview({'preset':'focused','advisory':switched})
+        self.assertEqual(self.console.snapshot(), before)
+        self.assertIn(b'# PERSONAL COMMENT KEEP', path.read_bytes())
+        self.assertIn(b'note = "KEEP"', path.read_bytes())
+
+    def test_adviser_switch_refuses_inline_comment_without_changing_files(self):
+        choice = {'provider':'anthropic','model':'claude-sonnet-5-5','effort':'high'}
+        switched = {'provider':'deepseek','model':'deepseek-flash','effort':'low'}
+        first = self.console.preview({'preset':'focused','advisory':choice})
+        self.console.save({'preview_id':first['preview_id']})
+        path = self.target/dashboard.installer.CONFIG_RELATIVE
+        before_text = path.read_bytes()
+        self.assertIn(b'enabled = true', before_text)
+        prefix, enabled = before_text.rsplit(b'enabled = true', 1)
+        path.write_bytes(prefix + b'enabled = true # PERSONAL_INLINE_COMMENT_KEEP' + enabled)
+        before = self.console.snapshot()
+        with self.assertRaisesRegex(ValueError, 'personal comments'):
+            self.console.preview({'preset':'focused','advisory':switched})
+        self.assertEqual(self.console.snapshot(), before)
+        self.assertIn(b'PERSONAL_INLINE_COMMENT_KEEP', path.read_bytes())
+        self.assertEqual(dashboard.without_advisory_tables('[mcp_servers.anthropic_claude]\nargs = ["a#b"]\n'), '')
+
+    def test_adviser_stale_symlink_and_midwrite_rollback(self):
+        choice = {'provider':'anthropic','model':'claude-sonnet-5-5','effort':'high'}
+        plan = self.console.preview({'preset':'focused','advisory':choice})
+        path = self.target/'AGENTS.md'
+        path.write_text('OWNER EDIT\n')
+        with self.assertRaisesRegex(ValueError, 'since preview'):
+            self.console.save({'preview_id':plan['preview_id']})
+        plan = self.console.preview({'preset':'focused','advisory':choice})
+        self.console.save({'preview_id':plan['preview_id']})
+        new_choice = {'provider':'deepseek','model':'deepseek-flash','effort':'high'}
+        before = self.console.snapshot()
+        plan = self.console.preview({'preset':'focused','advisory':new_choice})
+        original = dashboard.installer.install_text_file
+        def fail_bridge(**kwargs):
+            if kwargs.get('relative') == dashboard.installer.DEEPSEEK_BRIDGE_RELATIVE:
+                raise OSError('injected bridge write failure')
+            return original(**kwargs)
+        with mock.patch.object(dashboard.installer, 'install_text_file', side_effect=fail_bridge):
+            with self.assertRaisesRegex(OSError, 'injected bridge write failure'):
+                self.console.save({'preview_id':plan['preview_id']})
+        self.assertEqual(self.console.snapshot(), before)
+        outside = Path(self.tmp.name)/'outside.txt'
+        outside.write_text('UNCHANGED')
+        bridge = self.target/dashboard.installer.DEEPSEEK_BRIDGE_RELATIVE
+        bridge.symlink_to(outside)
+        with self.assertRaisesRegex(ValueError, 'Symlink'):
+            self.console.preview({'preset':'focused','advisory':new_choice})
+        self.assertEqual(outside.read_text(), 'UNCHANGED')
+
+    def test_cli_installed_older_adviser_model_survives_unrelated_console_save(self):
+        result = subprocess.run([sys.executable, str(ROOT/'scripts/install.py'), str(self.target),
+                                 '--preset', 'focused', '--external-provider', 'anthropic',
+                                 '--external-model', 'claude-sonnet-5', '--external-effort', 'high'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        saved = {'provider':'anthropic','model':'claude-sonnet-5','effort':'high'}
+        self.assertEqual(self.console.settings()['advisory_selection'], saved)
+        plan = self.console.preview({'preset':'quality'})
+        self.assertTrue(plan['can_save'], plan['conflicts'])
+        self.console.save({'preview_id':plan['preview_id']})
+        self.assertEqual(self.console.settings()['advisory_selection'], saved)
+
     def test_local_gpt_6_1_efforts_override_documentation_fallback(self):
         import model_catalog
         local = [{'id':'gpt-6.1-sol','label':'GPT-6.1 Sol','efforts':['low','medium','high','xhigh','max'],'origin':'local_cli'}]

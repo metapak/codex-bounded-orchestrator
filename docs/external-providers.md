@@ -23,11 +23,11 @@ export ANTHROPIC_API_KEY="your-key"
 python3 scripts/install.py /path/to/project \
   --preset balanced \
   --external-provider anthropic \
-  --external-model claude-sonnet-5 \
+  --external-model claude-sonnet-5-5 \
   --external-effort high
 ```
 
-Prepared choices are `claude-sonnet-5` and `claude-opus-5`. Anthropic efforts are `low`, `medium`, `high`, `xhigh`, and `max`. A custom `claude-*` model ID can be supplied, but availability and effort support depend on the user's account and current Anthropic documentation.
+The browser console and guided installer offer `claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5-5`, and `claude-haiku-4-5-20251001`. The first three use supported `low`, `medium`, `high`, `xhigh`, or `max` effort. Haiku 4.5 has no separate effort setting: its bridge omits `output_config` when `auto` is selected. These IDs and the effort boundary follow [Anthropic's model list](https://platform.claude.com/docs/en/models/overview) and [effort guide](https://platform.claude.com/docs/en/build-with-claude/effort). Account access is not checked. The CLI still accepts a custom `claude-*` ID, but its availability and effort support must be checked against provider documentation.
 
 ## DeepSeek
 
@@ -42,7 +42,7 @@ python3 scripts/install.py /path/to/project \
   --external-effort high
 ```
 
-The prepared choice is `deepseek-flash`. DeepSeek's September 10, 2026 [V4.1 Flash announcement](https://deepseek.com/en/news/deepseek-v4-1-flash/) identifies that alias for the current API model and says older V4 Flash aliases temporarily route to it. Supported bridge effort values follow DeepSeek's Responses API shape: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`. A custom `deepseek-*` model ID can be supplied, but availability must be checked against current provider documentation and the user's account.
+The browser choice is `deepseek-flash`. DeepSeek's [V4.1 Flash announcement](https://deepseek.com/en/news/deepseek-v4-1-flash/) identifies that alias. The browser offers the distinct Responses API reasoning levels `none`, `low`, `high`, and `max`; the API accepts some other CLI bridge values as aliases, as its [Responses API reference](https://api-docs.deepseek.com/api/create-response/) explains. A custom `deepseek-*` model ID can be supplied through the CLI, but availability must be checked against the provider and account.
 
 ## Boundary and data handling
 

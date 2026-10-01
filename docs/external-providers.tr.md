@@ -23,11 +23,11 @@ export ANTHROPIC_API_KEY="anahtarın"
 python3 scripts/install.py /projenin/yolu \
   --preset balanced \
   --external-provider anthropic \
-  --external-model claude-sonnet-5 \
+  --external-model claude-sonnet-5-5 \
   --external-effort high
 ```
 
-Hazır seçenekler `claude-sonnet-5` ve `claude-opus-5` modelleridir. Anthropic eforları `low`, `medium`, `high`, `xhigh` ve `max` değerleridir. Özel bir `claude-*` model kimliği girilebilir; erişim ve efor desteği kullanıcının hesabına ve güncel Anthropic belgelerine bağlıdır.
+Tarayıcı konsolu ve rehberli kurulum `claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5-5` ve `claude-haiku-4-5-20251001` seçeneklerini sunar. İlk üçü `low`, `medium`, `high`, `xhigh` veya `max` eforunu kullanır. Haiku 4.5 için ayrı efor ayarı yoktur; `auto` seçildiğinde köprü isteğe `output_config` eklemez. Kimlikler ve efor sınırı [Anthropic model listesine](https://platform.claude.com/docs/en/models/overview) ve [efor rehberine](https://platform.claude.com/docs/en/build-with-claude/effort) dayanır. Hesap erişimi burada doğrulanmaz. CLI özel bir `claude-*` kimliğini kabul eder; erişim ve efor desteği sağlayıcının güncel belgelerinden ayrıca kontrol edilmelidir.
 
 ## DeepSeek
 
@@ -42,7 +42,7 @@ python3 scripts/install.py /projenin/yolu \
   --external-effort high
 ```
 
-Hazır seçenek `deepseek-flash` modelidir. DeepSeek'in 10 Eylül 2026 tarihli [V4.1 Flash duyurusu](https://deepseek.com/en/news/deepseek-v4-1-flash/) güncel API modeli için bu adı verir ve eski V4 Flash adlarının geçici olarak bu modele yönlendirildiğini belirtir. Köprüdeki efor seçenekleri DeepSeek Responses API biçimini izler: `none`, `minimal`, `low`, `medium`, `high`, `xhigh` ve `max`. Özel bir `deepseek-*` model kimliği girilebilir; erişim güncel sağlayıcı belgeleri ve kullanıcının hesabıyla kontrol edilmelidir.
+Tarayıcıdaki model `deepseek-flash` seçeneğidir; adı DeepSeek'in [V4.1 Flash duyurusunda](https://deepseek.com/en/news/deepseek-v4-1-flash/) yer alır. Tarayıcı, Responses API'deki ayrı inceleme düzeyleri olan `none`, `low`, `high` ve `max` değerlerini gösterir. API bazı diğer CLI köprüsü değerlerini eşanlamlı kabul eder; ayrıntı [Responses API belgesindedir](https://api-docs.deepseek.com/api/create-response/). CLI özel bir `deepseek-*` kimliğini kabul eder, ancak erişim sağlayıcı ve hesap üzerinden ayrıca doğrulanmalıdır.
 
 ## Sınır ve veri kullanımı
 

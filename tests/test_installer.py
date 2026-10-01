@@ -434,7 +434,7 @@ class InstallerTests(unittest.TestCase):
     def test_external_anthropic_bridge_is_opt_in_and_never_persists_key(self) -> None:
         result = self.run_installer(
             "--external-provider", "anthropic",
-            "--external-model", "claude-opus-5",
+            "--external-model", "claude-opus-5-5",
             "--external-effort", "xhigh",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -444,13 +444,29 @@ class InstallerTests(unittest.TestCase):
         config = read_toml(self.target / ".codex/config.toml")
         server = config["mcp_servers"]["anthropic_claude"]
         self.assertEqual(server["env_vars"], ["ANTHROPIC_API_KEY"])
-        self.assertIn("claude-opus-5", server["args"])
+        self.assertIn("claude-opus-5-5", server["args"])
         manifest_text = (self.target / MANIFEST).read_text()
         self.assertNotIn("test-only-key", config_text + manifest_text)
         self.assertIn("ANTHROPIC_API_KEY is not set", result.stdout)
 
+    def test_haiku_bridge_uses_auto_without_unsupported_effort(self) -> None:
+        result = self.run_installer(
+            '--external-provider', 'anthropic',
+            '--external-model', 'claude-haiku-4-5-20251001',
+            '--external-effort', 'auto',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        server = read_toml(self.target / '.codex/config.toml')['mcp_servers']['anthropic_claude']
+        self.assertEqual(server['args'][-2:], ['--effort', 'auto'])
+        invalid = self.run_installer(
+            '--external-provider', 'anthropic',
+            '--external-model', 'claude-haiku-4-5-20251001',
+            '--external-effort', 'high',
+        )
+        self.assertEqual(invalid.returncode, 2)
+
     def test_native_roles_reject_external_brand_models(self) -> None:
-        for model in ("claude-sonnet-5", "deepseek-flash"):
+        for model in ("claude-sonnet-5-5", "deepseek-flash"):
             with self.subTest(model=model):
                 result = self.run_installer(
                     "--preset", "custom", "--role-model", f"implementer={model}"
@@ -489,7 +505,7 @@ class InstallerTests(unittest.TestCase):
 
     def test_external_provider_model_and_effort_are_provider_specific(self) -> None:
         wrong_model = self.run_installer(
-            "--external-provider", "deepseek", "--external-model", "claude-sonnet-5"
+            "--external-provider", "deepseek", "--external-model", "claude-sonnet-5-5"
         )
         self.assertEqual(wrong_model.returncode, 2)
         self.assertIn("deepseek-", wrong_model.stderr)

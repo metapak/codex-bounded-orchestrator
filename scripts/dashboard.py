@@ -6,6 +6,7 @@ import base64
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import secrets
 import sys
@@ -27,6 +28,97 @@ HISTORY = Path('.codex/.bounded-orchestrator/console-style-history.json')
 SAFE_PATHS = sorted(installer.ALLOWED_MANIFEST_FILES | {Path('AGENTS.md'), installer.MANIFEST_RELATIVE}, key=str)
 EFFORTS = installer.EFFORTS
 TEAM_SLOTS = installer.TEAM_SLOT_FILES
+ADVISORY_MODELS = {
+    'anthropic': ('claude-fable-5-1', 'claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5-20251001'),
+    'deepseek': ('deepseek-flash',),
+}
+ADVISORY_EFFORTS = {'anthropic': ('low', 'medium', 'high', 'xhigh', 'max'),
+                    'deepseek': ('none', 'low', 'high', 'max')}
+ADVISORY_SERVERS = {'anthropic': 'anthropic_claude', 'deepseek': 'deepseek_proposals'}
+
+def advisory_selection(config, manifest):
+    """Return only the managed provider choice, never MCP commands or credentials."""
+    servers = config.get('mcp_servers', {})
+    servers = servers if isinstance(servers, dict) else {}
+    active = [provider for provider, name in ADVISORY_SERVERS.items()
+              if isinstance(servers.get(name), dict) and servers[name].get('enabled', True) is not False]
+    if not active:
+        return {'provider': 'none', 'model': '', 'effort': ''}
+    if len(active) != 1:
+        return {'provider': 'multiple', 'model': '', 'effort': ''}
+    provider = active[0]
+    server = servers[ADVISORY_SERVERS[provider]]
+    args = server.get('args', [])
+    if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+        return {'provider': provider, 'model': '', 'effort': ''}
+    try:
+        model = args[args.index('--model') + 1]
+        effort = args[args.index('--effort') + 1]
+        installer.validate_external_selection(provider, model, effort)
+    except (ValueError, IndexError, installer.InstallError):
+        return {'provider': provider, 'model': '', 'effort': ''}
+    if manifest is not None and (manifest.get('external_provider') != provider or manifest.get('external_model') != model or manifest.get('external_effort') != effort):
+        return {'provider': provider, 'model': '', 'effort': ''}
+    return {'provider': provider, 'model': model, 'effort': effort}
+
+def without_advisory_tables(text):
+    """Remove only known top-level MCP bridge tables, never nested/user tables."""
+    def has_comment(block):
+        for line in block.splitlines():
+            # Managed bridge values are single-line TOML strings. Refuse a
+            # multiline edit rather than guessing where its comments end.
+            if "'''" in line or '"""' in line:
+                return True
+            quote = None
+            escaped = False
+            for char in line:
+                if quote == '"' and escaped:
+                    escaped = False
+                elif quote == '"' and char == '\\':
+                    escaped = True
+                elif char == quote:
+                    quote = None
+                elif quote is None and char in ('"', "'"):
+                    quote = char
+                elif quote is None and char == '#':
+                    return True
+        return False
+
+    headers = table_headers(text)
+    cuts = []
+    for index, (start, _, name, array) in enumerate(headers):
+        if name in {'mcp_servers.' + server for server in ADVISORY_SERVERS.values()}:
+            if array:
+                raise ValueError('Adviser table requires manual reconciliation')
+            end = headers[index + 1][0] if index + 1 < len(headers) else len(text)
+            if has_comment(text[start:end]):
+                raise ValueError('Adviser table has personal comments; use the CLI installer to reconcile it')
+            cuts.append((start, end))
+        elif any(name.startswith('mcp_servers.' + server + '.') for server in ADVISORY_SERVERS.values()):
+            raise ValueError('Nested adviser table requires manual reconciliation')
+    for start, end in reversed(cuts):
+        text = text[:start] + text[end:]
+    return text
+
+def require_managed_advisory_tables(config, manifest, target, settings):
+    servers = config.get('mcp_servers', {})
+    if not isinstance(servers, dict):
+        raise ValueError('Adviser configuration requires manual reconciliation')
+    for provider, server_name in ADVISORY_SERVERS.items():
+        if server_name not in servers:
+            continue
+        if manifest.get('external_provider') != provider:
+            raise ValueError('Existing adviser configuration is not console-managed')
+        model, effort = manifest.get('external_model'), manifest.get('external_effort')
+        try:
+            if not isinstance(model, str) or not isinstance(effort, str) or not model or not effort:
+                raise ValueError('Missing managed adviser selection')
+            installer.validate_external_selection(provider, model, effort)
+            expected = tomllib.loads(installer.render_root_config(ROOT, target, settings, provider, model, effort))['mcp_servers'][server_name]
+        except (KeyError, ValueError, tomllib.TOMLDecodeError, installer.InstallError):
+            raise ValueError('Existing adviser configuration requires manual reconciliation') from None
+        if servers[server_name] != expected:
+            raise ValueError('Existing adviser configuration was changed; use the CLI installer to reconcile it')
 
 def load_usage():
     spec = importlib.util.spec_from_file_location('console_usage', ROOT/'.codex/tools/usage_report.py')
@@ -318,6 +410,11 @@ def managed_preview_diff(name, old, new):
         earlier, later = value(before, path), value(after, path)
         if earlier != later:
             lines.append('.'.join(path)+': '+describe(earlier)+' → '+describe(later))
+    if name == str(installer.CONFIG_RELATIVE):
+        earlier, later = advisory_selection(before, None), advisory_selection(after, None)
+        if earlier != later:
+            label = lambda item: item['provider'] + ((' · '+item['model']+' · '+item['effort']) if item['model'] else '')
+            lines.append('adviser: '+label(earlier)+' → '+label(later))
     return '\n'.join(lines) if lines else 'Managed settings update'
 
 def without_team_tables(text):
@@ -418,11 +515,11 @@ class Console:
         if not isinstance(servers, dict):
             servers = {}
         advisory = {name: isinstance(servers.get(server), dict) and servers[server].get('enabled', True) is not False
-                    for name, server in (('anthropic', 'anthropic_claude'), ('deepseek', 'deepseek_proposals'))}
-        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'advisory': advisory, 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
+                    for name, server in ADVISORY_SERVERS.items()}
+        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'advisory': advisory, 'advisory_selection': advisory_selection(config, manifest), 'advisory_key_available': {'anthropic': 'ANTHROPIC_API_KEY' in os.environ, 'deepseek': 'DEEPSEEK_API_KEY' in os.environ}, 'advisory_models': ADVISORY_MODELS, 'advisory_efforts': ADVISORY_EFFORTS, 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
 
     def preview(self, payload):
-        if set(payload) - {'preset', 'roles', 'concurrency', 'team', 'team_count'}:
+        if set(payload) - {'preset', 'roles', 'concurrency', 'team', 'team_count', 'advisory'}:
             raise ValueError('Unknown setting')
         preset = payload.get('preset', 'focused')
         if preset not in installer.PRESETS:
@@ -433,6 +530,18 @@ class Console:
         models, efforts = [], []
         known_models = {item['id']: item for item in self.models()['models']}
         saved_state = self.settings()
+        advisory = payload.get('advisory', saved_state['advisory_selection'])
+        if not isinstance(advisory, dict) or set(advisory) != {'provider', 'model', 'effort'} or not all(isinstance(value, str) for value in advisory.values()):
+            raise ValueError('Invalid adviser selection')
+        if saved_state['advisory_selection']['provider'] == 'multiple':
+            raise ValueError('Multiple adviser bridges require CLI reconciliation')
+        if advisory != saved_state['advisory_selection']:
+            provider, model, effort = (advisory[key] for key in ('provider', 'model', 'effort'))
+            if provider == 'none':
+                if model or effort:
+                    raise ValueError('No adviser must not have a model or reasoning level')
+            elif provider not in ADVISORY_MODELS or model not in ADVISORY_MODELS[provider] or effort not in (('auto',) if model == 'claude-haiku-4-5-20251001' else ADVISORY_EFFORTS[provider]):
+                raise ValueError('Unsupported adviser model or reasoning level')
         saved_models = saved_state['roles']
         for role, value in overrides.items():
             if not isinstance(value, dict) or set(value) != {'model', 'effort'} or not all(isinstance(v,str) for v in value.values()):
@@ -483,6 +592,7 @@ class Console:
                 raise ValueError('Selected team reasoning is not supported by the model: '+slot)
             clean_team.append({'slot': slot, 'duty': duty, 'model': model, 'effort': effort, 'title': title})
         before = self.snapshot()
+        manifest = installer.load_manifest(self.target)
         desired = {str(p): (ROOT/p).read_bytes() for p in installer.MANAGED_RELATIVE_FILES}
         for role, relative in installer.ROLE_FILES.items():
             old = before[str(relative)]
@@ -500,7 +610,11 @@ class Console:
             text = installer.render_root_config(ROOT, self.target, settings, 'none', '', '')
         else:
             text = old.decode()
-        tomllib.loads(text)
+        old_config = tomllib.loads(text)
+        advisory_changed = advisory != saved_state['advisory_selection']
+        require_managed_advisory_tables(old_config, manifest, self.target, settings)
+        if advisory_changed:
+            text = without_advisory_tables(text)
         existing_slots = {parts[1] for _, _, name, _ in table_headers(text) if (parts := name.split('.')) and len(parts) >= 2 and parts[0] == 'agents' and parts[1] in TEAM_SLOTS}
         if existing_slots - set(saved_team):
             raise ValueError('Existing team slot table is not console-managed')
@@ -512,10 +626,23 @@ class Console:
         for item in clean_team:
             path = TEAM_SLOTS[item['slot']]
             text = patch_values(text, 'agents.'+item['slot'], {'description': f"Team helper {item['slot'][-2:]} · {item['duty']}" + (f" · {item['title']}" if item['title'] else ''), 'config_file': './agents/'+path.name})
+        if advisory_changed and advisory['provider'] != 'none':
+            provider = advisory['provider']
+            generated = installer.render_root_config(ROOT, self.target, settings, provider, advisory['model'], advisory['effort'])
+            server = tomllib.loads(generated)['mcp_servers'][ADVISORY_SERVERS[provider]]
+            text = patch_values(text, 'mcp_servers.'+ADVISORY_SERVERS[provider], server)
         tomllib.loads(text)
         desired[str(installer.CONFIG_RELATIVE)] = text.encode()
+        for provider, relative in installer.EXTERNAL_BRIDGES.items():
+            name = str(relative)
+            previous = before[name]
+            if provider == advisory['provider']:
+                desired[name] = (ROOT/relative).read_bytes()
+            elif previous is not None and installer.unchanged_owned(manifest, relative, self.target/relative):
+                desired[name] = None
+            else:
+                desired[name] = previous
         desired['AGENTS.md'] = installer.merge_agents_text((before['AGENTS.md'] or b'').decode(), (ROOT/'templates/AGENTS.block.md').read_text()).encode()
-        manifest = installer.load_manifest(self.target)
         conflicts = []
         changes = []
         for name, data in desired.items():
@@ -532,13 +659,13 @@ class Console:
                 diff = 'Managed asset '+('update' if old else 'install')
             changes.append({'path': name, 'diff': diff})
         preview_id = secrets.token_urlsafe(24)
-        self.pending = (preview_id, before, desired, settings, preset, clean_team, conflicts)
+        self.pending = (preview_id, before, desired, settings, preset, clean_team, advisory, conflicts)
         return {'preview_id': preview_id, 'changes': changes, 'conflicts': conflicts, 'can_save': not conflicts, 'notice': 'Save backs up existing configuration. Unrelated assignments are preserved. Modified or unowned managed assets must be reconciled using the CLI installer first.'}
 
     def save(self, payload):
         if set(payload) != {'preview_id'} or not self.pending or payload['preview_id'] != self.pending[0]:
             raise ValueError('Preview required before Save')
-        _, before, desired, settings, preset, team, conflicts = self.pending
+        _, before, desired, settings, preset, team, advisory, conflicts = self.pending
         if conflicts:
             raise ValueError('Managed file conflict: '+', '.join(conflicts))
         if self.snapshot() != before:
@@ -585,7 +712,7 @@ class Console:
             installer.refuse_symlink_destination(self.target, installer.MANIFEST_RELATIVE)
             if contents(self.target/installer.MANIFEST_RELATIVE) != before[manifest_name]:
                 raise ValueError('Files changed since preview; preview again: '+manifest_name)
-            installer.write_manifest(root=ROOT, target=self.target, preset=preset, settings=settings, external_provider=manifest.get('external_provider', 'none'), external_model=manifest.get('external_model') or '', external_effort=manifest.get('external_effort') or '', manifest=manifest, dry_run=False, create_only=before[manifest_name] is None, expected_bytes=before[manifest_name])
+            installer.write_manifest(root=ROOT, target=self.target, preset=preset, settings=settings, external_provider=advisory['provider'], external_model=advisory['model'], external_effort=advisory['effort'], manifest=manifest, dry_run=False, create_only=before[manifest_name] is None, expected_bytes=before[manifest_name])
             mutated[manifest_name] = contents(self.target/installer.MANIFEST_RELATIVE)
             after = self.snapshot()
             changed = {p: {'before': base64.b64encode(before[p]).decode() if before[p] is not None else None, 'after': digest(after[p])} for p in before if before[p] != after[p]}

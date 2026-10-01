@@ -135,7 +135,7 @@ Set `ANTHROPIC_API_KEY` or `DEEPSEEK_API_KEY` only in the environment that start
 export ANTHROPIC_API_KEY="your-key"
 python3 scripts/install.py /absolute/path/to/your-project \
   --preset balanced --external-provider anthropic \
-  --external-model claude-sonnet-5 --external-effort high
+  --external-model claude-sonnet-5-5 --external-effort high
 
 # Or select the current DeepSeek V4.1 Flash API alias.
 export DEEPSEEK_API_KEY="your-key"

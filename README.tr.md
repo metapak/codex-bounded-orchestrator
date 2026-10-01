@@ -135,7 +135,7 @@ Codex'i başlatmadan önce seçime göre `ANTHROPIC_API_KEY` veya `DEEPSEEK_API_
 export ANTHROPIC_API_KEY="anahtarın"
 python3 scripts/install.py /projenin/tam/yolu \
   --preset balanced --external-provider anthropic \
-  --external-model claude-sonnet-5 --external-effort high
+  --external-model claude-sonnet-5-5 --external-effort high
 
 # Veya güncel DeepSeek V4.1 Flash API adını seç.
 export DEEPSEEK_API_KEY="anahtarın"

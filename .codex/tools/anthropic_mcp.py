@@ -16,9 +16,9 @@ SERVER_NAME = "codex-bounded-anthropic-bridge"
 SERVER_VERSION = "0.6.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_ENDPOINT = "https://api.anthropic.com/v1/messages"
-DEFAULT_MODEL = "claude-sonnet-5"
+DEFAULT_MODEL = "claude-sonnet-5-5"
 DEFAULT_EFFORT = "high"
-EFFORTS = {"low", "medium", "high", "xhigh", "max"}
+EFFORTS = {"auto", "low", "medium", "high", "xhigh", "max"}
 MAX_CONTEXT_CHARS = 200_000
 MAX_TASK_CHARS = 20_000
 MAX_ALLOWED_PATHS = 64
@@ -102,6 +102,8 @@ def call_anthropic(
         raise BridgeError("model must be a non-empty string up to 120 characters")
     if effort not in EFFORTS:
         raise BridgeError(f"effort must be one of: {', '.join(sorted(EFFORTS))}")
+    if (model == "claude-haiku-4-5-20251001") != (effort == "auto"):
+        raise BridgeError("Claude Haiku 4.5 requires auto effort; other Claude models need an explicit effort")
     if not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or not 256 <= max_tokens <= 16384:
         raise BridgeError("max_tokens must be an integer from 256 to 16384")
 
@@ -109,8 +111,9 @@ def call_anthropic(
         "model": model,
         "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": build_prompt(arguments)}],
-        "output_config": {"effort": effort},
     }
+    if effort != "auto":
+        body["output_config"] = {"effort": effort}
     request = urllib.request.Request(
         endpoint,
         data=json.dumps(body).encode("utf-8"),

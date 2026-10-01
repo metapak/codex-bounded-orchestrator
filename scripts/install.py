@@ -48,11 +48,11 @@ TEAM_SLOT_FILES = {
 ALL_ROLES = ("owner", *ROLE_FILES)
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 EXTERNAL_EFFORTS = {
-    "anthropic": ("low", "medium", "high", "xhigh", "max"),
+    "anthropic": ("auto", "low", "medium", "high", "xhigh", "max"),
     "deepseek": ("none", "minimal", "low", "medium", "high", "xhigh", "max"),
 }
 EXTERNAL_DEFAULTS = {
-    "anthropic": ("claude-sonnet-5", "high"),
+    "anthropic": ("claude-sonnet-5-5", "high"),
     "deepseek": ("deepseek-flash", "high"),
 }
 NATIVE_MODEL_PATTERN = re.compile(r"^gpt-[a-z0-9][a-z0-9._-]*$", re.IGNORECASE)
@@ -389,6 +389,8 @@ def validate_external_selection(
             f"Unsupported {provider} effort {selected_effort!r}; choose one of: "
             + ", ".join(allowed_efforts)
         )
+    if provider == "anthropic" and (selected_model == "claude-haiku-4-5-20251001") != (selected_effort == "auto"):
+        raise InstallError("Claude Haiku 4.5 requires auto effort; other Claude models require an explicit supported effort")
     return selected_model, selected_effort
 
 
@@ -1179,24 +1181,28 @@ def interactive_options(
         )
     if external_provider == "anthropic":
         print("\nClaude modeli / Claude model:")
-        print("  1) claude-sonnet-5 (dengeli / balanced)")
-        print("  2) claude-opus-5 (yüksek kalite / quality)")
-        print("  3) Özel model kimliği / Custom model ID")
-        choice = prompt_choice("Seçim / Select [1]: ", {"1": "sonnet", "2": "opus", "3": "custom"}, "1")
-        if choice == "sonnet":
-            external_model = "claude-sonnet-5"
-        elif choice == "opus":
-            external_model = "claude-opus-5"
+        print("  1) claude-sonnet-5-5 (dengeli / balanced)")
+        print("  2) claude-opus-5-5 (ayrıntılı / detailed)")
+        print("  3) claude-fable-5-1")
+        print("  4) claude-haiku-4-5-20251001 (ayrı efor ayarı yok / no effort setting)")
+        print("  5) Özel model kimliği / Custom model ID")
+        choice = prompt_choice("Seçim / Select [1]: ", {"1": "sonnet", "2": "opus", "3": "fable", "4": "haiku", "5": "custom"}, "1")
+        prepared = {"sonnet": "claude-sonnet-5-5", "opus": "claude-opus-5-5", "fable": "claude-fable-5-1", "haiku": "claude-haiku-4-5-20251001"}
+        if choice in prepared:
+            external_model = prepared[choice]
         else:
             default_model = external_model or EXTERNAL_DEFAULTS["anthropic"][0]
             external_model = input(f"Model ID [{default_model}]: ").strip() or default_model
-        external_effort = external_effort or EXTERNAL_DEFAULTS["anthropic"][1]
-        while True:
-            value = input(f"Claude effort [{external_effort}]: ").strip() or external_effort
-            if value in {"low", "medium", "high", "xhigh", "max"}:
-                external_effort = value
-                break
-            print("Geçersiz efor / Invalid effort: low, medium, high, xhigh, max")
+        if external_model == "claude-haiku-4-5-20251001":
+            external_effort = "auto"
+        else:
+            external_effort = external_effort or EXTERNAL_DEFAULTS["anthropic"][1]
+            while True:
+                value = input(f"Claude effort [{external_effort}]: ").strip() or external_effort
+                if value in {"low", "medium", "high", "xhigh", "max"}:
+                    external_effort = value
+                    break
+                print("Geçersiz efor / Invalid effort: low, medium, high, xhigh, max")
     elif external_provider == "deepseek":
         default_model, default_effort = EXTERNAL_DEFAULTS["deepseek"]
         print("\nDeepSeek model:")
@@ -1283,7 +1289,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--external-model", default=None)
     parser.add_argument(
         "--external-effort",
-        choices=("none", "minimal", "low", "medium", "high", "xhigh", "max"),
+        choices=("auto", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
         default=None,
     )
     parser.add_argument("--interactive", action="store_true")

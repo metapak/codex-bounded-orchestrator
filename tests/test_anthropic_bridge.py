@@ -37,6 +37,23 @@ class FakeResponse:
 
 
 class AnthropicBridgeTests(unittest.TestCase):
+    def test_haiku_auto_omits_unsupported_effort_in_outgoing_payload(self) -> None:
+        bridge = load_bridge()
+        captured = {}
+        def fake_urlopen(request, timeout):
+            captured['body'] = json.loads(request.data)
+            return FakeResponse({'content':[{'type':'text','text':'proposal'}]})
+        arguments = {'task':'Check the patch','context':'supplied only','allowed_paths':['app.py']}
+        with patch.dict(os.environ, {'ANTHROPIC_API_KEY':'test-only-key'}, clear=True), patch.object(
+            bridge.urllib.request, 'urlopen', side_effect=fake_urlopen
+        ):
+            self.assertEqual(bridge.call_anthropic(arguments, default_model='claude-haiku-4-5-20251001', default_effort='auto'), 'proposal')
+        self.assertEqual(captured['body']['model'], 'claude-haiku-4-5-20251001')
+        self.assertNotIn('output_config', captured['body'])
+        with patch.dict(os.environ, {'ANTHROPIC_API_KEY':'test-only-key'}, clear=True):
+            with self.assertRaisesRegex(bridge.BridgeError, 'requires auto effort'):
+                bridge.call_anthropic(arguments, default_model='claude-haiku-4-5-20251001', default_effort='high')
+
     def test_mocked_messages_request_uses_output_config_and_env_key(self) -> None:
         bridge = load_bridge()
         captured = {}
@@ -66,12 +83,12 @@ class AnthropicBridgeTests(unittest.TestCase):
                         "arguments": arguments,
                     },
                 },
-                default_model="claude-sonnet-5",
+                default_model="claude-sonnet-5-5",
                 default_effort="medium",
                 endpoint=bridge.DEFAULT_ENDPOINT,
             )
         self.assertEqual(response["result"]["content"][0]["text"], "--- a/app.py")
-        self.assertEqual(captured["body"]["model"], "claude-sonnet-5")
+        self.assertEqual(captured["body"]["model"], "claude-sonnet-5-5")
         self.assertEqual(captured["body"]["output_config"], {"effort": "medium"})
         self.assertIn("app.py", captured["body"]["messages"][0]["content"])
         self.assertEqual(captured["headers"]["X-api-key"], "test-only-key")
@@ -83,7 +100,7 @@ class AnthropicBridgeTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True), self.assertRaises(bridge.BridgeError):
             bridge.call_anthropic(
                 {"task": "x", "context": "y", "allowed_paths": ["a.py"]},
-                default_model="claude-sonnet-5",
+                default_model="claude-sonnet-5-5",
                 default_effort="high",
             )
 
