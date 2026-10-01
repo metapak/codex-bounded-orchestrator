@@ -22,12 +22,12 @@
 @media(max-width:900px){.stage-actors{grid-template-columns:minmax(125px,160px) minmax(0,1fr);gap:12px;padding:76px 38px 75px}.stage-helpers{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.stage-chief .stage-actor{grid-template-rows:153px minmax(2.4em,auto) minmax(1.5em,auto) 1.5em}.stage-chief .stage-actor svg{width:108px;height:145px}}
 @media(max-width:540px){.orchestra-stage:before,.orchestra-stage:after{width:19px}.stage-actors{display:block;padding:77px 24px 75px}.stage-chief{display:flex;justify-content:center;margin-bottom:16px}.stage-chief .stage-actor{width:150px;grid-template-rows:135px minmax(2.4em,auto) minmax(1.5em,auto) 1.5em}.stage-chief .stage-actor svg{width:95px;height:128px}.stage-helpers{grid-template-columns:repeat(3,minmax(0,1fr));gap:11px 5px}.stage-actor{grid-template-rows:91px minmax(2.4em,auto) minmax(1.5em,auto) 1.5em;padding:5px 2px 8px}.stage-actor svg{width:58px;height:84px}.stage-role{font-size:.69rem}.stage-name{font-size:.66rem}.stage-amount{font-size:.6rem}.more-helpers{margin-top:14px}}
 .baton-arm{transform-box:view-box;transform-origin:143px 151px}
-.music-note{opacity:0;pointer-events:none}
+.music-note{opacity:0;pointer-events:none;stroke:#5a302b;stroke-width:2px;paint-order:stroke;filter:drop-shadow(0 0 4px #f7d58a99)}
 .is-conducting .baton-arm{animation:baton-swing 2.6s ease-in-out infinite}
 .is-conducting .music-note{animation:note-float 2.6s ease-out infinite}
 .is-conducting .note-2{animation-delay:.55s}
-@keyframes baton-swing{0%,100%{transform:rotate(-8deg)}48%{transform:rotate(15deg)}}
-@keyframes note-float{0%{opacity:0;transform:translateY(8px)}25%{opacity:.95}80%{opacity:.65}100%{opacity:0;transform:translateY(-18px)}}
+@keyframes baton-swing{0%,100%{transform:rotate(-22deg)}48%{transform:rotate(17deg)}}
+@keyframes note-float{0%{opacity:.1;transform:translateY(8px)}25%{opacity:1}80%{opacity:.85}100%{opacity:.1;transform:translateY(-18px)}}
 @media(prefers-reduced-motion:reduce){.is-conducting .baton-arm,.is-conducting .music-note{animation:none}.music-note{display:none}}
 .stage-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;color:#745d50;font-size:.78rem}
 .stage-actor{grid-template-rows:132px minmax(2.4em,auto) minmax(1.5em,auto) minmax(2.5em,auto) minmax(2.5em,auto) 1.5em}
@@ -116,3 +116,11 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .selected-actor-stat small{display:block;margin-top:6px;color:#e7cba5;font-size:.73rem;line-height:1.35}
 @media(max-width:800px){.orchestra-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:540px){.orchestra-head label{width:100%;max-width:none}.orchestra-stats{gap:8px}}
+
+/* The requested conductor illustration keeps its gentle loop even when macOS
+   reduces other interface motion; all other reduced-motion rules still apply. */
+@media(prefers-reduced-motion:reduce){
+  .team-stage svg.is-conducting .baton-arm,.orchestra-stage svg.is-conducting .baton-arm{animation:baton-swing 2.8s ease-in-out infinite}
+  .team-stage svg.is-conducting .music-note,.orchestra-stage svg.is-conducting .music-note{display:inline;animation:note-float 2.8s ease-out infinite}
+  .team-stage svg.is-conducting .note-2,.orchestra-stage svg.is-conducting .note-2{animation-delay:.7s}
+}
