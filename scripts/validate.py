@@ -13,44 +13,44 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_AGENTS: dict[str, dict[str, str]] = {
     "fast-lookup.toml": {
         "name": "fast_lookup",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "effort": "medium",
         "sandbox": "read-only",
     },
     "explorer.toml": {
         "name": "explorer",
-        "model": "gpt-5.6-terra",
-        "effort": "medium",
+        "model": "gpt-6-luna",
+        "effort": "high",
         "sandbox": "read-only",
     },
     "researcher.toml": {
         "name": "researcher",
-        "model": "gpt-5.6-terra",
+        "model": "gpt-6.1-sol",
         "effort": "medium",
         "sandbox": "read-only",
     },
     "implementer.toml": {
         "name": "implementer",
-        "model": "gpt-5.6-sol",
+        "model": "gpt-6.1-sol",
         "effort": "high",
         "sandbox": "workspace-write",
     },
     "verifier.toml": {
         "name": "verifier",
-        "model": "gpt-5.6-terra",
+        "model": "gpt-6.1-sol",
         "effort": "high",
         "sandbox": "workspace-write",
     },
     "failure-analyst.toml": {
         "name": "failure_analyst",
-        "model": "gpt-5.6-sol",
+        "model": "gpt-6.1-sol",
         "effort": "high",
         "sandbox": "read-only",
     },
     "qa-operator.toml": {
         "name": "qa_operator",
-        "model": "gpt-5.6-sol",
-        "effort": "high",
+        "model": "gpt-6.1-sol",
+        "effort": "medium",
         "sandbox": "workspace-write",
     },
     "reviewer.toml": {
@@ -188,9 +188,9 @@ def validate_root_config(
         )
     if agents.get("max_depth") != 1:
         errors.append(f"{path.relative_to(ROOT)}: max_depth must be 1")
-    if agents.get("default_subagent_model") != "gpt-5.6-terra":
-        errors.append(f"{path.relative_to(ROOT)}: default subagent must be Terra")
-    if agents.get("default_subagent_reasoning_effort") != "medium":
+    if agents.get("default_subagent_model") != "gpt-6-luna":
+        errors.append(f"{path.relative_to(ROOT)}: default subagent must be Luna")
+    if agents.get("default_subagent_reasoning_effort") != "high":
         errors.append(
             f"{path.relative_to(ROOT)}: default subagent effort must be medium"
         )
@@ -299,8 +299,8 @@ def validate_skill(errors: list[str]) -> None:
         "no recursive delegation",
         "Maximum writer turns",
         "External-effect boundary",
-        "GPT-5.6 Terra",
-        "GPT-5.6 Sol",
+        "GPT-6 Luna",
+        "GPT-6.1 Sol",
         "GPT-6 Astra medium",
     )
     lowered = text.lower()
@@ -389,7 +389,7 @@ def main() -> int:
             ROOT / ".codex/config.toml", "gpt-6-astra", "medium", errors
         )
         validate_root_config(
-            ROOT / "presets/sol-owner.config.toml", "gpt-5.6-sol", "high", errors
+            ROOT / "presets/sol-owner.config.toml", "gpt-6.1-sol", "high", errors
         )
         validate_agents(errors)
         validate_skill(errors)

@@ -13,6 +13,20 @@ from pathlib import Path
 CATALOG = Path(__file__).with_name('model_catalog.json')
 MODEL_ID = re.compile(r'^gpt-[a-z0-9][a-z0-9._-]{0,89}$', re.I)
 EFFORTS = frozenset(('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'))
+CURRENT_MODELS = frozenset(('gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-luna'))
+VERSIONED_MODEL = re.compile(r'^gpt-(\d+)(?:\.(\d+))?-[a-z0-9][a-z0-9._-]*$', re.I)
+
+
+def new_choice_model(model_id: str, *, discovered: bool = False) -> bool:
+    """Offer current documented models and newer models observed in the local CLI.
+
+    Older saved selections are handled separately by the console and must not
+    become new assignments merely because an old CLI still lists them.
+    """
+    if model_id in CURRENT_MODELS:
+        return True
+    match = VERSIONED_MODEL.fullmatch(model_id) if discovered else None
+    return bool(match and (int(match[1]), int(match[2] or 0)) > (6, 1))
 
 
 def bundled():
@@ -20,7 +34,7 @@ def bundled():
     data = json.loads(CATALOG.read_text(encoding='utf-8'))
     models = []
     for item in data['models']:
-        if MODEL_ID.fullmatch(item['id']):
+        if MODEL_ID.fullmatch(item['id']) and new_choice_model(item['id']):
             models.append({'id': item['id'], 'label': item['label'],
                            'efforts': [effort for effort in item['efforts'] if effort in EFFORTS],
                            'origin': 'documentation'})
@@ -90,7 +104,7 @@ def discover_cli(timeout=5.0):
                 if not isinstance(item, dict):
                     continue
                 model_id = item.get('model') or item.get('id')
-                if not isinstance(model_id, str) or not MODEL_ID.fullmatch(model_id) or item.get('hidden'):
+                if not isinstance(model_id, str) or not MODEL_ID.fullmatch(model_id) or not new_choice_model(model_id, discovered=True) or item.get('hidden'):
                     continue
                 label = item.get('displayName')
                 if not isinstance(label, str) or len(label) > 100 or any(ord(c) < 32 for c in label):
@@ -126,7 +140,8 @@ def catalog():
     fallback = bundled()
     runtime = discover_cli()
     if runtime:
-        by_id = {item['id']: item for item in runtime}
+        by_id = {item['id']: item for item in runtime
+                 if new_choice_model(item['id'], discovered=True)}
         for item in fallback['models']:
             by_id.setdefault(item['id'], item)
         return {'models': list(by_id.values()), 'discovery': 'local_cli',

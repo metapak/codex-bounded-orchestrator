@@ -20,26 +20,26 @@ START_MARKER = "<!-- codex-bounded-orchestrator:start -->"
 MANIFEST = Path(".codex/.bounded-orchestrator/install.json")
 
 EXPECTED_ROLES = {
-    "fast_lookup": ("fast-lookup.toml", "gpt-5.6-luna", "medium", "read-only"),
-    "explorer": ("explorer.toml", "gpt-5.6-terra", "medium", "read-only"),
-    "researcher": ("researcher.toml", "gpt-5.6-terra", "medium", "read-only"),
+    "fast_lookup": ("fast-lookup.toml", "gpt-6-luna", "medium", "read-only"),
+    "explorer": ("explorer.toml", "gpt-6-luna", "high", "read-only"),
+    "researcher": ("researcher.toml", "gpt-6.1-sol", "medium", "read-only"),
     "implementer": (
         "implementer.toml",
-        "gpt-5.6-sol",
+        "gpt-6.1-sol",
         "high",
         "workspace-write",
     ),
-    "verifier": ("verifier.toml", "gpt-5.6-terra", "high", "workspace-write"),
+    "verifier": ("verifier.toml", "gpt-6.1-sol", "high", "workspace-write"),
     "failure_analyst": (
         "failure-analyst.toml",
-        "gpt-5.6-sol",
+        "gpt-6.1-sol",
         "high",
         "read-only",
     ),
     "qa_operator": (
         "qa-operator.toml",
-        "gpt-5.6-sol",
-        "high",
+        "gpt-6.1-sol",
+        "medium",
         "workspace-write",
     ),
     "reviewer": ("reviewer.toml", "gpt-6-astra", "medium", "read-only"),
@@ -97,7 +97,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(config["model"], "gpt-6-astra")
         self.assertEqual(config["model_reasoning_effort"], "medium")
         self.assertEqual(config["review_model"], "gpt-6-astra")
-        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-5.6-terra")
+        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
         self.assertEqual(config["agents"]["max_depth"], 1)
 
         registered_roles = {
@@ -182,16 +182,16 @@ class InstallerTests(unittest.TestCase):
         result = self.run_installer("--profile", "sol")
         self.assertEqual(result.returncode, 0, result.stderr)
         config = read_toml(self.target / ".codex/config.toml")
-        self.assertEqual(config["model"], "gpt-5.6-sol")
+        self.assertEqual(config["model"], "gpt-6.1-sol")
         self.assertEqual(config["model_reasoning_effort"], "high")
-        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-5.6-terra")
+        self.assertEqual(config["agents"]["default_subagent_model"], "gpt-6-luna")
         self.assertEqual(
             read_toml(self.target / ".codex/agents/reviewer.toml")["model"],
             "gpt-6-astra",
         )
         self.assertEqual(
             read_toml(self.target / ".codex/agents/fast-lookup.toml")["model"],
-            "gpt-5.6-luna",
+            "gpt-6-luna",
         )
 
     def test_install_is_idempotent_and_preserves_existing_agents_text(self) -> None:
@@ -224,8 +224,8 @@ class InstallerTests(unittest.TestCase):
         example = codex / "bounded-orchestrator.config.example.toml"
         self.assertTrue(example.is_file())
         parsed = read_toml(example)
-        self.assertEqual(parsed["model"], "gpt-5.6-sol")
-        self.assertEqual(parsed["agents"]["default_subagent_model"], "gpt-5.6-terra")
+        self.assertEqual(parsed["model"], "gpt-6.1-sol")
+        self.assertEqual(parsed["agents"]["default_subagent_model"], "gpt-6-luna")
         self.assertEqual(
             parsed["agents"]["reviewer"]["config_file"],
             "./agents/reviewer.toml",
@@ -263,7 +263,7 @@ class InstallerTests(unittest.TestCase):
         result = self.run_installer("--profile", "sol", "--force-config")
         self.assertEqual(result.returncode, 0, result.stderr)
         parsed = read_toml(config)
-        self.assertEqual(parsed["model"], "gpt-5.6-sol")
+        self.assertEqual(parsed["model"], "gpt-6.1-sol")
         self.assertEqual(parsed["model_reasoning_effort"], "high")
         backups = list(
             (self.target / ".codex/.bounded-orchestrator/backups").rglob(
@@ -360,7 +360,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(read_toml(self.target / ".codex/agents/implementer.toml")["model"], "gpt-6-astra")
         result = self.run_installer("--preset", "economy", "--force")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(read_toml(self.target / ".codex/config.toml")["model"], "gpt-5.6-terra")
+        self.assertEqual(read_toml(self.target / ".codex/config.toml")["model"], "gpt-6.1-sol")
         self.assertEqual(read_toml(self.target / ".codex/agents/fast-lookup.toml")["model_reasoning_effort"], "low")
 
     def test_custom_role_model_and_effort_overrides(self) -> None:

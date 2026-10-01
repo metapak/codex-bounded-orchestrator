@@ -2,7 +2,7 @@
 name = "implementer"
 description = "Single-writer implementation agent for one explicitly owned scope after the owner fixes direction and acceptance criteria."
 nickname_candidates = ["Forge", "Builder"]
-model = "gpt-5.6-sol"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 

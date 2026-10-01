@@ -414,7 +414,12 @@ class Console:
                     data = tomllib.loads(path.read_text())
                     team.append({'slot': item['slot'], 'duty': item.get('duty', ''), 'model': data.get('model', ''), 'effort': data.get('model_reasoning_effort', ''), 'title': item.get('title', '')})
         concurrency = config.get('agents', {}).get('max_concurrent_threads_per_session', 4)
-        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
+        servers = config.get('mcp_servers', {})
+        if not isinstance(servers, dict):
+            servers = {}
+        advisory = {name: isinstance(servers.get(server), dict) and servers[server].get('enabled', True) is not False
+                    for name, server in (('anthropic', 'anthropic_claude'), ('deepseek', 'deepseek_proposals'))}
+        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'advisory': advisory, 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
 
     def preview(self, payload):
         if set(payload) - {'preset', 'roles', 'concurrency', 'team', 'team_count'}:

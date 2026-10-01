@@ -2,8 +2,8 @@
 name = "explorer"
 description = "Repository explorer for mapping real code paths, ownership boundaries, tests, and constraints before implementation."
 nickname_candidates = ["Atlas", "Scout"]
-model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
+model = "gpt-6-luna"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
 developer_instructions = """

@@ -1,5 +1,5 @@
 # managed-by: codex-bounded-orchestrator
-# Default profile: Astra owns; Terra explores and verifies; Sol implements and diagnoses; Astra reviews.
+# Default profile: Astra coordinates; Luna explores, Sol implements and verifies, Astra reviews.
 # Explicit role registration is intentional: it is more reliable across
 # Codex surfaces than relying only on directory auto-discovery.
 
@@ -13,8 +13,8 @@ sandbox_mode = "workspace-write"
 enabled = true
 max_concurrent_threads_per_session = 4
 max_depth = 1
-default_subagent_model = "gpt-5.6-terra"
-default_subagent_reasoning_effort = "medium"
+default_subagent_model = "gpt-6-luna"
+default_subagent_reasoning_effort = "high"
 interrupt_message = true
 
 [agents.fast_lookup]

@@ -2,7 +2,7 @@
 name = "verifier"
 description = "Independent verifier that runs focused checks and classifies failures without repairing production code."
 nickname_candidates = ["Gauge", "Proof"]
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 

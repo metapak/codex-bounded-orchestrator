@@ -60,13 +60,13 @@ EXTERNAL_MODEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:/-]*$", re.IGNORECASE)
 
 BALANCED_PROFILE = {
     "owner": ("gpt-6-astra", "medium"),
-    "fast_lookup": ("gpt-5.6-luna", "medium"),
-    "explorer": ("gpt-5.6-terra", "medium"),
-    "researcher": ("gpt-5.6-terra", "medium"),
-    "implementer": ("gpt-5.6-sol", "high"),
-    "verifier": ("gpt-5.6-terra", "high"),
-    "failure_analyst": ("gpt-5.6-sol", "high"),
-    "qa_operator": ("gpt-5.6-sol", "high"),
+    "fast_lookup": ("gpt-6-luna", "medium"),
+    "explorer": ("gpt-6-luna", "high"),
+    "researcher": ("gpt-6.1-sol", "medium"),
+    "implementer": ("gpt-6.1-sol", "high"),
+    "verifier": ("gpt-6.1-sol", "high"),
+    "failure_analyst": ("gpt-6.1-sol", "high"),
+    "qa_operator": ("gpt-6.1-sol", "medium"),
     "reviewer": ("gpt-6-astra", "medium"),
     "advisor": ("gpt-6-astra", "xhigh"),
 }
@@ -86,27 +86,27 @@ PRESETS = {
     },
     "economy": {
         **BALANCED_PROFILE,
-        "owner": ("gpt-5.6-terra", "medium"),
-        "fast_lookup": ("gpt-5.6-luna", "low"),
-        "explorer": ("gpt-5.6-luna", "medium"),
-        "researcher": ("gpt-5.6-terra", "low"),
-        "implementer": ("gpt-5.6-terra", "medium"),
-        "verifier": ("gpt-5.6-terra", "medium"),
-        "failure_analyst": ("gpt-5.6-terra", "medium"),
-        "qa_operator": ("gpt-5.6-terra", "medium"),
-        "reviewer": ("gpt-5.6-terra", "high"),
-        "advisor": ("gpt-5.6-sol", "high"),
+        "owner": ("gpt-6.1-sol", "medium"),
+        "fast_lookup": ("gpt-6-luna", "low"),
+        "explorer": ("gpt-6-luna", "medium"),
+        "researcher": ("gpt-6-luna", "high"),
+        "implementer": ("gpt-6.1-sol", "medium"),
+        "verifier": ("gpt-6-luna", "high"),
+        "failure_analyst": ("gpt-6.1-sol", "medium"),
+        "qa_operator": ("gpt-6-luna", "high"),
+        "reviewer": ("gpt-6.1-sol", "high"),
+        "advisor": ("gpt-6.1-sol", "high"),
     },
     "quota-saver": {
         **BALANCED_PROFILE,
         "owner": ("gpt-6-astra", "low"),
-        "fast_lookup": ("gpt-5.6-luna", "low"),
-        "explorer": ("gpt-5.6-terra", "low"),
-        "researcher": ("gpt-5.6-terra", "low"),
-        "implementer": ("gpt-5.6-sol", "medium"),
-        "verifier": ("gpt-5.6-terra", "medium"),
-        "failure_analyst": ("gpt-5.6-sol", "medium"),
-        "qa_operator": ("gpt-5.6-sol", "medium"),
+        "fast_lookup": ("gpt-6-luna", "low"),
+        "explorer": ("gpt-6-luna", "low"),
+        "researcher": ("gpt-6.1-sol", "low"),
+        "implementer": ("gpt-6.1-sol", "medium"),
+        "verifier": ("gpt-6-luna", "medium"),
+        "failure_analyst": ("gpt-6.1-sol", "medium"),
+        "qa_operator": ("gpt-6-luna", "medium"),
         "reviewer": ("gpt-6-astra", "low"),
         "advisor": ("gpt-6-astra", "low"),
     },
@@ -116,8 +116,7 @@ PRESETS = {
 # Compact context routing, opt-in; preserve existing presets and custom choices.
 PRESETS["focused"] = {
     role: ("gpt-6-luna", "high") if role in ("fast_lookup", "explorer")
-    else ("gpt-6-sol", "medium") if role == "owner"
-    else ("gpt-6-sol", "medium")
+    else ("gpt-6.1-sol", "medium")
     for role in ALL_ROLES
 }
 
@@ -401,7 +400,7 @@ def resolve_profile(
 ) -> dict[str, tuple[str, str]]:
     selected = {role: tuple(values) for role, values in PRESETS[preset].items()}
     if legacy_profile == "sol":
-        selected["owner"] = ("gpt-5.6-sol", "high")
+        selected["owner"] = ("gpt-6.1-sol", "high")
     elif legacy_profile == "astra":
         selected["owner"] = ("gpt-6-astra", "medium")
     for raw in model_overrides:
@@ -791,7 +790,7 @@ def write_manifest(
         {
             "schema": SCHEMA_VERSION,
             "tool_version": tool_version(root),
-            "profile": "sol" if settings["owner"] == ("gpt-5.6-sol", "high") else "astra",
+            "profile": "sol" if settings["owner"] == ("gpt-6.1-sol", "high") else "astra",
             "preset": preset,
             "role_settings": {
                 role: {"model": model, "effort": effort}

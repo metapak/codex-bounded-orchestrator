@@ -91,7 +91,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(current['unrelated'], before['unrelated'])
         self.assertEqual(current['quoted]table'], before['quoted]table'])
         self.assertEqual(current['note'], before['note'])
-        self.assertEqual(current['model'], 'gpt-6-sol')
+        self.assertEqual(current['model'], 'gpt-6.1-sol')
         self.assertEqual(current['agents']['max_depth'], 1)
         self.console.restore({})
         self.assertEqual(config.read_text(), original)
@@ -230,7 +230,7 @@ class ConsoleTests(unittest.TestCase):
         log = self.sessions/'rollout.jsonl'
         rows = [
             {'timestamp':'2026-09-01T10:00:00Z','type':'session_meta','payload':{'id':'session-one','cwd':str(self.target)}},
-            {'timestamp':'2026-09-01T10:01:00Z','type':'turn_context','payload':{'turn_id':'turn-one','model':'gpt-6-sol'}},
+            {'timestamp':'2026-09-01T10:01:00Z','type':'turn_context','payload':{'turn_id':'turn-one','model':'gpt-6.1-sol'}},
             {'timestamp':'2026-09-01T10:02:00Z','type':'token_usage_record','payload':{'turn_id':'turn-one','usage':{'total_tokens':25}}},
         ]
         log.write_text(''.join(json.dumps(row)+'\n' for row in rows))
@@ -320,6 +320,27 @@ class ConsoleTests(unittest.TestCase):
         self.assertIn('gpt-6-luna', {item['id'] for item in fallback['models']})
         self.assertIn('ultra', next(item for item in fallback['models'] if item['id']=='gpt-6.1-sol')['efforts'])
 
+    def test_new_model_choices_hide_legacy_but_allow_newer_local_revision(self):
+        import model_catalog
+        local = [{'id':name,'label':name,'efforts':['medium'],'origin':'local_cli'}
+                 for name in ('gpt-5.6-sol','gpt-6-sol','gpt-6.2-sol')]
+        with mock.patch.object(model_catalog, 'discover_cli', return_value=local):
+            result = model_catalog.catalog()
+        entries = {item['id']:item for item in result['models']}
+        self.assertEqual(set(entries), {'gpt-6-astra','gpt-6.1-sol','gpt-6-luna','gpt-6.2-sol'})
+        self.assertEqual(entries['gpt-6.2-sol']['origin'], 'local_cli')
+        self.assertFalse(result['account_access_verified'])
+
+    def test_advisory_status_exposes_names_only_not_bridge_credentials(self):
+        config = self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('[mcp_servers.anthropic_claude]\ncommand = "python"\n'
+                          'args = ["private-script", "PRIVATE_KEY"]\n'
+                          '[mcp_servers.deepseek_proposals]\nenabled = false\n')
+        state = self.console.settings()
+        self.assertEqual(state['advisory'], {'anthropic': True, 'deepseek': False})
+        self.assertNotIn('PRIVATE_KEY', json.dumps(state))
+
     def test_local_gpt_6_1_efforts_override_documentation_fallback(self):
         import model_catalog
         local = [{'id':'gpt-6.1-sol','label':'GPT-6.1 Sol','efforts':['low','medium','high','xhigh','max'],'origin':'local_cli'}]
@@ -350,7 +371,7 @@ class ConsoleTests(unittest.TestCase):
         config.parent.mkdir()
         config.write_text('private_setting = "keep"\n[unrelated]\nvalue = 7\n')
         team = [
-            {'slot':'team_slot_01','duty':'researcher','model':'gpt-6-sol','effort':'medium','title':'Sources'},
+            {'slot':'team_slot_01','duty':'researcher','model':'gpt-6.1-sol','effort':'medium','title':'Sources'},
             {'slot':'team_slot_02','duty':'researcher','model':'gpt-6-luna','effort':'high','title':'Facts'},
         ]
         plan = self.console.preview({'preset':'focused','concurrency':2,'team':team})
@@ -383,7 +404,7 @@ class ConsoleTests(unittest.TestCase):
     def test_fifty_planned_slots_are_separate_from_concurrency_and_restore(self):
         duties = list(dashboard.installer.ROLE_FILES)
         team = [{'slot':f'team_slot_{index:02d}', 'duty':duties[(index-1)%len(duties)],
-                 'model':'gpt-6-sol', 'effort':'medium', 'title':f'Part {index}'} for index in range(1,51)]
+                 'model':'gpt-6.1-sol', 'effort':'medium', 'title':f'Part {index}'} for index in range(1,51)]
         plan = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
         self.assertTrue(plan['can_save'], plan['conflicts'])
         self.console.save({'preview_id':plan['preview_id']})
@@ -407,7 +428,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertFalse(last.exists())
 
     def test_fifty_slot_preflight_and_mid_save_rollback(self):
-        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6.1-sol','effort':'medium','title':''}
                 for index in range(1,51)]
         payload = {'preset':'focused','concurrency':4,'team_count':50,'team':team}
         for count in (0,51,True):
@@ -437,7 +458,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertFalse((self.target/dashboard.installer.MANIFEST_RELATIVE).exists())
 
     def test_new_slot_created_during_save_is_never_replaced_or_rolled_back(self):
-        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6.1-sol','effort':'medium','title':''}
                 for index in range(1,51)]
         plan = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
         leaf = self.target/dashboard.TEAM_SLOTS['team_slot_25']
@@ -470,7 +491,7 @@ class ConsoleTests(unittest.TestCase):
                 self.console.save({'preview_id':plan['preview_id']})
         self.assertIn(b'OWNER CONCURRENT EDIT', explorer.read_bytes())
         self.assertEqual(manifest.read_bytes(), old_manifest)
-        self.assertEqual(self.console.settings()['roles']['owner']['model'], 'gpt-6-sol')
+        self.assertEqual(self.console.settings()['roles']['owner']['model'], 'gpt-6.1-sol')
 
     def test_existing_crlf_config_and_agent_keep_raw_snapshot_through_restore(self):
         first = self.console.preview({'preset':'focused'})
@@ -494,7 +515,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertIn(b'\r\n', agent.read_bytes())
 
     def test_fifty_slot_restore_failure_rolls_back_and_can_retry(self):
-        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6.1-sol','effort':'medium','title':''}
                 for index in range(1,51)]
         full = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
         self.console.save({'preview_id':full['preview_id']})
@@ -536,7 +557,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertFalse((self.target/'.codex/agents/researcher.toml').exists())
 
     def test_fifty_slot_conflict_and_changed_preview_refuse_write(self):
-        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6.1-sol','effort':'medium','title':''}
                 for index in range(1,51)]
         plan = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
         self.console.save({'preview_id':plan['preview_id']})

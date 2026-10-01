@@ -20,7 +20,7 @@ scope | architecture | routing | integration | triage | outcome
             |
    +--------+----------------+----------------+
    |                         |                |
-Terra medium              Sol high        Terra high
+Luna high               Sol high         Sol high
 explore/research          implement        verify
 read-only                 one writer       evidence only
    |                         |                |
@@ -42,9 +42,9 @@ read-only                 one writer       evidence only
 
 Optional roles:
 
-- `fast_lookup`: Luna medium for exact mechanical read-only lookup
-- `failure_analyst`: Sol high for one concrete evidence-backed blocker
-- `qa_operator`: Sol high for direct browser/device/runtime QA
+- `fast_lookup`: GPT-6 Luna medium for exact mechanical read-only lookup
+- `failure_analyst`: GPT-6.1 Sol high for one concrete evidence-backed blocker
+- `qa_operator`: GPT-6.1 Sol medium for direct browser/device/runtime QA
 - `advisor`: Astra xhigh for one high-risk owner decision
 
 Optional expertise packs, activated only when the user explicitly selects them or asks for that expertise:
@@ -158,20 +158,20 @@ Use capability-based routing, not a flat swarm.
 
 | Need | Role | Balanced preset |
 |---|---|---|
-| Exact symbol/file/config lookup with no interpretation | `fast_lookup` | GPT-5.6 Luna medium |
-| Repository mapping, flow tracing, ownership boundaries | `explorer` | GPT-5.6 Terra medium |
-| Current or version-specific technical facts | `researcher` | GPT-5.6 Terra medium |
-| Bounded production implementation | `implementer` | GPT-5.6 Sol high |
-| Targeted tests and failure classification | `verifier` | GPT-5.6 Terra high |
-| Difficult root cause after evidence exists | `failure_analyst` | GPT-5.6 Sol high |
-| Browser/device/computer-use QA | `qa_operator` | GPT-5.6 Sol high |
+| Exact symbol/file/config lookup with no interpretation | `fast_lookup` | GPT-6 Luna medium |
+| Repository mapping, flow tracing, ownership boundaries | `explorer` | GPT-6 Luna high |
+| Current or version-specific technical facts | `researcher` | GPT-6.1 Sol medium |
+| Bounded production implementation | `implementer` | GPT-6.1 Sol high |
+| Targeted tests and failure classification | `verifier` | GPT-6.1 Sol high |
+| Difficult root cause after evidence exists | `failure_analyst` | GPT-6.1 Sol high |
+| Browser/device/computer-use QA | `qa_operator` | GPT-6.1 Sol high |
 | Frozen candidate review | `reviewer` | GPT-6 Astra medium |
 | One high-risk decision | `advisor` | GPT-6 Astra xhigh |
 
 Routing rules:
 
 - Luna never owns architecture, broad diagnosis, implementation, or final verification.
-- Terra handles broad but bounded evidence work before Sol is used.
+- Luna handles narrow lookup; Sol handles broader bounded evidence work.
 - Sol writes production code and resolves named causal blockers.
 - Astra owns the task and independently reviews the frozen candidate.
 - Escalate because evidence names a reasoning blocker, not merely because a task is long.
