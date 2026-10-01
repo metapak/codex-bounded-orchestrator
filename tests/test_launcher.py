@@ -34,7 +34,9 @@ class MacLauncherTests(unittest.TestCase):
             picker = temporary / "picker"
             dashboard_source = (ROOT / "launchers/launch_dashboard.py").read_text(encoding="utf-8")
             (distribution / "launchers/launch_dashboard.py").write_text(
-                dashboard_source.replace("/usr/bin/osascript", str(picker)).replace(
+                dashboard_source.replace("import time\n", "import time\nsys.platform = 'darwin'\n").replace(
+                    "/usr/bin/osascript", str(picker)
+                ).replace(
                     "return run_mac_console(entry, project)",
                     "print(f'selected target: {project}'); return 0",
                 ),
