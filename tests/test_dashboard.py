@@ -464,6 +464,27 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(manifest.read_bytes(), old_manifest)
         self.assertEqual(self.console.settings()['roles']['owner']['model'], 'gpt-6-sol')
 
+    def test_existing_crlf_config_and_agent_keep_raw_snapshot_through_restore(self):
+        first = self.console.preview({'preset':'focused'})
+        self.console.save({'preview_id':first['preview_id']})
+        config = self.target/dashboard.installer.CONFIG_RELATIVE
+        role = dashboard.installer.ROLE_FILES['explorer']
+        agent = self.target/role
+        manifest_path = self.target/dashboard.installer.MANIFEST_RELATIVE
+        config.write_bytes(config.read_bytes().replace(b'\n', b'\r\n'))
+        agent.write_bytes(agent.read_bytes().replace(b'\n', b'\r\n'))
+        manifest = dashboard.installer.load_manifest(self.target)
+        manifest['files'][str(role)]['sha256'] = dashboard.installer.sha256_path(agent)
+        manifest_path.write_text(json.dumps(manifest))
+        before = self.console.snapshot()
+        change = self.console.preview({'preset':'quality'})
+        self.assertTrue(change['can_save'], change['conflicts'])
+        self.console.save({'preview_id':change['preview_id']})
+        self.console.restore({})
+        self.assertEqual(self.console.snapshot(), before)
+        self.assertIn(b'\r\n', config.read_bytes())
+        self.assertIn(b'\r\n', agent.read_bytes())
+
     def test_fifty_slot_restore_failure_rolls_back_and_can_retry(self):
         team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
                 for index in range(1,51)]
