@@ -482,7 +482,7 @@ class ConsoleTests(unittest.TestCase):
         config.write_bytes(config.read_bytes().replace(b'\n', b'\r\n'))
         agent.write_bytes(agent.read_bytes().replace(b'\n', b'\r\n'))
         manifest = dashboard.installer.load_manifest(self.target)
-        manifest['files'][str(role)]['sha256'] = dashboard.installer.sha256_path(agent)
+        manifest['files'][role.as_posix()]['sha256'] = dashboard.installer.sha256_path(agent)
         manifest_path.write_text(json.dumps(manifest))
         before = self.console.snapshot()
         change = self.console.preview({'preset':'quality'})
