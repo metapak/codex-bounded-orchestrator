@@ -167,7 +167,7 @@ Useful commands:
 # Replace conflicting managed role, skill, or tool files after backing them up.
 python3 scripts/install.py /path/to/project --profile astra --force
 
-# Remove only unmodified installer-owned files and the managed AGENTS.md block.
+# On macOS/Linux, remove only unmodified installer-owned files and the managed AGENTS.md block.
 python3 scripts/install.py /path/to/project --uninstall
 
 # Freeze and later verify the candidate from the installed project.

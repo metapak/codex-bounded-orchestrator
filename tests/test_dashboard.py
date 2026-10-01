@@ -56,6 +56,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(agents.read_text(), 'Personal instruction\n')
         self.assertFalse((self.target/'.codex/tools/usage_report.py').exists())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_after_two_saves_uses_full_manifest(self):
         for preset in ('focused', 'balanced'):
             plan = self.console.preview({'preset': preset})
@@ -72,6 +73,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertFalse((self.target/dashboard.installer.MANIFEST_RELATIVE).exists())
         self.assertTrue((self.target/dashboard.STATE).exists())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_preserves_modified_file_and_backup(self):
         config = self.target/'.codex/config.toml'
         config.parent.mkdir()
@@ -94,6 +96,7 @@ class ConsoleTests(unittest.TestCase):
         subprocess.run(['git', 'add', '-A'], cwd=self.target, check=True)
         self.assertEqual(subprocess.check_output(['git', 'ls-files', '--', '.codex/.bounded-orchestrator/backups'], cwd=self.target), b'')
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_rejects_stale_preview_and_missing_manifest(self):
         with self.assertRaisesRegex(ValueError, 'No install manifest'):
             self.console.uninstall_preview({})
@@ -105,6 +108,7 @@ class ConsoleTests(unittest.TestCase):
             self.console.uninstall_confirm({'preview_id': removal['preview_id'], 'target': removal['target'], 'confirmed': True})
         self.assertTrue((self.target/dashboard.installer.MANIFEST_RELATIVE).exists())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_reports_first_removal_when_later_unlink_fails(self):
         plan = self.console.preview({'preset': 'focused'})
         self.console.save({'preview_id': plan['preview_id']})
@@ -130,6 +134,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertTrue(failure.manifest_present)
         self.assertFalse(self.target.joinpath(removed[0]).exists())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_rechecks_file_after_hash_before_unlink(self):
         plan = self.console.preview({'preset': 'focused'})
         self.console.save({'preview_id': plan['preview_id']})
@@ -158,6 +163,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertTrue(destination.exists())
         self.assertIn(b'concurrent edit', destination.read_bytes())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_rejects_edit_after_final_hash(self):
         plan = self.console.preview({'preset': 'focused'})
         self.console.save({'preview_id': plan['preview_id']})
@@ -183,6 +189,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertTrue(destination.exists())
         self.assertIn(b'concurrent user edit', destination.read_bytes())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_cannot_follow_redirected_parent_after_final_hash(self):
         plan = self.console.preview({'preset': 'focused'})
         self.console.save({'preview_id': plan['preview_id']})
@@ -213,6 +220,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(victim.read_bytes(), b'outside user file\n')
         self.assertTrue(destination.parent.with_name('tools-original').joinpath('usage_report.py').exists())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_restores_file_changed_during_quarantine_rename(self):
         plan = self.console.preview({'preset': 'focused'})
         self.console.save({'preview_id': plan['preview_id']})
@@ -236,6 +244,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertTrue(destination.exists())
         self.assertIn(b'stage-time edit', destination.read_bytes())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_rejects_file_appearing_after_approved_actions(self):
         plan = self.console.preview({'preset': 'focused'})
         self.console.save({'preview_id': plan['preview_id']})
@@ -261,6 +270,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(caught.exception.removed_paths, [])
         self.assertEqual(destination.read_bytes(), b'new user file after preview\n')
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_recovers_edit_at_final_file_unlink(self):
         plan = self.console.preview({'preset': 'focused'})
         self.console.save({'preview_id': plan['preview_id']})
@@ -290,6 +300,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertTrue(destination.exists())
         self.assertIn(b'final user edit', destination.read_bytes())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_recovers_agents_edit_at_final_replace(self):
         agents = self.console.target/'AGENTS.md'
         agents.write_text('Personal intro\n')
@@ -320,6 +331,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertIn('rollback incomplete', str(caught.exception))
         self.assertTrue(agents.exists())
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_browser_uninstall_keeps_both_agents_edits_during_rollback(self):
         agents = self.console.target/'AGENTS.md'
         agents.write_text('Personal intro\n')
@@ -857,6 +869,7 @@ class ConsoleTests(unittest.TestCase):
         conflict = self.console.preview({'preset':'focused','concurrency':1,'team':team[:1]})
         self.assertIn(str(dashboard.TEAM_SLOTS['team_slot_02']),conflict['conflicts'])
 
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_fifty_planned_slots_are_separate_from_concurrency_and_restore(self):
         duties = list(dashboard.installer.ROLE_FILES)
         team = [{'slot':f'team_slot_{index:02d}', 'duty':duties[(index-1)%len(duties)],

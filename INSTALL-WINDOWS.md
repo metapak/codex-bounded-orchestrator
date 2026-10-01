@@ -12,6 +12,12 @@ Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](htt
 
 For later changes, reopen the launcher and click **Save**; no uninstall is needed. An already-open Codex session may need to be reopened before it uses the changes. Double-click behavior has not been tested on every Windows setup. See the [local console guide](docs/local-console.md) for more help.
 
+## Remove a setup on Windows
+
+Automatic **Uninstall setup** and `--uninstall` are unavailable on Windows because this Python build cannot perform the directory-handle checks required for safe deletion. The browser disables the button, and the CLI refuses before changing project files.
+
+To remove the setup manually, close Codex and other programs editing the project. In the extracted installer folder, run `py -3 scripts/install.py "C:\path\to\project" --uninstall --dry-run` and check the project path and each `REMOVE`/`KEEP` line. In File Explorer, delete only the listed `REMOVE` files that still match that review. Leave every `KEEP` file untouched. In the project's `AGENTS.md`, remove only the text between `<!-- codex-bounded-orchestrator:start -->` and `<!-- codex-bounded-orchestrator:end -->` if the block is still unchanged; keep all other text. Keep `.codex\.bounded-orchestrator\backups`, usage records, and its `.gitignore` so private backups remain ignored by Git. Delete `.codex\.bounded-orchestrator\install.json` last, after checking the remaining files. If any file changed since the dry run, repeat it before deleting that file.
+
 <details>
 <summary>Terminal alternative</summary>
 

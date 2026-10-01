@@ -64,6 +64,8 @@ def load_installer_module():
     return module
 
 
+UNINSTALL_SUPPORTED = load_installer_module().SAFE_UNINSTALL_SUPPORTED
+
 class InstallerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -72,6 +74,17 @@ class InstallerTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
+
+    @unittest.skipIf(UNINSTALL_SUPPORTED, 'platform supports safe uninstall')
+    def test_uninstall_refuses_unsupported_platform_without_changes(self) -> None:
+        installed = self.run_installer('--profile', 'astra')
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+        manifest = self.target / MANIFEST
+        original = manifest.read_bytes()
+        result = self.run_installer('--uninstall')
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Safe uninstall requires POSIX', result.stderr)
+        self.assertEqual(manifest.read_bytes(), original)
 
     def run_installer(self, *args: str, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
         environment = dict(os.environ)
@@ -299,6 +312,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(len(backups), 1)
         self.assertEqual(backups[0].read_text(), "custom reviewer\n")
 
+    @unittest.skipUnless(UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_uninstall_removes_owned_files_and_block(self) -> None:
         (self.target / "AGENTS.md").write_text("# Keep me\n", encoding="utf-8")
         self.assertEqual(self.run_installer().returncode, 0)
@@ -323,6 +337,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((self.target / "AGENTS.md").read_text(), "# Keep me\n")
         self.assertFalse((self.target / MANIFEST).exists())
 
+    @unittest.skipUnless(UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_uninstall_keeps_modified_managed_file(self) -> None:
         self.assertEqual(self.run_installer().returncode, 0)
         path = self.target / ".codex/agents/reviewer.toml"
@@ -332,6 +347,7 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(path.exists())
         self.assertIn("modified after installation", result.stdout)
 
+    @unittest.skipUnless(UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_uninstall_rejects_symlink_ancestor_before_any_removal(self) -> None:
         self.assertEqual(self.run_installer().returncode, 0)
         agents = self.target / ".codex/agents"
@@ -571,6 +587,7 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("Requested external: none", result.stdout)
         self.assertIn("Active external   : deepseek", result.stdout)
 
+    @unittest.skipUnless(UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_uninstall_ignores_manifest_path_outside_allowlist(self) -> None:
         self.assertEqual(self.run_installer().returncode, 0)
         outside = self.target.parent / "outside.txt"
@@ -598,6 +615,7 @@ class InstallerTests(unittest.TestCase):
         config = read_toml(self.target / ".codex/config.toml")
         self.assertNotIn("mcp_servers", config)
 
+    @unittest.skipUnless(UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_external_install_uninstall_removes_bridge(self) -> None:
         self.assertEqual(
             self.run_installer("--external-provider", "anthropic").returncode, 0
@@ -606,6 +624,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.target / ".codex/tools/anthropic_mcp.py").exists())
 
+    @unittest.skipUnless(UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
     def test_deepseek_install_uninstall_removes_bridge(self) -> None:
         self.assertEqual(
             self.run_installer("--external-provider", "deepseek").returncode, 0
