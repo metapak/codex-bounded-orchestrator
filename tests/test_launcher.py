@@ -6,8 +6,7 @@ import plistlib
 import subprocess
 import tempfile
 import unittest
-from unittest.mock import patch
-from urllib.request import urlopen
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,29 +49,29 @@ class MacLauncherTests(unittest.TestCase):
     def test_reports_browser_failure_with_local_address(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             entry = Path(directory) / "server.py"
-            entry.write_text(
-                "from http.server import BaseHTTPRequestHandler, HTTPServer\n"
-                "class Handler(BaseHTTPRequestHandler):\n"
-                "    def do_GET(self):\n"
-                "        self.send_response(200)\n"
-                "        self.end_headers()\n"
-                "        self.wfile.write(b'live')\n"
-                "server = HTTPServer(('127.0.0.1', 0), Handler)\n"
-                "print('Codex yerel konsol: http://127.0.0.1:' + str(server.server_port), flush=True)\n"
-                "server.handle_request()\n",
-                encoding="utf-8",
-            )
             failure = subprocess.CompletedProcess([], 1, stderr="Launch Services error")
-            def inspect_alert(_title: str, message: str) -> None:
-                address = message.split(" ")[1]
-                with urlopen(address, timeout=2) as response:
-                    self.assertEqual(response.read(), b"live")
+            server = Mock()
+            server.poll.return_value = None
+            server.wait.return_value = 0
 
-            with patch.object(launcher.subprocess, "run", return_value=failure), patch.object(
+            def start_server(*_args, **kwargs):
+                kwargs["stdout"].write("Codex yerel konsol: http://127.0.0.1:43210\n")
+                kwargs["stdout"].flush()
+                return server
+
+            def inspect_alert(_title: str, message: str) -> None:
+                self.assertIn("http://127.0.0.1:43210", message)
+                server.terminate.assert_not_called()
+                server.wait.assert_not_called()
+
+            with patch.object(launcher.subprocess, "Popen", side_effect=start_server), patch.object(
+                launcher.subprocess, "run", return_value=failure
+            ), patch.object(
                 launcher, "alert", side_effect=inspect_alert
             ) as alert:
                 self.assertEqual(launcher.run_mac_console(entry, Path(directory)), 1)
-            self.assertIn("Open http://127.0.0.1:", alert.call_args.args[1])
+            self.assertIn("Open http://127.0.0.1:43210", alert.call_args.args[1])
+            server.wait.assert_called_once()
 
 
 if __name__ == "__main__":
