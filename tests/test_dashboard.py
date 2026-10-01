@@ -305,12 +305,26 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(catalog['discovery'], 'local_cli')
         self.assertEqual(entries['gpt-6-astra']['origin'], 'local_cli')
         self.assertEqual(entries['gpt-6.1-sol']['origin'], 'documentation')
+        self.assertEqual(entries['gpt-6.1-sol']['efforts'], ['low','medium','high','xhigh','max','ultra'])
         self.assertFalse(catalog['account_access_verified'])
         with mock.patch.object(model_catalog, 'discover_cli', return_value=None):
             fallback = model_catalog.catalog()
         self.assertEqual(fallback['discovery'], 'documentation_fallback')
         self.assertTrue(fallback['documentation_reviewed_at'])
         self.assertIn('gpt-6-luna', {item['id'] for item in fallback['models']})
+        self.assertIn('ultra', next(item for item in fallback['models'] if item['id']=='gpt-6.1-sol')['efforts'])
+
+    def test_local_gpt_6_1_efforts_override_documentation_fallback(self):
+        import model_catalog
+        local = [{'id':'gpt-6.1-sol','label':'GPT-6.1 Sol','efforts':['low','medium','high','xhigh','max'],'origin':'local_cli'}]
+        with mock.patch.object(model_catalog, 'discover_cli', return_value=local):
+            self.console._catalog = model_catalog.catalog()
+        entry = next(item for item in self.console._catalog['models'] if item['id']=='gpt-6.1-sol')
+        self.assertEqual(entry['origin'], 'local_cli')
+        self.assertNotIn('ultra', entry['efforts'])
+        with self.assertRaisesRegex(ValueError, 'reasoning effort is not supported'):
+            self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-6.1-sol','effort':'ultra'}}})
+        self.assertTrue(self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-6.1-sol','effort':'max'}}})['can_save'])
 
     def test_saved_unlisted_model_is_preserved_but_new_unlisted_rejected(self):
         config = self.target/'.codex/config.toml'
@@ -402,9 +416,12 @@ class ConsoleTests(unittest.TestCase):
 
     def test_model_effort_pair_and_existing_legacy_pair(self):
         import model_catalog
-        self.console._catalog = model_catalog.catalog()
+        with mock.patch.object(model_catalog, 'discover_cli', return_value=None):
+            self.console._catalog = model_catalog.catalog()
         with self.assertRaisesRegex(ValueError, 'reasoning effort is not supported'):
             self.console.preview({'preset':'balanced', 'roles':{'explorer':{'model':'gpt-6-luna','effort':'ultra'}}})
+        self.assertTrue(self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-6.1-sol','effort':'ultra'}}})['can_save'])
+        self.assertTrue(self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-6.1-sol','effort':'max'}}})['can_save'])
         self.assertTrue(self.console.preview({'preset':'balanced', 'roles':{'owner':{'model':'gpt-6-astra','effort':'ultra'}}})['can_save'])
         role = self.target/'.codex/agents/explorer.toml'
         role.parent.mkdir(parents=True)
