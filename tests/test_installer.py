@@ -143,6 +143,41 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(manifest["tool_version"], VERSION)
         self.assertTrue(manifest["files"][".codex/config.toml"]["owned"])
 
+    def test_cli_install_refuses_manifest_leaf_symlink_before_writes(self) -> None:
+        manifest = self.target / MANIFEST
+        manifest.parent.mkdir(parents=True)
+        outside = Path(self.temporary.name) / "private-install.json"
+        outside.write_text('{"schema": 1, "files": {}, "agents_block": false}\n')
+        manifest.symlink_to(outside)
+        before = outside.read_bytes()
+        result = self.run_installer("--preset", "balanced")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("symlink", result.stderr.lower())
+        self.assertTrue(manifest.is_symlink())
+        self.assertEqual(outside.read_bytes(), before)
+        self.assertFalse((self.target / ".codex/config.toml").exists())
+        self.assertFalse((self.target / ".codex/agents").exists())
+        self.assertFalse((self.target / ".codex/.bounded-orchestrator/.gitignore").exists())
+
+    def test_crlf_managed_copy_and_generated_text_keep_ownership_hashes(self) -> None:
+        installer = load_installer_module()
+        source = Path(self.temporary.name) / "source"
+        runtime = Path(".codex/.bounded-orchestrator/.gitignore")
+        agent = Path(".codex/agents/team-slot-50.toml")
+        (source / runtime).parent.mkdir(parents=True)
+        (source / runtime).write_bytes(b"# private\r\n*\r\n")
+        manifest = {"files": {}}
+        installer.install_file(root=source, target=self.target, relative=runtime,
+                               manifest=manifest, force=False, dry_run=False, messages=[])
+        installer.install_text_file(target=self.target, relative=agent,
+                                    text='model = "gpt-6-sol"\r\n', manifest=manifest,
+                                    force=False, dry_run=False, messages=[])
+        for relative, expected in ((runtime, b"# private\r\n*\r\n"),
+                                   (agent, b'model = "gpt-6-sol"\r\n')):
+            path = self.target / relative
+            self.assertEqual(path.read_bytes(), expected)
+            self.assertTrue(installer.unchanged_owned(manifest, relative, path))
+
     def test_sol_fallback_profile_keeps_terra_sol_astra_routing(self) -> None:
         result = self.run_installer("--profile", "sol")
         self.assertEqual(result.returncode, 0, result.stderr)

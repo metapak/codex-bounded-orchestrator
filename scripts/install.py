@@ -43,7 +43,7 @@ ROLE_FILES = {
 }
 TEAM_SLOT_FILES = {
     f"team_slot_{index:02d}": Path(f".codex/agents/team-slot-{index:02d}.toml")
-    for index in range(1, 11)
+    for index in range(1, 51)
 }
 ALL_ROLES = ("owner", *ROLE_FILES)
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
@@ -116,7 +116,7 @@ PRESETS = {
 # Compact context routing, opt-in; preserve existing presets and custom choices.
 PRESETS["focused"] = {
     role: ("gpt-6-luna", "high") if role in ("fast_lookup", "explorer")
-    else ("gpt-6-astra", "medium") if role == "owner"
+    else ("gpt-6-sol", "medium") if role == "owner"
     else ("gpt-6-sol", "medium")
     for role in ALL_ROLES
 }
@@ -202,8 +202,18 @@ def same_text(path: Path, text: str) -> bool:
     return path.is_file() and not path.is_symlink() and sha256_path(path) == sha256_text(text)
 
 
+def require_expected_bytes(path: Path, expected: bytes | None, relative: Path) -> None:
+    if expected is None:
+        return
+    if path.is_symlink() or not path.is_file() or path.read_bytes() != expected:
+        raise InstallError(f"Managed file changed during installation: {relative}")
+
+
 def load_manifest(target: Path) -> dict[str, Any]:
     path = target / MANIFEST_RELATIVE
+    refuse_symlink_destination(target, MANIFEST_RELATIVE)
+    if path.exists() and not path.is_file():
+        raise InstallError(f"Install manifest is not a regular file: {path}")
     if not path.exists():
         return {
             "schema": SCHEMA_VERSION,
@@ -219,7 +229,7 @@ def load_manifest(target: Path) -> dict[str, Any]:
     return data
 
 
-def atomic_write_text(path: Path, text: str, dry_run: bool) -> None:
+def atomic_write_text(path: Path, text: str, dry_run: bool, *, exclusive: bool = False) -> None:
     if dry_run:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -230,13 +240,16 @@ def atomic_write_text(path: Path, text: str, dry_run: bool) -> None:
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary, path)
+        if exclusive:
+            os.link(temporary, path)
+        else:
+            os.replace(temporary, path)
     finally:
         if temporary.exists():
             temporary.unlink()
 
 
-def atomic_copy(source: Path, destination: Path, dry_run: bool) -> None:
+def atomic_copy(source: Path, destination: Path, dry_run: bool, *, exclusive: bool = False) -> None:
     if dry_run:
         return
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -247,7 +260,10 @@ def atomic_copy(source: Path, destination: Path, dry_run: bool) -> None:
     temporary = Path(temporary_name)
     try:
         shutil.copy2(source, temporary)
-        os.replace(temporary, destination)
+        if exclusive:
+            os.link(temporary, destination)
+        else:
+            os.replace(temporary, destination)
     finally:
         if temporary.exists():
             temporary.unlink()
@@ -511,7 +527,7 @@ def install_file(
 
     if not destination.exists() and not destination.is_symlink():
         messages.append(f"INSTALL {relative}")
-        atomic_copy(source, destination, dry_run)
+        atomic_copy(source, destination, dry_run, exclusive=True)
         if not dry_run:
             remember_file(manifest, relative, destination, True)
         return
@@ -544,14 +560,19 @@ def install_text_file(
     force: bool,
     dry_run: bool,
     messages: list[str],
+    create_only: bool = False,
+    expected_bytes: bytes | None = None,
 ) -> None:
     destination = target / relative
+    require_expected_bytes(destination, expected_bytes, relative)
+    if create_only and (destination.exists() or destination.is_symlink()):
+        raise InstallError(f"New managed file appeared during installation: {relative}")
     if destination.exists() and destination.is_dir():
         messages.append(f"SKIP {relative}: destination is a directory")
         return
     if not destination.exists() and not destination.is_symlink():
         messages.append(f"INSTALL {relative}")
-        atomic_write_text(destination, text, dry_run)
+        atomic_write_text(destination, text, dry_run, exclusive=True)
         if not dry_run:
             remember_file(manifest, relative, destination, True)
         return
@@ -565,6 +586,7 @@ def install_text_file(
         messages.append(f"SKIP {relative}: existing file differs; use --force to replace")
         return
     backup = backup_file(target, destination, dry_run)
+    require_expected_bytes(destination, expected_bytes, relative)
     messages.append(f"BACKUP {relative} -> {backup.relative_to(target)}")
     messages.append(f"REPLACE {relative}")
     atomic_write_text(destination, text, dry_run)
@@ -581,10 +603,15 @@ def install_config(
     force_config: bool,
     dry_run: bool,
     messages: list[str],
+    create_only: bool = False,
+    expected_bytes: bytes | None = None,
 ) -> bool:
     """Install desired config and report whether it becomes the active config."""
     relative = CONFIG_RELATIVE
     destination = target / relative
+    require_expected_bytes(destination, expected_bytes, relative)
+    if create_only and (destination.exists() or destination.is_symlink()):
+        raise InstallError(f"New configuration appeared during installation: {relative}")
 
     if destination.exists() and destination.is_dir():
         messages.append(f"SKIP {relative}: destination is a directory")
@@ -592,7 +619,7 @@ def install_config(
 
     if not destination.exists() and not destination.is_symlink():
         messages.append(f"INSTALL {relative} ({preset} preset)")
-        atomic_write_text(destination, config_text, dry_run)
+        atomic_write_text(destination, config_text, dry_run, exclusive=True)
         if not dry_run:
             remember_file(manifest, relative, destination, True)
         return True
@@ -606,6 +633,7 @@ def install_config(
 
     if unchanged_owned(manifest, relative, destination):
         messages.append(f"UPDATE {relative} ({preset} preset; installer-owned)")
+        require_expected_bytes(destination, expected_bytes, relative)
         atomic_write_text(destination, config_text, dry_run)
         if not dry_run:
             remember_file(manifest, relative, destination, True)
@@ -613,6 +641,7 @@ def install_config(
 
     if force_config:
         backup = backup_file(target, destination, dry_run)
+        require_expected_bytes(destination, expected_bytes, relative)
         messages.append(f"BACKUP {relative} -> {backup.relative_to(target)}")
         messages.append(f"REPLACE {relative} ({preset} preset)")
         atomic_write_text(destination, config_text, dry_run)
@@ -634,7 +663,7 @@ def install_config(
             f"PRESERVE {relative}; {action} {CONFIG_EXAMPLE_RELATIVE} for manual merge"
         )
         if example_was_absent:
-            atomic_write_text(example, config_text, dry_run)
+            atomic_write_text(example, config_text, dry_run, exclusive=True)
         if not dry_run:
             owned = True if example_was_absent else previous_owned(
                 manifest, CONFIG_EXAMPLE_RELATIVE
@@ -755,6 +784,8 @@ def write_manifest(
     external_effort: str,
     manifest: dict[str, Any],
     dry_run: bool,
+    create_only: bool = False,
+    expected_bytes: bytes | None = None,
 ) -> None:
     manifest.update(
         {
@@ -775,10 +806,15 @@ def write_manifest(
     if dry_run:
         return
     path = target / MANIFEST_RELATIVE
+    refuse_symlink_destination(target, MANIFEST_RELATIVE)
+    if path.exists() and not path.is_file():
+        raise InstallError(f"Install manifest is not a regular file: {path}")
+    require_expected_bytes(path, expected_bytes, MANIFEST_RELATIVE)
     atomic_write_text(
         path,
         json.dumps(manifest, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
         False,
+        exclusive=create_only or not path.exists(),
     )
 
 

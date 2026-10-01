@@ -410,10 +410,11 @@ class Console:
                 if path.is_file():
                     data = tomllib.loads(path.read_text())
                     team.append({'slot': item['slot'], 'duty': item.get('duty', ''), 'model': data.get('model', ''), 'effort': data.get('model_reasoning_effort', ''), 'title': item.get('title', '')})
-        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'roles': roles, 'team': team, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': config.get('agents', {}).get('max_concurrent_threads_per_session', 4), 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Custom GPT IDs accepted; no account capability discovery. Context/report preferences are soft instructions, not token limits.'}
+        concurrency = config.get('agents', {}).get('max_concurrent_threads_per_session', 4)
+        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'restore_available': (self.target/STATE).is_file(), 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
 
     def preview(self, payload):
-        if set(payload) - {'preset', 'roles', 'concurrency', 'team'}:
+        if set(payload) - {'preset', 'roles', 'concurrency', 'team', 'team_count'}:
             raise ValueError('Unknown setting')
         preset = payload.get('preset', 'focused')
         if preset not in installer.PRESETS:
@@ -447,7 +448,12 @@ class Console:
         if type(cap) is not int or not 1 <= cap <= 10:
             raise ValueError('Concurrency must be 1–10; runtime/account limits still apply')
         team = payload.get('team', saved_state['team'])
-        if not isinstance(team, list) or len(team) > 10 or ('team' in payload and len(team) != cap):
+        team_count = payload.get('team_count', len(team) if 'team' in payload and isinstance(team, list) else saved_state['team_count'])
+        if type(team_count) is not int or not 1 <= team_count <= 50:
+            raise ValueError('Planned team size must be 1–50')
+        if 'team_count' in payload and 'team' not in payload and len(team) != team_count:
+            raise ValueError('Team must have one helper per selected slot')
+        if not isinstance(team, list) or len(team) > 50 or ('team' in payload and len(team) != team_count):
             raise ValueError('Team must have one helper per selected slot')
         saved_team = {item['slot']: item for item in saved_state['team']}
         clean_team = []
@@ -532,47 +538,61 @@ class Console:
             raise ValueError('Files changed since preview; preview again')
         manifest = installer.load_manifest(self.target)
         messages = []
+        mutated = {}
         old_state, old_history = contents(self.target/STATE), contents(self.target/HISTORY)
         # Runtime ignore comes first so backups and snapshots stay local.
         ordered = [str(Path('.codex/.bounded-orchestrator/.gitignore'))] + [p for p in desired if p != '.codex/.bounded-orchestrator/.gitignore']
         try:
             for name in ordered:
                 path = Path(name)
+                installer.refuse_symlink_destination(self.target, path)
+                if contents(self.target/path) != before[name]:
+                    raise ValueError('Files changed since preview; preview again: '+name)
                 if desired[name] is None:
                     if before[name] is not None:
                         if not installer.unchanged_owned(manifest, path, self.target/path):
                             raise ValueError('Team file changed since preview: '+name)
                         (self.target/path).unlink()
                         manifest.get('files', {}).pop(name, None)
+                        mutated[name] = None
                     continue
                 text = desired[name].decode()
                 if name == str(installer.CONFIG_RELATIVE):
                     installer.backup_file(self.target, self.target/path, False) if before[name] is not None else None
-                    installer.install_config(target=self.target, config_text=text, preset=preset, manifest=manifest, force_config=True, dry_run=False, messages=messages)
+                    installer.install_config(target=self.target, config_text=text, preset=preset, manifest=manifest, force_config=True, dry_run=False, messages=messages, create_only=before[name] is None, expected_bytes=before[name])
                 elif name == 'AGENTS.md':
                     if before[name] is not None and before[name] != desired[name]:
                         installer.backup_file(self.target, self.target/path, False)
-                    installer.atomic_write_text(self.target/path, text, False)
+                    if contents(self.target/path) != before[name]:
+                        raise ValueError('File changed during Save: '+name)
+                    installer.atomic_write_text(self.target/path, text, False, exclusive=before[name] is None)
                     manifest['agents_block'] = True
                 else:
-                    installer.install_text_file(target=self.target, relative=path, text=text, manifest=manifest, force=before[name] is not None, dry_run=False, messages=messages)
+                    installer.install_text_file(target=self.target, relative=path, text=text, manifest=manifest, force=before[name] is not None, dry_run=False, messages=messages, create_only=before[name] is None, expected_bytes=before[name])
+                if before[name] != desired[name]:
+                    mutated[name] = desired[name]
             manifest['team_slots'] = team
-            installer.write_manifest(root=ROOT, target=self.target, preset=preset, settings=settings, external_provider=manifest.get('external_provider', 'none'), external_model=manifest.get('external_model') or '', external_effort=manifest.get('external_effort') or '', manifest=manifest, dry_run=False)
+            manifest_name = str(installer.MANIFEST_RELATIVE)
+            installer.refuse_symlink_destination(self.target, installer.MANIFEST_RELATIVE)
+            if contents(self.target/installer.MANIFEST_RELATIVE) != before[manifest_name]:
+                raise ValueError('Files changed since preview; preview again: '+manifest_name)
+            installer.write_manifest(root=ROOT, target=self.target, preset=preset, settings=settings, external_provider=manifest.get('external_provider', 'none'), external_model=manifest.get('external_model') or '', external_effort=manifest.get('external_effort') or '', manifest=manifest, dry_run=False, create_only=before[manifest_name] is None, expected_bytes=before[manifest_name])
+            mutated[manifest_name] = contents(self.target/installer.MANIFEST_RELATIVE)
             after = self.snapshot()
             changed = {p: {'before': base64.b64encode(before[p]).decode() if before[p] is not None else None, 'after': digest(after[p])} for p in before if before[p] != after[p]}
             installer.atomic_write_text(self.target/STATE, json.dumps({'schema': 1, 'files': changed}), False)
             self.append_style_history('save', preset, settings)
         except Exception:
-            for name, data in before.items():
-                if contents(self.target/name) != data:
-                    self.restore_bytes(name, data)
+            for name, written in reversed(list(mutated.items())):
+                if contents(self.target/name) == written:
+                    self.restore_bytes(name, before[name])
             self.restore_bytes(str(STATE), old_state)
             self.restore_bytes(str(HISTORY), old_history)
             raise
         self.pending = None
         return {'status': 'saved', 'changed_files': list(changed), 'restart_required': True}
 
-    def restore_bytes(self, name, data):
+    def restore_bytes(self, name, data, *, create_only=False):
         path = self.target/name
         if data is None:
             # Preserve privacy after undoing a first installation: installer
@@ -584,7 +604,7 @@ class Console:
                 return
             path.unlink(missing_ok=True)
         else:
-            installer.atomic_write_text(path, data.decode(), False)
+            installer.atomic_write_text(path, data.decode(), False, exclusive=create_only)
 
     def restore(self, payload):
         if payload:
@@ -599,12 +619,32 @@ class Console:
             if digest(snapshot[name]) != entry['after']:
                 raise ValueError('File changed after Save; restore refused: '+name)
         decoded = {name: base64.b64decode(entry['before'], validate=True) if entry['before'] is not None else None for name,entry in data['files'].items()}
-        # Record the transition before changing settings; a failed restore then
-        # leaves future attribution unknown rather than falsely assigning a style.
-        self.append_style_history('restore')
-        for name, value in decoded.items():
-            self.restore_bytes(name, value)
-        path.unlink()
+        old_history = contents(self.target/HISTORY)
+        mutated = {}
+        try:
+            # History is recorded first so an interrupted rollback never
+            # attributes partially restored work to the previous style.
+            self.append_style_history('restore')
+            for name, value in decoded.items():
+                installer.refuse_symlink_destination(self.target, Path(name))
+                if contents(self.target/name) != snapshot[name]:
+                    raise ValueError('File changed during Restore: '+name)
+                mutated[name] = value
+                self.restore_bytes(name, value, create_only=snapshot[name] is None and value is not None)
+            path.unlink()
+        except Exception:
+            rollback_complete = True
+            for name, written in reversed(list(mutated.items())):
+                if contents(self.target/name) == written:
+                    try:
+                        self.restore_bytes(name, snapshot[name], create_only=written is None and snapshot[name] is not None)
+                    except Exception:
+                        rollback_complete = False
+                elif contents(self.target/name) != snapshot[name]:
+                    rollback_complete = False
+            if rollback_complete:
+                self.restore_bytes(str(HISTORY), old_history)
+            raise
         self.pending = None
         return {'status': 'restored', 'restart_required': True}
 

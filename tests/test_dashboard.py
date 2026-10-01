@@ -85,7 +85,7 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(current['unrelated'], before['unrelated'])
         self.assertEqual(current['quoted]table'], before['quoted]table'])
         self.assertEqual(current['note'], before['note'])
-        self.assertEqual(current['model'], 'gpt-6-astra')
+        self.assertEqual(current['model'], 'gpt-6-sol')
         self.assertEqual(current['agents']['max_depth'], 1)
         self.console.restore({})
         self.assertEqual(config.read_text(), original)
@@ -374,6 +374,159 @@ class ConsoleTests(unittest.TestCase):
         conflict = self.console.preview({'preset':'focused','concurrency':1,'team':team[:1]})
         self.assertIn(str(dashboard.TEAM_SLOTS['team_slot_02']),conflict['conflicts'])
 
+    def test_fifty_planned_slots_are_separate_from_concurrency_and_restore(self):
+        duties = list(dashboard.installer.ROLE_FILES)
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':duties[(index-1)%len(duties)],
+                 'model':'gpt-6-sol', 'effort':'medium', 'title':f'Part {index}'} for index in range(1,51)]
+        plan = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
+        self.assertTrue(plan['can_save'], plan['conflicts'])
+        self.console.save({'preview_id':plan['preview_id']})
+        saved = self.console.settings()
+        self.assertEqual((saved['team_count'],saved['concurrency'],len(saved['team'])),(50,4,50))
+        self.assertEqual(saved['saved_preset'],'focused')
+        last = self.target/dashboard.TEAM_SLOTS['team_slot_50']
+        self.assertTrue(last.is_file())
+        self.assertEqual(dashboard.tomllib.loads((self.target/'.codex/config.toml').read_text())['agents']['max_concurrent_threads_per_session'],4)
+        smaller = self.console.preview({'preset':'focused','concurrency':2,'team_count':7,'team':team[:7]})
+        self.assertTrue(smaller['can_save'], smaller['conflicts'])
+        self.console.save({'preview_id':smaller['preview_id']})
+        self.assertFalse(last.exists())
+        self.assertEqual(self.console.settings()['team_count'],7)
+        self.console.restore({})
+        self.assertTrue(last.exists())
+        self.assertEqual(self.console.settings()['team_count'],50)
+        self.assertEqual(dashboard.installer.uninstall(self.target, False),0)
+        self.assertFalse(last.exists())
+
+    def test_fifty_slot_preflight_and_mid_save_rollback(self):
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+                for index in range(1,51)]
+        payload = {'preset':'focused','concurrency':4,'team_count':50,'team':team}
+        for count in (0,51,True):
+            with self.subTest(count=count), self.assertRaisesRegex(ValueError,'Planned team size'):
+                self.console.preview({**payload,'team_count':count})
+        with self.assertRaisesRegex(ValueError,'one helper per selected slot'):
+            self.console.preview({**payload,'team_count':49})
+        outside = Path(self.tmp.name)/'outside.toml'
+        leaf = self.target/dashboard.TEAM_SLOTS['team_slot_50']
+        leaf.parent.mkdir(parents=True)
+        leaf.symlink_to(outside)
+        with self.assertRaisesRegex(ValueError,'Symlink destination refused'):
+            self.console.preview(payload)
+        self.assertFalse(outside.exists())
+        leaf.unlink()
+        plan = self.console.preview(payload)
+        before = self.console.snapshot()
+        original = dashboard.installer.install_text_file
+        def fail_on_thirtieth(**kwargs):
+            if kwargs.get('relative') == dashboard.TEAM_SLOTS['team_slot_30']:
+                raise OSError('injected write failure')
+            return original(**kwargs)
+        with mock.patch.object(dashboard.installer,'install_text_file',side_effect=fail_on_thirtieth):
+            with self.assertRaisesRegex(OSError,'injected write failure'):
+                self.console.save({'preview_id':plan['preview_id']})
+        self.assertEqual(self.console.snapshot(),before)
+        self.assertFalse((self.target/dashboard.installer.MANIFEST_RELATIVE).exists())
+
+    def test_new_slot_created_during_save_is_never_replaced_or_rolled_back(self):
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+                for index in range(1,51)]
+        plan = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
+        leaf = self.target/dashboard.TEAM_SLOTS['team_slot_25']
+        original = dashboard.installer.install_text_file
+        def create_racing_file(**kwargs):
+            if kwargs.get('relative') == dashboard.TEAM_SLOTS['team_slot_25']:
+                leaf.write_text('OWNER_NEW_FILE = "keep"\n')
+            return original(**kwargs)
+        with mock.patch.object(dashboard.installer,'install_text_file',side_effect=create_racing_file):
+            with self.assertRaises((FileExistsError,dashboard.installer.InstallError)):
+                self.console.save({'preview_id':plan['preview_id']})
+        self.assertEqual(leaf.read_text(),'OWNER_NEW_FILE = "keep"\n')
+        self.assertFalse((self.target/dashboard.TEAM_SLOTS['team_slot_24']).exists())
+        self.assertFalse((self.target/dashboard.installer.MANIFEST_RELATIVE).exists())
+
+    def test_existing_managed_file_changed_during_save_is_preserved(self):
+        initial = self.console.preview({'preset':'focused'})
+        self.console.save({'preview_id':initial['preview_id']})
+        explorer = self.target/dashboard.installer.ROLE_FILES['explorer']
+        manifest = self.target/dashboard.installer.MANIFEST_RELATIVE
+        old_manifest = manifest.read_bytes()
+        plan = self.console.preview({'preset':'quality'})
+        original = dashboard.installer.install_text_file
+        def edit_after_precheck(**kwargs):
+            if kwargs.get('relative') == dashboard.installer.ROLE_FILES['explorer']:
+                explorer.write_bytes(explorer.read_bytes()+b'\n# OWNER CONCURRENT EDIT\n')
+            return original(**kwargs)
+        with mock.patch.object(dashboard.installer,'install_text_file',side_effect=edit_after_precheck):
+            with self.assertRaisesRegex(dashboard.installer.InstallError,'changed during installation'):
+                self.console.save({'preview_id':plan['preview_id']})
+        self.assertIn(b'OWNER CONCURRENT EDIT', explorer.read_bytes())
+        self.assertEqual(manifest.read_bytes(), old_manifest)
+        self.assertEqual(self.console.settings()['roles']['owner']['model'], 'gpt-6-sol')
+
+    def test_fifty_slot_restore_failure_rolls_back_and_can_retry(self):
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+                for index in range(1,51)]
+        full = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
+        self.console.save({'preview_id':full['preview_id']})
+        smaller = self.console.preview({'preset':'focused','concurrency':4,'team_count':3,'team':team[:3]})
+        self.console.save({'preview_id':smaller['preview_id']})
+        before = self.console.snapshot()
+        history = (self.target/dashboard.HISTORY).read_bytes()
+        state = (self.target/dashboard.STATE).read_bytes()
+        original = self.console.restore_bytes
+        injected = False
+        def fail_after_twenty_fifth(name, data, **kwargs):
+            nonlocal injected
+            original(name, data, **kwargs)
+            if name == str(dashboard.TEAM_SLOTS['team_slot_25']) and not injected:
+                injected = True
+                raise OSError('injected restore failure')
+        with mock.patch.object(self.console,'restore_bytes',side_effect=fail_after_twenty_fifth):
+            with self.assertRaisesRegex(OSError,'injected restore failure'):
+                self.console.restore({})
+        self.assertEqual(self.console.snapshot(),before)
+        self.assertEqual((self.target/dashboard.HISTORY).read_bytes(),history)
+        self.assertEqual((self.target/dashboard.STATE).read_bytes(),state)
+        self.console.restore({})
+        self.assertEqual(self.console.settings()['team_count'],50)
+
+    def test_manifest_dangling_symlink_inserted_during_save_is_not_replaced(self):
+        plan = self.console.preview({'preset':'focused'})
+        manifest = self.target/dashboard.installer.MANIFEST_RELATIVE
+        outside = Path(self.tmp.name)/'outside.json'
+        original = dashboard.installer.write_manifest
+        def create_racing_symlink(**kwargs):
+            manifest.symlink_to(outside)
+            return original(**kwargs)
+        with mock.patch.object(dashboard.installer,'write_manifest',side_effect=create_racing_symlink):
+            with self.assertRaises((FileExistsError,dashboard.installer.InstallError)):
+                self.console.save({'preview_id':plan['preview_id']})
+        self.assertTrue(manifest.is_symlink())
+        self.assertFalse(outside.exists())
+        self.assertFalse((self.target/'.codex/agents/researcher.toml').exists())
+
+    def test_fifty_slot_conflict_and_changed_preview_refuse_write(self):
+        team = [{'slot':f'team_slot_{index:02d}', 'duty':'researcher','model':'gpt-6-sol','effort':'medium','title':''}
+                for index in range(1,51)]
+        plan = self.console.preview({'preset':'focused','concurrency':4,'team_count':50,'team':team})
+        self.console.save({'preview_id':plan['preview_id']})
+        last = self.target/dashboard.TEAM_SLOTS['team_slot_50']
+        original = last.read_bytes()
+        last.write_text(last.read_text()+'\n# owner edit\n')
+        before = last.read_bytes()
+        smaller = self.console.preview({'preset':'focused','concurrency':4,'team_count':3,'team':team[:3]})
+        self.assertIn(str(dashboard.TEAM_SLOTS['team_slot_50']),smaller['conflicts'])
+        with self.assertRaisesRegex(ValueError,'Managed file conflict'):
+            self.console.save({'preview_id':smaller['preview_id']})
+        self.assertEqual(last.read_bytes(),before)
+        last.write_bytes(original)
+        clean = self.console.preview({'preset':'focused','concurrency':4,'team_count':3,'team':team[:3]})
+        self.assertTrue(clean['can_save'])
+        last.write_bytes(original+b'\n# newer owner edit\n')
+        with self.assertRaisesRegex(ValueError,'since preview'):
+            self.console.save({'preview_id':clean['preview_id']})
+
     def test_team_rejects_invalid_slot_or_effort(self):
         team = [{'slot':'team_slot_01','duty':'researcher','model':'gpt-6-luna','effort':'ultra','title':''}]
         with self.assertRaisesRegex(ValueError, 'not supported'):
@@ -436,6 +589,7 @@ class ConsoleTests(unittest.TestCase):
         for preset in dashboard.installer.PRESETS:
             with self.subTest(preset=preset):
                 self.assertTrue(self.console.preview({'preset':preset})['can_save'])
+        self.assertTrue(all('astra' not in model for model, _ in dashboard.installer.PRESETS['focused'].values()))
 
     def test_http_security_api_and_assets(self):
         server = dashboard.Server(('127.0.0.1',0), self.console)
