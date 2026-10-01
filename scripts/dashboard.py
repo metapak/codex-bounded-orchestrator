@@ -39,6 +39,9 @@ usage = load_usage()
 def contents(path):
     return path.read_bytes() if path.exists() else None
 
+def ordered_managed_paths(desired, first):
+    return [first, *[name for name in desired if name != first]]
+
 def digest(data):
     return hashlib.sha256(data).hexdigest() if data is not None else None
 
@@ -541,7 +544,8 @@ class Console:
         mutated = {}
         old_state, old_history = contents(self.target/STATE), contents(self.target/HISTORY)
         # Runtime ignore comes first so backups and snapshots stay local.
-        ordered = [str(Path('.codex/.bounded-orchestrator/.gitignore'))] + [p for p in desired if p != '.codex/.bounded-orchestrator/.gitignore']
+        runtime_name = str(Path('.codex/.bounded-orchestrator/.gitignore'))
+        ordered = ordered_managed_paths(desired, runtime_name)
         try:
             for name in ordered:
                 path = Path(name)
@@ -553,7 +557,7 @@ class Console:
                         if not installer.unchanged_owned(manifest, path, self.target/path):
                             raise ValueError('Team file changed since preview: '+name)
                         (self.target/path).unlink()
-                        manifest.get('files', {}).pop(name, None)
+                        manifest.get('files', {}).pop(path.as_posix(), None)
                         mutated[name] = None
                     continue
                 text = desired[name].decode()

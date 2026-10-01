@@ -16,6 +16,12 @@ sys.path.insert(0, str(ROOT/'scripts'))
 import dashboard
 
 class ConsoleTests(unittest.TestCase):
+    def test_managed_write_order_never_duplicates_windows_style_path(self):
+        runtime = '.codex\\.bounded-orchestrator\\.gitignore'
+        desired = {runtime: b'private', '.codex\\config.toml': b'config'}
+        self.assertEqual(dashboard.ordered_managed_paths(desired, runtime),
+                         [runtime, '.codex\\config.toml'])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.target = Path(self.tmp.name)/'repo'
@@ -392,6 +398,8 @@ class ConsoleTests(unittest.TestCase):
         self.console.save({'preview_id':smaller['preview_id']})
         self.assertFalse(last.exists())
         self.assertEqual(self.console.settings()['team_count'],7)
+        self.assertNotIn(dashboard.TEAM_SLOTS['team_slot_50'].as_posix(),
+                         dashboard.installer.load_manifest(self.target)['files'])
         self.console.restore({})
         self.assertTrue(last.exists())
         self.assertEqual(self.console.settings()['team_count'],50)
