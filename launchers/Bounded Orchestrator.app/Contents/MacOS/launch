@@ -3,25 +3,48 @@
 launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
 launcher="$launcher_dir/launchers/launch_dashboard.py"
 
+if [ -z "${BO_LANG:-}" ]; then
+    preferred_language=$(defaults read -g AppleLanguages 2>/dev/null | awk -F '"' 'NF >= 2 { print $2; exit }')
+    preferred_language=${preferred_language:-${LC_ALL:-${LANG:-en}}}
+    case "$preferred_language" in
+        tr|tr-*|tr_*) BO_LANG=tr ;;
+        *) BO_LANG=en ;;
+    esac
+fi
+export BO_LANG
+
 if [ ! -f "$launcher" ]; then
-    guide=$(/usr/bin/osascript -e 'display dialog "Önce İndirilenler klasöründe ZIP dosyasından çıkan kurulum paketini bulacağız. Bu klasör uygulamanın çalışması için gereken launchers ve scripts klasörlerini içerir. Sonraki adımda Codex ile çalıştığınız projeyi seçeceksiniz. / First find the extracted setup package in Downloads. It contains launchers and scripts. Next, choose the project where you use Codex." buttons {"Vazgeç / Cancel", "Devam / Continue"} default button "Devam / Continue" cancel button "Vazgeç / Cancel" with title "1/2 Kurulum paketi / Setup package"' 2>&1)
+    if [ "$BO_LANG" = tr ]; then
+        guide_script='display dialog "Önce kurulum paketinin klasörünü bulacağız." & return & return & "İndirilenler klasöründe, adı codex-bounded-orchestrator ile başlayan ZIP dosyasından çıkan DIŞ klasörü seçin. İçinde launchers ve scripts klasörleri olmalı." & return & return & "Kendi Codex proje klasörünüzü burada seçmeyin. Onu 2. adımda seçeceksiniz." buttons {"Vazgeç", "Devam"} default button "Devam" cancel button "Vazgeç" with title "1/2 · Kurulum paketi"'
+        picker_script='POSIX path of (choose folder with prompt "1/2 · ZIP dosyasından çıkan ana klasörü seçin" default location (path to downloads folder))'
+        wrong_script='display alert "Yanlış klasör" message "İndirilenler klasöründeki, adı codex-bounded-orchestrator ile başlayan ZIP dosyasından çıkan DIŞ klasörü seçin. İçinde launchers ve scripts olmalı." & return & return & "Codex projenizi 2. adımda seçeceksiniz." buttons {"Vazgeç", "Yeniden dene"} default button "Yeniden dene" cancel button "Vazgeç" as warning'
+        cancel_script='display alert "Kurulum iptal edildi" message "Uygulamayı yeniden açarak kurulum paketi klasörünü seçebilirsiniz."'
+        error_script='display alert "Kurulum konsolu açılamadı" message "Kurulum paketi klasörü seçilemedi." as warning'
+    else
+        guide_script='display dialog "First, find the setup package folder." & return & return & "In Downloads, choose the OUTER folder extracted from the ZIP whose name starts with codex-bounded-orchestrator. It contains launchers and scripts." & return & return & "Do not choose your Codex project yet. You will choose it in step 2." buttons {"Cancel", "Continue"} default button "Continue" cancel button "Cancel" with title "1/2 · Setup package"'
+        picker_script='POSIX path of (choose folder with prompt "1/2 · Select the folder extracted from the ZIP" default location (path to downloads folder))'
+        wrong_script='display alert "Wrong folder" message "In Downloads, choose the OUTER folder extracted from the ZIP whose name starts with codex-bounded-orchestrator. It must contain launchers and scripts." & return & return & "Choose your Codex project in step 2." buttons {"Cancel", "Try again"} default button "Try again" cancel button "Cancel" as warning'
+        cancel_script='display alert "Setup canceled" message "Reopen the app to choose the setup package folder."'
+        error_script='display alert "Setup console unavailable" message "Could not choose the setup package folder." as warning'
+    fi
+    guide=$(/usr/bin/osascript -e "$guide_script" 2>&1)
     guide_status=$?
     if [ "$guide_status" -ne 0 ]; then
         case "$guide" in *-128*) exit 0 ;; esac
-        /usr/bin/osascript -e 'display alert "Kurulum konsolu açılamadı / Setup console unavailable" message "Kurulum adımı açılamadı / Could not show the setup step." as warning'
+        /usr/bin/osascript -e "$error_script"
         exit 1
     fi
     while :; do
-        selected=$(/usr/bin/osascript -e 'POSIX path of (choose folder with prompt "1/2 Kurulum paketinin klasörünü seçin (içinde launchers ve scripts var) / Select the extracted setup folder containing launchers and scripts")' 2>&1)
+        selected=$(/usr/bin/osascript -e "$picker_script" 2>&1)
         choice_status=$?
         if [ "$choice_status" -ne 0 ]; then
             case "$selected" in
                 *-128*)
-                    /usr/bin/osascript -e 'display alert "Kurulum iptal edildi / Setup canceled" message "Kurulum paketinin klasörünü seçerek yeniden deneyebilirsiniz / Reopen the app to choose the setup folder."'
+                    /usr/bin/osascript -e "$cancel_script"
                     exit 0
                     ;;
             esac
-            /usr/bin/osascript -e 'display alert "Kurulum konsolu açılamadı / Setup console unavailable" message "Kurulum paketinin klasörü seçilemedi / Could not choose the setup folder." as warning'
+            /usr/bin/osascript -e "$error_script"
             exit 1
         fi
         case "$selected" in
@@ -32,7 +55,12 @@ if [ ! -f "$launcher" ]; then
             launcher="$selected/launchers/launch_dashboard.py"
             break
         fi
-        /usr/bin/osascript -e 'display alert "Yanlış klasör / Wrong folder" message "Bu ilk adımda Git projenizi değil, içinde launchers ve scripts bulunan çıkarılmış kurulum paketini seçin. Ardından Git projenizi seçeceksiniz. / First select the extracted setup folder containing launchers and scripts. The Git project comes next." as warning'
+        retry=$(/usr/bin/osascript -e "$wrong_script" 2>&1)
+        retry_status=$?
+        if [ "$retry_status" -ne 0 ]; then
+            case "$retry" in *-128*) exit 0 ;; esac
+            exit 1
+        fi
     done
 fi
 

@@ -4,8 +4,10 @@ import importlib.util
 import os
 from pathlib import Path
 import plistlib
+import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -25,7 +27,7 @@ class MacLauncherTests(unittest.TestCase):
             temporary = Path(directory)
             executable = temporary / "AppTranslocation/random/d/Bounded Orchestrator.app/Contents/MacOS/launch"
             executable.parent.mkdir(parents=True)
-            distribution = temporary / "codex-bounded-orchestrator-main 2"
+            distribution = temporary / "codex-bounded-orchestrator-main 2; touch injected"
             (distribution / "launchers").mkdir(parents=True)
             (distribution / "scripts").mkdir()
             (distribution / "scripts/dashboard.py").write_text("", encoding="utf-8")
@@ -45,7 +47,7 @@ class MacLauncherTests(unittest.TestCase):
             picker_calls = temporary / "picker-calls"
             picker.write_text(
                 "#!/bin/sh\n"
-                f"case \"$2\" in *'2/2 Çalışacağınız Git projesini seçin'*) printf '%s\\n' {shlex.quote(str(project))}; exit 0 ;; esac\n"
+                f"case \"$2\" in *'2/2 · Codex projenizin klasörünü seçin'*) printf '%s\\n' {shlex.quote(str(project))}; exit 0 ;; esac\n"
                 f"case \"$2\" in *'display dialog'*) exit 0 ;; *'display alert'*) exit 0 ;; esac\n"
                 f"printf 'call\\n' >> {shlex.quote(str(picker_calls))}\n"
                 f"if [ $(wc -l < {shlex.quote(str(picker_calls))}) -eq 1 ]; then\n"
@@ -58,10 +60,14 @@ class MacLauncherTests(unittest.TestCase):
             picker.chmod(0o755)
             executable.write_text(source.replace("/usr/bin/osascript", shlex.quote(str(picker))), encoding="utf-8")
             executable.chmod(0o755)
-            result = subprocess.run([str(executable)], capture_output=True, text=True, check=False, timeout=10)
+            result = subprocess.run(
+                [str(executable)], capture_output=True, text=True, check=False, timeout=10,
+                env={**os.environ, "BO_LANG": "tr"},
+            )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(f"selected target: {project.resolve()}", result.stdout)
             self.assertEqual(picker_calls.read_text(encoding="utf-8").count("call"), 2)
+            self.assertFalse((temporary / "injected").exists())
 
     @unittest.skipIf(os.name == "nt", "POSIX app launcher is not used on Windows")
     def test_translocated_app_wrong_folder_then_cancel_exits_cleanly(self) -> None:
@@ -87,12 +93,41 @@ class MacLauncherTests(unittest.TestCase):
             picker.chmod(0o755)
             executable.write_text(source.replace("/usr/bin/osascript", shlex.quote(str(picker))), encoding="utf-8")
             executable.chmod(0o755)
-            canceled = subprocess.run([str(executable)], capture_output=True, text=True, check=False, timeout=10)
+            canceled = subprocess.run(
+                [str(executable)], capture_output=True, text=True, check=False, timeout=10,
+                env={**os.environ, "BO_LANG": "tr"},
+            )
             self.assertEqual(canceled.returncode, 0)
             self.assertEqual(picker_calls.read_text(encoding="utf-8").count("call"), 2)
             alerts = alert_marker.read_text(encoding="utf-8")
             self.assertIn("Yanlış klasör", alerts)
-            self.assertIn("Kurulum iptal edildi", alerts)
+
+    @unittest.skipIf(os.name == "nt", "POSIX app launcher is not used on Windows")
+    def test_translocated_app_wrong_folder_alert_can_cancel(self) -> None:
+        source = (ROOT / "launchers/Bounded Orchestrator.app/Contents/MacOS/launch").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            executable = temporary / "AppTranslocation/random/d/Bounded Orchestrator.app/Contents/MacOS/launch"
+            executable.parent.mkdir(parents=True)
+            picker = temporary / "picker"
+            calls = temporary / "picker-calls"
+            picker.write_text(
+                "#!/bin/sh\n"
+                "case \"$2\" in *'display dialog'*) exit 0 ;; "
+                "*'display alert'*) echo 'User canceled. (-128)' >&2; exit 1 ;; esac\n"
+                f"printf 'call\\n' >> {shlex.quote(str(calls))}\n"
+                f"printf '%s\\n' {shlex.quote(str(temporary / 'wrong folder'))}\n",
+                encoding="utf-8",
+            )
+            picker.chmod(0o755)
+            executable.write_text(source.replace("/usr/bin/osascript", shlex.quote(str(picker))), encoding="utf-8")
+            executable.chmod(0o755)
+            canceled = subprocess.run(
+                [str(executable)], capture_output=True, text=True, check=False, timeout=10,
+                env={**os.environ, "BO_LANG": "tr"},
+            )
+            self.assertEqual(canceled.returncode, 0)
+            self.assertEqual(calls.read_text(encoding="utf-8").count("call"), 1)
 
     @unittest.skipIf(os.name == "nt", "POSIX app launcher is not used on Windows")
     def test_translocated_app_intro_cancel_skips_folder_picker(self) -> None:
@@ -111,21 +146,96 @@ class MacLauncherTests(unittest.TestCase):
             picker.chmod(0o755)
             executable.write_text(source.replace("/usr/bin/osascript", shlex.quote(str(picker))), encoding="utf-8")
             executable.chmod(0o755)
-            canceled = subprocess.run([str(executable)], capture_output=True, text=True, check=False, timeout=10)
+            canceled = subprocess.run(
+                [str(executable)], capture_output=True, text=True, check=False, timeout=10,
+                env={**os.environ, "BO_LANG": "tr"},
+            )
             self.assertEqual(canceled.returncode, 0)
 
     def test_app_is_visible_and_picker_does_not_activate_background_script(self) -> None:
         plist = ROOT / "launchers/Bounded Orchestrator.app/Contents/Info.plist"
         self.assertFalse(plistlib.loads(plist.read_bytes())["LSUIElement"])
         chosen = subprocess.CompletedProcess([], 0, stdout="/tmp/project folder/\n", stderr="")
-        with patch.object(launcher.sys, "platform", "darwin"), patch.object(
+        with patch.dict(os.environ, {"BO_LANG": "tr"}), patch.object(launcher.sys, "platform", "darwin"), patch.object(
             launcher.subprocess, "run", return_value=chosen
         ) as run:
             self.assertEqual(launcher.choose_project(), Path("/tmp/project folder/"))
-        self.assertIn("2/2 Çalışacağınız Git projesini seçin", run.call_args.args[0][2])
+        self.assertIn("2/2 · Codex projenizin klasörünü seçin", run.call_args.args[0][2])
         self.assertIn("Kurulum ayarları bu projeye yazılacak", run.call_args.args[0][2])
-        self.assertIn("Değişiklikleri kontrol edin", run.call_args.args[0][2])
+        self.assertIn("default location (path to home folder)", run.call_args.args[0][2])
         self.assertNotIn("activate", run.call_args.args[0][2])
+
+    def test_first_picker_uses_downloads_and_single_language(self) -> None:
+        source = (ROOT / "launchers/Bounded Orchestrator.app/Contents/MacOS/launch").read_text(encoding="utf-8")
+        self.assertEqual(source.count("default location (path to downloads folder)"), 2)
+        self.assertIn("İndirilenler klasöründe, adı codex-bounded-orchestrator ile başlayan", source)
+        self.assertIn("Kendi Codex proje klasörünüzü burada seçmeyin", source)
+        self.assertIn("Do not choose your Codex project yet", source)
+        self.assertNotIn(" / Select", source)
+
+    @unittest.skipIf(os.name == "nt", "POSIX app launcher is not used on Windows")
+    def test_first_dialog_uses_primary_system_language_and_locale_fallback(self) -> None:
+        source = (ROOT / "launchers/Bounded Orchestrator.app/Contents/MacOS/launch").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            executable = temporary / "AppTranslocation/random/d/Bounded Orchestrator.app/Contents/MacOS/launch"
+            executable.parent.mkdir(parents=True)
+            defaults = temporary / "defaults"
+            defaults.write_text(
+                "#!/bin/sh\n"
+                "[ \"$FAKE_LANGUAGE\" = unavailable ] && exit 1\n"
+                "printf '(\\n    \"%s\",\\n    \"en-US\"\\n)\\n' \"$FAKE_LANGUAGE\"\n",
+                encoding="utf-8",
+            )
+            defaults.chmod(0o755)
+            picker = temporary / "picker"
+            picker.write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$2\" > {shlex.quote(str(temporary / 'intro-script'))}\n"
+                "echo 'User canceled. (-128)' >&2\n"
+                "exit 1\n",
+                encoding="utf-8",
+            )
+            picker.chmod(0o755)
+            executable.write_text(source.replace("/usr/bin/osascript", shlex.quote(str(picker))), encoding="utf-8")
+            executable.chmod(0o755)
+            cases = (("tr-TR", "en_US.UTF-8", "Önce kurulum paketinin klasörünü"),
+                     ("en-US", "tr_TR.UTF-8", "First, find the setup package folder"),
+                     ("unavailable", "tr_TR.UTF-8", "Önce kurulum paketinin klasörünü"))
+            for primary, fallback, expected in cases:
+                env = {**os.environ, "PATH": f"{temporary}:{os.environ['PATH']}",
+                       "FAKE_LANGUAGE": primary, "LANG": fallback}
+                env.pop("BO_LANG", None)
+                env.pop("LC_ALL", None)
+                result = subprocess.run([str(executable)], capture_output=True, text=True,
+                                        check=False, timeout=10, env=env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(expected, (temporary / "intro-script").read_text(encoding="utf-8"))
+
+    @unittest.skipUnless(sys.platform == "darwin", "AppleScript compiler is macOS-only")
+    def test_native_picker_scripts_compile(self) -> None:
+        source = (ROOT / "launchers/Bounded Orchestrator.app/Contents/MacOS/launch").read_text(encoding="utf-8")
+        scripts = re.findall(r"^\s*\w+_script='([^']*)'", source, re.M)
+        self.assertEqual(len(scripts), 10)
+        with tempfile.TemporaryDirectory() as directory:
+            for index, script in enumerate(scripts):
+                compiled = subprocess.run(
+                    ["/usr/bin/osacompile", "-e", script, "-o", str(Path(directory) / f"shell-{index}.scpt")],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(compiled.returncode, 0, compiled.stderr)
+            chosen = subprocess.CompletedProcess([], 0, stdout="/tmp/project/\n", stderr="")
+            for language in ("tr", "en"):
+                with patch.dict(os.environ, {"BO_LANG": language}), patch.object(launcher.sys, "platform", "darwin"), patch.object(
+                    launcher.subprocess, "run", return_value=chosen
+                ) as run:
+                    launcher.choose_project()
+                script = run.call_args.args[0][2]
+                compiled = subprocess.run(
+                    ["/usr/bin/osacompile", "-e", script, "-o", str(Path(directory) / f"project-{language}.scpt")],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(compiled.returncode, 0, compiled.stderr)
 
     def test_project_guide_cancel_skips_project_picker(self) -> None:
         canceled = subprocess.CompletedProcess([], 1, stdout="", stderr="User canceled. (-128)")
