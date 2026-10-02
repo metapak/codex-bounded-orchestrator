@@ -4,7 +4,9 @@
   <img src="docs/assets/cover-tr.svg" alt="Orkestra şefi ve uzman yardımcıları gösteren resimli sahne" width="100%">
 </p>
 
-# Codex Bounded Orchestrator
+# Ustam
+
+Ustam’ın Codex sürümü.
 
 [![Lisans: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
@@ -21,7 +23,7 @@ Ekibi kurun, değişiklikleri kontrol edin ve geçmiş kullanımı görün. Şef
 Önce Codex, [Git](https://git-scm.com/downloads) ve [Python 3.11 veya yenisi](https://www.python.org/downloads/) kurulu olsun. Python bu indirmeye **dahil değildir**.
 
 1. **İndirin:** [Güncel ZIP dosyasını alın](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) ve açılan klasöre girin.
-2. **Açın:** Mac'te `launchers` klasöründeki **Bounded Orchestrator.app** dosyasına çift tıklayın. Windows'ta aynı klasördeki **Launch Bounded Orchestrator.vbs** dosyasına çift tıklayın. Linux'ta aşağıdaki kısa komutu kullanın.
+2. **Açın:** Mac'te `launchers` klasöründeki **Ustam.app** dosyasına çift tıklayın. Windows'ta aynı klasördeki **Launch Ustam.vbs** dosyasına çift tıklayın. Linux'ta aşağıdaki kısa komutu kullanın.
 3. **Proje seçin:** Mac veya Windows'ta Codex kullandığınız Git proje klasörünü seçin. Linux'ta bu klasörü komutta belirtirsiniz.
 4. **Kurun:** Tarayıcıda önerilen ekibi bırakabilir veya değiştirebilirsiniz. **Değişiklikleri kontrol et**, ardından **Kur** düğmesine basın. Codex'i bu projede yeniden başlatın.
 
@@ -48,13 +50,13 @@ Sahnede şefi veya bir yardımcıyı seçip modelini ve inceleme düzeyini belir
 
 *Örnek projeyle güncel konsol. Vurgulanan model bir kurulum tercihidir; erişim Codex hesabınıza bağlıdır.*
 
-## 8 saniyelik hareketli önizleme
+## Ustam’ı 40 saniyede tanıyın
 
-<p><img src="docs/assets/bounded-orchestrator-intro-8s.gif" alt="Şef ve dört yardımcıyla örnek Codex orkestrasının hareketli görüntüsü" width="480"></p>
+[![Ustam Türkçe tanıtımını izleyin](docs/assets/ustam-poster-tr.png)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-tr-40s.mp4)
 
-Sessizdir; Türkçe başlıklar içerir. Örnek Codex Kullanım ekranıdır; canlı veri değildir. [Orijinal MP4 dosyasını indirin](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/bounded-orchestrator-intro-8s.mp4).
+[Türkçe videoyu oynatın veya indirin (MP4)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-tr-40s.mp4). Türkçe başlıklar ve müzikle Ustam’ın 40 saniyelik tanıtımı. Konsol ve kullanım rakamları örnek veridir. GitHub satır içinde oynatıcı göstermezse orijinal videoyu açmak için postere veya MP4 bağlantısına tıklayın.
 
-![Orkestra sahnesini ve gözlenen yardımcı dağılımını gösteren örnek Codex Kullanım sayfası](docs/assets/console-tr.png)
+![Orkestra sahnesini ve gözlenen yardımcı dağılımını gösteren örnek Ustam Kullanım sayfası](docs/assets/console-tr.png)
 
 *Ayıklanmış örnek kayıtlarla güncel konsol. Token toplamları geçmiş kullanımı anlatır; orkestra hareketi bir çizimdir.*
 
@@ -71,6 +73,8 @@ python3 scripts/install.py /projenin/tam/yolu --preset balanced
 ```
 
 Seçtiğiniz projede yeni Codex oturumu açın ve repo işlerinde `$bounded-orchestrator` çağırın. Model yönlendirmesine güvenmeden önce [çalışma zamanı kontrolünü](docs/runtime-smoke-test.md) yapın.
+
+Mevcut projelerle uyumluluk için teknik skill adı `$bounded-orchestrator`, kurulum işaretleri ve `.codex/.bounded-orchestrator` yolları korunur.
 
 </details>
 
@@ -127,8 +131,8 @@ Aşağıdaki giriş noktaları repo içinde sunulur. Gerçek çalışma davranı
 
 | Platform | Sunulan giriş noktaları | Rehber |
 |---|---|---|
-| macOS | `launchers/Bounded Orchestrator.app`; terminal için `setup.command` | [macOS kurulumu](INSTALL-MACOS.md) |
-| Windows | `launchers/Launch Bounded Orchestrator.vbs`; terminal için `setup.cmd` | [Windows kurulumu](INSTALL-WINDOWS.md) |
+| macOS | `launchers/Ustam.app`; terminal için `setup.command` | [macOS kurulumu](INSTALL-MACOS.md) |
+| Windows | `launchers/Launch Ustam.vbs`; terminal için `setup.cmd` | [Windows kurulumu](INSTALL-WINDOWS.md) |
 | Linux | `python3 scripts/dashboard.py /proje/yolu`; `scripts/install.sh` | [Yerel konsol](docs/local-console.tr.md) ve `--help` |
 
 Installer ve konsol yalnız Python standart kütüphanesini kullanır. Konsol, seçilen projeye yazmadan önce tam değişiklikleri gösterir, ilgisiz ayarları korur ve yönetilen dosyalarla Git tarafından yok sayılan yerel yedekleri izler. Giriş yoluna göre `balanced`, `quality`, `economy`, `quota-saver`, `focused` ve özel yönlendirme seçenekleri bulunur. Bu adlar niyeti anlatır; ölçülmüş tasarruf veya hız garantisi değildir. Yerel roller OpenAI `gpt-*` modellerini kullanır; başka markalar isteğe bağlı API öneri araçlarıdır. Eski `--profile astra|sol` seçeneği çalışmaya devam eder; otomasyonlarda `--preset`, tekrarlanabilir `--role-model ROL=MODEL` ve `--role-effort ROL=EFOR` seçenekleri kullanılabilir.

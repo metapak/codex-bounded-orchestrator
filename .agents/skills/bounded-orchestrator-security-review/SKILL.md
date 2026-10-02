@@ -1,6 +1,6 @@
 ---
 name: bounded-orchestrator-security-review
-description: Optional security review expertise pack for Codex Bounded Orchestrator. Use only when the user explicitly selects this pack or asks the orchestrator for security-focused analysis.
+description: Optional security review expertise pack for Ustam. Use only when the user explicitly selects this pack or asks the orchestrator for security-focused analysis.
 ---
 
 # Security review expertise pack

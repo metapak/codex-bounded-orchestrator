@@ -969,7 +969,7 @@ def main(argv=None):
         server = Server(('127.0.0.1', args.port), Console(args.target, args.sessions))
     except (ValueError, OSError, installer.InstallError) as exc:
         parser.error(str(exc))
-    print('Codex yerel konsol: '+server.origin, flush=True)
+    print('Ustam yerel konsol: '+server.origin, flush=True)
     if not args.no_browser:
         webbrowser.open(server.origin)
     try:

@@ -2,7 +2,7 @@
 
 # v0.5.0 release notes
 
-Codex Bounded Orchestrator now keeps every native role on OpenAI GPT models. Prepared profiles are unchanged in intent, and custom native model IDs must use the forward-compatible `gpt-*` family. Other brands are explicit, optional API proposal tools.
+Ustam now keeps every native role on OpenAI GPT models. Prepared profiles are unchanged in intent, and custom native model IDs must use the forward-compatible `gpt-*` family. Other brands are explicit, optional API proposal tools.
 
 The external provider selector defaults to none and now offers Anthropic Claude or DeepSeek. The new standard-library DeepSeek bridge uses the current `deepseek-flash` V4.1 Flash alias, accepts bounded supplied context, and cannot read or write the workspace. The native GPT implementer remains the sole writer.
 

@@ -73,7 +73,7 @@ def run_mac_console(entry: Path, project: Path) -> int:
         deadline = time.monotonic() + 15
         origin = None
         while time.monotonic() < deadline and server.poll() is None:
-            match = re.search(r"Codex yerel konsol: (http://127\.0\.0\.1:\d+)", log_path.read_text(encoding="utf-8"))
+            match = re.search(r"(?:Ustam|Codex) yerel konsol: (http://127\.0\.0\.1:\d+)", log_path.read_text(encoding="utf-8"))
             if match:
                 origin = match.group(1)
                 break

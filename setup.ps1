@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host "============================================================"
-Write-Host " Codex Bounded Orchestrator 0.6.0"
+Write-Host " Ustam 0.6.0"
 Write-Host " Guided setup / Windows"
 Write-Host "============================================================"
 Write-Host " Native roles: OpenAI GPT models only"

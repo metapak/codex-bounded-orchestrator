@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safely install Codex Bounded Orchestrator into an existing repository."""
+"""Safely install Ustam into an existing repository."""
 
 from __future__ import annotations
 

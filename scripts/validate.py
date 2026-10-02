@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static repository validation for Codex Bounded Orchestrator."""
+"""Static repository validation for Ustam."""
 
 from __future__ import annotations
 

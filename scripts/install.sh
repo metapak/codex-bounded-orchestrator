@@ -13,7 +13,7 @@ else
 fi
 
 if [ "$#" -eq 0 ]; then
-    printf '%s\n' 'Codex Bounded Orchestrator guided setup'
+    printf '%s\n' 'Ustam guided setup'
     printf '%s\n' 'Usage: scripts/install.sh /path/to/project --interactive'
     printf '%s\n' 'Native roles use OpenAI GPT models; external proposal APIs are opt-in.'
     exit 2

@@ -1,6 +1,6 @@
 ---
 name: bounded-orchestrator-ui-design
-description: Optional UI design expertise pack for Codex Bounded Orchestrator. Use only when the user explicitly selects this pack or asks the orchestrator for UI or UX design expertise.
+description: Optional UI design expertise pack for Ustam. Use only when the user explicitly selects this pack or asks the orchestrator for UI or UX design expertise.
 ---
 
 # UI design expertise pack

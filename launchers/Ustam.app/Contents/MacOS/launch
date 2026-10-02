@@ -71,4 +71,4 @@ for python in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3.13 python
     fi
 done
 
-/usr/bin/osascript -e 'display alert "Python 3.11 or newer is needed" message "Install Python 3.11 or newer, then open Bounded Orchestrator again." as warning'
+/usr/bin/osascript -e 'display alert "Python 3.11 or newer is needed" message "Install Python 3.11 or newer, then open Ustam again." as warning'

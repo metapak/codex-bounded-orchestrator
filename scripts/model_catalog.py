@@ -86,7 +86,7 @@ def discover_cli(timeout=5.0):
     try:
         send({'method': 'initialize', 'id': 1,
               'params': {'clientInfo': {'name': 'bounded_orchestrator_console',
-                                        'title': 'Bounded Orchestrator Console', 'version': '0.6.0'}}})
+                                        'title': 'Ustam Console', 'version': '0.6.0'}}})
         if response(1) is None:
             return None
         send({'method': 'initialized', 'params': {}})

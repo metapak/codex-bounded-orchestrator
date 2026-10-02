@@ -1,4 +1,4 @@
-# Codex Bounded Orchestrator v0.2.0
+# Ustam v0.2.0
 
 A project-scoped Codex workflow with one accountable owner, explicit task ownership,
 separate verification, and a finite review process.

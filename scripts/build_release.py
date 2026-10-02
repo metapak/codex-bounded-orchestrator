@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECT_NAME = "codex-bounded-orchestrator"
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 EXECUTABLE_PATHS = {
-    "launchers/Bounded Orchestrator.app/Contents/MacOS/launch",
+    "launchers/Ustam.app/Contents/MacOS/launch",
     "setup.command",
     "scripts/install.sh",
     "scripts/install.py",
@@ -43,9 +43,9 @@ SKIP_NAMES = {
 SKIP_SUFFIXES = {".pyc", ".pyo", ".zip", ".bundle"}
 WINDOWS_CRLF_SUFFIXES = {".ps1", ".cmd"}
 REQUIRED_SOURCE_FILES = {
-    "launchers/Bounded Orchestrator.app/Contents/Info.plist",
-    "launchers/Bounded Orchestrator.app/Contents/MacOS/launch",
-    "launchers/Launch Bounded Orchestrator.vbs",
+    "launchers/Ustam.app/Contents/Info.plist",
+    "launchers/Ustam.app/Contents/MacOS/launch",
+    "launchers/Launch Ustam.vbs",
     "launchers/launch_dashboard.py",
     "scripts/model_catalog.py",
     "scripts/model_catalog.json",
@@ -90,9 +90,9 @@ REQUIRED_SOURCE_FILES = {
     "tests/test_vnext.py",
 }
 
-MAC_START = """Codex Bounded Orchestrator {version} - macOS\n\n1. Extract this ZIP completely.\n2. Open launchers/Bounded Orchestrator.app.\n3. If asked for the setup package (step 1/2), the folder picker opens in Downloads. Choose the OUTER folder extracted from the codex-bounded-orchestrator ZIP; it contains launchers and scripts. A wrong choice can be retried.\n4. Choose the Git project where you use Codex (step 2/2). Setup will save settings there.\n5. The browser console opens. Review the suggested team, check the changes, then select Install or Save.\n6. Use Close console when finished. Python 3.11 or newer is required.\n\nTerminal installer remains available through setup.command. Detailed instructions: docs/local-console.md\n"""
+MAC_START = """Ustam {version} - macOS\n\n1. Extract this ZIP completely.\n2. Open launchers/Ustam.app.\n3. If asked for the setup package (step 1/2), the folder picker opens in Downloads. Choose the OUTER folder extracted from the codex-bounded-orchestrator ZIP; it contains launchers and scripts. A wrong choice can be retried.\n4. Choose the Git project where you use Codex (step 2/2). Setup will save settings there.\n5. The browser console opens. Review the suggested team, check the changes, then select Install or Save.\n6. Use Close console when finished. Python 3.11 or newer is required.\n\nTerminal installer remains available through setup.command. Detailed instructions: docs/local-console.md\n"""
 
-WINDOWS_START = """Codex Bounded Orchestrator {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click launchers/Launch Bounded Orchestrator.vbs.\r\n3. Choose the target Git repository folder in the folder picker.\r\n4. The local browser console opens. Choose a work style and planned helper team, check the changes, then select Install or Save.\r\n5. Use Close console when finished. Python 3.11 or newer is required.\r\n\r\nTerminal installer remains available through setup.cmd. Detailed instructions: docs/local-console.md\r\n"""
+WINDOWS_START = """Ustam {version} - Windows\r\n\r\n1. Extract this ZIP completely.\r\n2. Double-click launchers/Launch Ustam.vbs.\r\n3. Choose the target Git repository folder in the folder picker.\r\n4. The local browser console opens. Choose a work style and planned helper team, check the changes, then select Install or Save.\r\n5. Use Close console when finished. Python 3.11 or newer is required.\r\n\r\nTerminal installer remains available through setup.cmd. Detailed instructions: docs/local-console.md\r\n"""
 
 
 class ReleaseError(RuntimeError):
@@ -289,7 +289,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps(metadata, indent=2, sort_keys=True))
     else:
-        print(f"Built Codex Bounded Orchestrator v{metadata['version']}:")
+        print(f"Built Ustam v{metadata['version']}:")
         for item in metadata["artifacts"].values():
             print(f"  {item['path']}  sha256={item['sha256']}")
     return 0

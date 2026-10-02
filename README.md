@@ -4,7 +4,9 @@
   <img src="docs/assets/cover-en.svg" alt="Illustrated orchestra stage with a conductor and specialist helpers" width="100%">
 </p>
 
-# Codex Bounded Orchestrator
+# Ustam
+
+The Codex edition of Ustam.
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
@@ -21,7 +23,7 @@ Set up the team, check the changes, and see locally recorded past usage. The set
 Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed first. Python is **not included** in this download.
 
 1. **Download:** [Get the current ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
-2. **Open:** On Mac, open `launchers` and double-click **Bounded Orchestrator.app**. On Windows, double-click **Launch Bounded Orchestrator.vbs** in the same folder. On Linux, use the short command below.
+2. **Open:** On Mac, open `launchers` and double-click **Ustam.app**. On Windows, double-click **Launch Ustam.vbs** in the same folder. On Linux, use the short command below.
 3. **Choose a project:** On Mac or Windows, pick the Git project folder where you use Codex. On Linux, the command includes that folder instead.
 4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
 
@@ -48,13 +50,13 @@ Choose a chief or helper on the stage to set their model and reasoning. Each hel
 
 *Current console with an example project. The highlighted model is a setup choice; access depends on your Codex account.*
 
-## Watch the 8-second preview
+## Watch Ustam in 40 seconds
 
-<p><img src="docs/assets/bounded-orchestrator-intro-8s.gif" alt="Animated sample Codex orchestra with conductor and four helpers" width="480"></p>
+[![Watch the English Ustam introduction](docs/assets/ustam-poster-en.png)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-en-40s.mp4)
 
-Silent, with Turkish titles. Illustrative sample Codex Usage screen, not live data. [Download the original MP4](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/bounded-orchestrator-intro-8s.mp4).
+[Play or download the English video (MP4)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-en-40s.mp4). A 40-second introduction to Ustam, with English titles and music. The console and usage figures are illustrative sample data. If GitHub does not show an inline player, select the poster or MP4 link to open the original video.
 
-![Sample Codex Usage page with an orchestra stage and observed helper breakdown](docs/assets/console-en.png)
+![Sample Ustam Usage page with an orchestra stage and observed helper breakdown](docs/assets/console-en.png)
 
 *Current console with sanitized sample records. Token totals describe past usage; the orchestra animation is an illustration.*
 
@@ -71,6 +73,8 @@ python3 scripts/install.py /absolute/path/to/your-project --preset balanced
 ```
 
 Start a fresh Codex session in the selected project, then invoke `$bounded-orchestrator` for repository work. Run the [runtime smoke test](docs/runtime-smoke-test.md) before relying on model routing.
+
+The technical skill name `$bounded-orchestrator`, installation markers and `.codex/.bounded-orchestrator` paths stay unchanged for compatibility with existing projects.
 
 </details>
 
@@ -127,8 +131,8 @@ These entry points are supplied by the repository. Runtime behavior still depend
 
 | Platform | Supplied entry points | Guide |
 |---|---|---|
-| macOS | `launchers/Bounded Orchestrator.app`; `setup.command` for terminal setup | [macOS installation](INSTALL-MACOS.md) |
-| Windows | `launchers/Launch Bounded Orchestrator.vbs`; `setup.cmd` for terminal setup | [Windows installation](INSTALL-WINDOWS.md) |
+| macOS | `launchers/Ustam.app`; `setup.command` for terminal setup | [macOS installation](INSTALL-MACOS.md) |
+| Windows | `launchers/Launch Ustam.vbs`; `setup.cmd` for terminal setup | [Windows installation](INSTALL-WINDOWS.md) |
 | Linux | `python3 scripts/dashboard.py /path/to/project`; `scripts/install.sh` | [Local console](docs/local-console.md) and `--help` |
 
 The installer and console use only the Python standard library. The console previews exact changes before writing to the selected project, preserves unrelated settings, and tracks managed files and local ignored backups. Its choices include `balanced`, `quality`, `economy`, `quota-saver`, `focused`, and custom routing, depending on the entry point. These names describe intent, not measured savings or speed guarantees. Native roles use OpenAI `gpt-*` models; optional other brands are API-backed proposal tools. The legacy `--profile astra|sol` flag remains supported; automation can use `--preset`, repeated `--role-model ROLE=MODEL`, and `--role-effort ROLE=EFFORT` flags.

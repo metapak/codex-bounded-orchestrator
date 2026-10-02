@@ -7,8 +7,10 @@ and screenshots captured from the current local console.
 |---|---|---|
 | `cover-en.svg`, `cover-tr.svg` | 1600 × 900 | Project identity and the choose → preview → past usage flow |
 | `team-guide-en.svg`, `team-guide-tr.svg` | 1600 × 760 | Duties, model selection and recorded usage |
-| `preferences-en.png`, `preferences-tr.png` | 1264 × 1105 (EN), 1264 × 1109 (TR) | Current planned-team console with chief settings selected |
-| `console-en.png`, `console-tr.png` | 1264 × 1258 (EN), 1264 × 1274 (TR) | Current Usage orchestra, recorded models and token shares |
+| `preferences-en.png`, `preferences-tr.png` | 1600 × 2296 (EN), 1600 × 2300 (TR) | Current planned-team console with chief settings selected |
+| `console-en.png`, `console-tr.png` | 1600 × 2039 (EN), 1600 × 2055 (TR) | Current Usage orchestra, recorded models and token shares |
+| `ustam-poster-en.png`, `ustam-poster-tr.png` | 1920 × 1080 | Language-specific video posters |
+| `ustam-promo-en-40s.mp4`, `ustam-promo-tr-40s.mp4` | 1920 × 1080, 40 seconds | Language-specific Ustam introductions with music |
 
 The illustrations reuse this repository's original orchestra character art.
 Each SVG embeds its own symbols and gradients; it has no external images,
@@ -19,7 +21,7 @@ warm gold, cream text. The core palette is `#201619`, `#302124`, `#783238`,
 For a related orchestrator repository, change the cover's product label and
 translate the model families in the team guide to that product's actual
 choices. The stage, characters and three-step composition are reusable.
-Console screenshots belong to this Codex version and should be recaptured
+Console screenshots belong to the Codex edition of Ustam and should be recaptured
 from another product rather than relabeled.
 
 Screenshots use the repository's sanitized usage fixture and a temporary,
@@ -32,7 +34,14 @@ python3 scripts/dashboard.py /path/to/temporary-git-project \
 ```
 
 Use a 1600 × 1100 browser viewport, switch to the desired language, and
-capture `.team-builder` in Preferences or `#orchestra-panel` in Usage.
+capture from the top of the page through `.team-builder` in Preferences or
+`#orchestra-panel` in Usage, including the Ustam masthead. Expand the viewport
+height to include the full capture. Use reduced motion for stable actors.
 The example model selection reflects the local catalogue at capture time;
 it does not promise account access. Token values are sample historical
-records. The older GIF/MP4 remains an illustrative short preview.
+records. The promotional videos use illustrative sample data.
+
+Each README links its matching poster to the MP4 on raw.githubusercontent.com.
+This opens the original playable/downloadable asset even when GitHub does not
+render a video preview. Superseded preview media and the unused old role diagram
+were removed so the current asset collection uses the Ustam name.

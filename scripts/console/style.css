@@ -136,3 +136,5 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 .uninstall-confirm{display:flex;align-items:flex-start;gap:10px;line-height:1.5;margin-top:18px;color:var(--cream)}.uninstall-confirm input{margin-top:5px;flex:0 0 auto}#uninstall-target{overflow-wrap:anywhere;font-weight:700}#uninstall-actions{max-height:300px;overflow:auto;padding-left:24px;line-height:1.6;overflow-wrap:anywhere}#uninstall-status{overflow-wrap:anywhere;line-height:1.5}
 .save-result:focus{outline:3px solid #e9a743;outline-offset:3px}
 @media(max-width:540px){.setup-guide{padding:14px}.setup-guide ol{padding-left:20px;font-size:.82rem}}
+
+.brand-edition{font-size:.68em;font-weight:500;letter-spacing:0;color:var(--muted,#52657c);margin-left:.35em}

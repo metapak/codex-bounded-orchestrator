@@ -3,7 +3,7 @@ name: bounded-orchestrator
 description: Coordinate Codex repository execution with a chief who only speaks to the user, plans, delegates, reads concise reports, and decides next assignments. Specialists perform all file, research, build, test, and review work, including trivial edits.
 ---
 
-# Bounded Orchestrator
+# Ustam
 
 The user's explicit instructions take precedence over this skill.
 

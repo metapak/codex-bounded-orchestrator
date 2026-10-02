@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640" role="img" aria-labelledby="title desc">
-<title id="title">Codex Bounded Orchestrator</title>
+<title id="title">Ustam</title>
 <desc id="desc">Net roller, tek uygulayıcı ve bağımsız kontrollerle çalışan küçük bir yapay zekâ ekibi.</desc>
 <defs>
   <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0d1117"/><stop offset="1" stop-color="#111827"/></linearGradient>
@@ -27,8 +27,8 @@
 <g transform="translate(80 64)">
   <rect width="10" height="24" rx="5" fill="#58a6ff"/>
   <text x="28" y="18" class="eyebrow">CODEX  /  AÇIK KAYNAK ORKESTRASYON</text>
-  <text x="0" y="94" class="title">Codex</text>
-  <text x="0" y="155" class="title">Bounded Orchestrator</text>
+  <text x="0" y="94" class="title">Ustam</text>
+  <text x="0" y="155" class="title">Codex</text>
   <text x="2" y="198" class="subtitle">Net roller, tek uygulayıcı ve bağımsız kontrollerle çalışan küçük bir yapay zekâ ekibi.</text>
   <text x="2" y="242" class="flow">SİZ HEDEFİ ANLATIN  ·  ORKESTRA ÇALIŞMA DÜZENİNİ YÖNETSİN</text>
 </g>
