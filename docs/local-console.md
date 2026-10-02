@@ -2,6 +2,8 @@
 
 # Local console
 
+Check the **Selected project** path near the top of the browser. To use the suggested team, select **Continue with this team · review changes**, then **Install**. Changing the team is optional. External API models are under **Optional advisers**. Settings controls pause while an operation runs, and a visible result appears when it finishes.
+
 [Download the current `main` ZIP](https://github.com/metapak/ustam-codex-orchestrator/archive/refs/heads/main.zip) and extract it completely; older release packages may lack the GUI launcher. Open **launchers/Ustam.app** on macOS or **launchers/Launch Ustam.vbs** on Windows. Keep the Mac app inside the extracted folder. If macOS asks for the setup package (step 1/2), its introductory dialog explains that this is the outer folder extracted from the `ustam-codex-orchestrator` ZIP, containing `launchers` and `scripts`. The short folder picker opens in Downloads; a wrong choice can be retried. The next dialog explains that step 2/2 is the Git project where setup will save settings. Dialogs use Turkish or English based on your primary system language. The browser then opens the local console, where you can choose a work style and helper team, preview the changes, and select **Install** (first setup) or **Save**. Use **Close console** when finished. Local Python 3.11 or newer is required; the launcher displays an error if it is missing. On Mac, a browser opening failure displays the local address to open manually. No terminal commands are required for this flow.
 
 The terminal alternative from the extracted installer repository is:
@@ -43,3 +45,6 @@ Current configuration reference: [official Codex config reference](https://learn
 
 
 The model picker is one visual catalogue. Each model says whether it appeared in this computer's Codex CLI app-server `model/list` response or only in official documentation; neither is a guarantee of account access. When GPT-6.1 Sol is absent from the local list, the documentation fallback offers `low` through `ultra`, with access unverified; Codex Max and Ultra depend on client settings. If local `model/list` reports the model, its supported efforts take precedence, even when Ultra is absent. The offline list in `scripts/model_catalog.json` records its source and review date and is packaged for disconnected use. **Refresh models** repeats bounded local discovery without changing saved settings. A previously saved model missing from the list remains selectable and unchanged; a new unlisted ID cannot be entered or saved. Exact model and reasoning changes appear in the save preview. See [Codex app-server model/list](https://learn.chatgpt.com/docs/app-server#models) and [Codex models](https://learn.chatgpt.com/docs/models).
+
+
+A pre-existing `.codex/config.toml` stays user-owned. Uninstall preserves that file and your unrelated settings; the removal preview lists it as **Keep**. Edit any remaining Ustam settings manually if needed. A newly created, unchanged Ustam config is removed. Check the removal preview carefully for files marked as owned by older Ustam versions.

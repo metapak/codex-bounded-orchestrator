@@ -20,6 +20,14 @@ spec.loader.exec_module(launcher)
 
 
 class MacLauncherTests(unittest.TestCase):
+    def test_turkish_error_alert_translates_next_action(self) -> None:
+        with patch.dict(os.environ, {"BO_LANG": "tr"}), patch.object(launcher.sys, "platform", "darwin"), patch.object(launcher.subprocess, "run") as run:
+            launcher.alert("Python update needed", "Install Python 3.11 or newer, then open this launcher again.")
+        self.assertEqual(run.call_args.args[0][-2:], ["Python güncellenmeli", "Python 3.11 veya yenisini kurup Ustam’ı yeniden açın."])
+        with patch.dict(os.environ, {"BO_LANG": "tr"}), patch.object(launcher.sys, "platform", "darwin"), patch.object(launcher.subprocess, "run") as run:
+            launcher.alert("Browser could not open", "Open http://127.0.0.1:8765 in your browser.")
+        self.assertEqual(run.call_args.args[0][-1], "Tarayıcınızda http://127.0.0.1:8765 adresini açın.")
+
     def test_product_name_preserves_legacy_bundle_identity(self) -> None:
         bundle = ROOT / "launchers/Ustam.app/Contents/Info.plist"
         metadata = plistlib.loads(bundle.read_bytes())

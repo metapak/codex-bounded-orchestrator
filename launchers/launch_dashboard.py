@@ -15,7 +15,31 @@ import time
 ROOT = Path(__file__).resolve().parent.parent
 
 
+TRANSLATIONS = {
+    "Could not choose a folder": "Klasör seçilemedi",
+    "Please try again.": "Lütfen yeniden deneyin.",
+    "Setup console could not start": "Kurulum konsolu başlatılamadı",
+    "The local server did not become ready.": "Yerel sunucu hazırlanamadı. Ustam’ı yeniden açın.",
+    "Browser could not open": "Tarayıcı açılamadı",
+    "Setup console stopped": "Kurulum konsolu durdu",
+    "The local server stopped unexpectedly.": "Yerel sunucu beklenmedik biçimde durdu. Ustam’ı yeniden açın.",
+    "Invalid launch": "Başlatma geçersiz",
+    "Open the launcher again and choose one project folder.": "Ustam’ı yeniden açıp bir proje klasörü seçin.",
+    "Setup console unavailable": "Kurulum konsolu bulunamadı",
+    "The launcher must stay inside its distribution folder.": "Uygulamayı ZIP dosyasından çıkan klasörün içinde tutun.",
+    "Python update needed": "Python güncellenmeli",
+    "Install Python 3.11 or newer, then open this launcher again.": "Python 3.11 veya yenisini kurup Ustam’ı yeniden açın.",
+    "Project folder unavailable": "Proje klasörü bulunamadı",
+    "Choose an existing local project folder.": "Bu bilgisayarda bulunan bir proje klasörünü seçin.",
+    "Check that this distribution and project folder are valid.": "Kurulum paketi ile proje klasörünü kontrol edip yeniden deneyin.",
+}
+
+
 def alert(title: str, message: str) -> None:
+    if os.environ.get("BO_LANG") == "tr":
+        title = TRANSLATIONS.get(title, title)
+        message = TRANSLATIONS.get(message, message)
+        message = re.sub(r"^Open (http://127\.0\.0\.1:\d+) in your browser\.", r"Tarayıcınızda \1 adresini açın.", message)
     if sys.platform == "darwin":
         script = (
             "on run argv\n"

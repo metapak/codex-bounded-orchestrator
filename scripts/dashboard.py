@@ -529,7 +529,7 @@ class Console:
             servers = {}
         advisory = {name: isinstance(servers.get(server), dict) and servers[server].get('enabled', True) is not False
                     for name, server in ADVISORY_SERVERS.items()}
-        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': config_path.exists(), 'uninstall_supported': installer.SAFE_UNINSTALL_SUPPORTED, 'uninstall_available': installer.SAFE_UNINSTALL_SUPPORTED and (self.target/installer.MANIFEST_RELATIVE).is_file(), 'restore_available': (self.target/STATE).is_file(), 'advisory': advisory, 'advisory_selection': advisory_selection(config, manifest), 'advisory_key_available': {'anthropic': 'ANTHROPIC_API_KEY' in os.environ, 'deepseek': 'DEEPSEEK_API_KEY' in os.environ}, 'advisory_models': ADVISORY_MODELS, 'advisory_efforts': ADVISORY_EFFORTS, 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
+        return {'target': str(self.target), 'target_kind': 'project', 'user_target_supported': False, 'presets': {k: {r: {'model': m, 'effort': e} for r,(m,e) in v.items()} for k,v in installer.PRESETS.items()}, 'saved_preset': manifest.get('preset') if manifest.get('preset') in installer.PRESETS else None, 'roles': roles, 'team': team, 'team_count': len(team) or concurrency, 'team_duties': list(installer.ROLE_FILES), 'efforts': EFFORTS, 'concurrency': concurrency, 'installed': (self.target/installer.MANIFEST_RELATIVE).is_file(), 'uninstall_supported': installer.SAFE_UNINSTALL_SUPPORTED, 'uninstall_available': installer.SAFE_UNINSTALL_SUPPORTED and (self.target/installer.MANIFEST_RELATIVE).is_file(), 'restore_available': (self.target/STATE).is_file(), 'advisory': advisory, 'advisory_selection': advisory_selection(config, manifest), 'advisory_key_available': {'anthropic': 'ANTHROPIC_API_KEY' in os.environ, 'deepseek': 'DEEPSEEK_API_KEY' in os.environ}, 'advisory_models': ADVISORY_MODELS, 'advisory_efforts': ADVISORY_EFFORTS, 'limitations': 'Project configuration only. Model/effort availability must be verified in your Codex client. Context/report preferences are soft instructions, not token limits.'}
 
     def preview(self, payload):
         if set(payload) - {'preset', 'roles', 'concurrency', 'team', 'team_count', 'advisory'}:
@@ -707,8 +707,12 @@ class Console:
                     continue
                 text = desired[name].decode()
                 if name == str(installer.CONFIG_RELATIVE):
+                    config_was_owned = installer.previous_owned(manifest, path)
                     installer.backup_file(self.target, self.target/path, False) if before[name] is not None else None
                     installer.install_config(target=self.target, config_text=text, preset=preset, manifest=manifest, force_config=True, dry_run=False, messages=messages, create_only=before[name] is None, expected_bytes=before[name])
+                    # Patching a user's config does not transfer ownership of the whole file.
+                    if before[name] is not None and not config_was_owned:
+                        installer.remember_file(manifest, path, self.target/path, False)
                 elif name == 'AGENTS.md':
                     if before[name] is not None and before[name] != desired[name]:
                         installer.backup_file(self.target, self.target/path, False)

@@ -27,6 +27,8 @@ Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](htt
 3. **Choose a project:** On Mac or Windows, pick the Git project folder where you use Codex. On Linux, the command includes that folder instead.
 4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
 
+Check the **Selected project** path near the top of the browser. To use the suggested team, select **Continue with this team · review changes**, then **Install**. Changing the team is optional. External API models are under **Optional advisers**. Settings controls pause while an operation runs, and a visible result appears when it finishes.
+
 <details>
 <summary>Linux: open the same setup page</summary>
 

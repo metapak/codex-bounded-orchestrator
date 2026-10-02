@@ -18,6 +18,8 @@ Automatic **Uninstall setup** and `--uninstall` are unavailable on Windows becau
 
 To remove the setup manually, close Codex and other programs editing the project. In the extracted installer folder, run `py -3 scripts/install.py "C:\path\to\project" --uninstall --dry-run` and check the project path and each `REMOVE`/`KEEP` line. In File Explorer, delete only the listed `REMOVE` files that still match that review. Leave every `KEEP` file untouched. In the project's `AGENTS.md`, remove only the text between `<!-- codex-bounded-orchestrator:start -->` and `<!-- codex-bounded-orchestrator:end -->` if the block is still unchanged; keep all other text. Keep `.codex\.bounded-orchestrator\backups`, usage records, and its `.gitignore` so private backups remain ignored by Git. Delete `.codex\.bounded-orchestrator\install.json` last, after checking the remaining files. If any file changed since the dry run, repeat it before deleting that file.
 
+Check the **Selected project** path near the top of the browser. To use the suggested team, select **Continue with this team · review changes**, then **Install**. Changing the team is optional. External API models are under **Optional advisers**. Settings controls pause while an operation runs, and a visible result appears when it finishes.
+
 <details>
 <summary>Terminal alternative</summary>
 

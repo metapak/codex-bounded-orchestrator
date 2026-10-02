@@ -27,6 +27,8 @@ Ekibi kurun, değişiklikleri kontrol edin ve geçmiş kullanımı görün. Şef
 3. **Proje seçin:** Mac veya Windows'ta Codex kullandığınız Git proje klasörünü seçin. Linux'ta bu klasörü komutta belirtirsiniz.
 4. **Kurun:** Tarayıcıda önerilen ekibi bırakabilir veya değiştirebilirsiniz. **Değişiklikleri kontrol et**, ardından **Kur** düğmesine basın. Codex'i bu projede yeniden başlatın.
 
+Tarayıcının üstünde **Seçilen proje** yolunu kontrol edin. Önerilen ekibi kullanmak için **Bu ekiple devam et · değişiklikleri kontrol et**, ardından **Kur** seçin. Ekibi değiştirmek isteğe bağlıdır. Haricî API modelleri **İsteğe bağlı danışmanlar** altında bulunur. İşlem sürerken ayar düğmeleri kapanır; tamamlanınca görünür bir sonuç gösterilir.
+
 <details>
 <summary>Linux: aynı kurulum ekranını açın</summary>
 

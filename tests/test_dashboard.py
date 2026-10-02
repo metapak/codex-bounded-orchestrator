@@ -34,6 +34,37 @@ class ConsoleTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_existing_codex_config_is_not_an_ustam_installation(self):
+        config = self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('model = "gpt-6.1-sol"\n')
+        self.assertFalse(self.console.settings()['installed'])
+        plan = self.console.preview({'preset': 'focused'})
+        self.console.save({'preview_id': plan['preview_id']})
+        self.assertTrue(self.console.settings()['installed'])
+        self.console.restore({})
+        self.assertFalse(self.console.settings()['installed'])
+        self.assertTrue(config.exists())
+
+    @unittest.skipUnless(dashboard.installer.SAFE_UNINSTALL_SUPPORTED, 'safe uninstall requires POSIX directory handles')
+    def test_console_updates_never_take_ownership_of_existing_user_config(self):
+        config = self.target/'.codex/config.toml'
+        config.parent.mkdir()
+        config.write_text('model = "gpt-6.1-sol"\n[unrelated]\nvalue = 42\n')
+        for preset in ('focused', 'balanced'):
+            plan = self.console.preview({'preset': preset})
+            self.console.save({'preview_id': plan['preview_id']})
+            manifest = dashboard.installer.load_manifest(self.target)
+            self.assertFalse(manifest['files']['.codex/config.toml']['owned'])
+            self.assertEqual(dashboard.tomllib.loads(config.read_text())['unrelated']['value'], 42)
+        self.console.restore({})
+        self.assertFalse(dashboard.installer.load_manifest(self.target)['files']['.codex/config.toml']['owned'])
+        plan = self.console.uninstall_preview({})
+        self.assertIn('KEEP .codex/config.toml: pre-existing file was not owned', plan['actions'])
+        self.console.uninstall_confirm({'preview_id': plan['preview_id'], 'target': str(self.console.target), 'confirmed': True})
+        self.assertEqual(dashboard.tomllib.loads(config.read_text())['unrelated']['value'], 42)
+        self.assertFalse(self.console.settings()['installed'])
+
     def test_preview_save_restore_preserves_other_config_and_files(self):
         config = self.target/'.codex/config.toml'
         config.parent.mkdir()

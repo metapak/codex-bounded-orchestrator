@@ -71,4 +71,8 @@ for python in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3.13 python
     fi
 done
 
+if [ "$BO_LANG" = tr ]; then
+    /usr/bin/osascript -e 'display alert "Python 3.11 veya yenisi gerekli" message "Python 3.11 veya yenisini kurup Ustam’ı yeniden açın." as warning'
+    exit 1
+fi
 /usr/bin/osascript -e 'display alert "Python 3.11 or newer is needed" message "Install Python 3.11 or newer, then open Ustam again." as warning'
