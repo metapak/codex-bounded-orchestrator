@@ -94,11 +94,11 @@ All notable changes to the public project are documented here. This repository b
 
 - Preserved Apache-2.0 licensing and attribution to [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator) in [LICENSE](LICENSE), [NOTICE](NOTICE), and the [design comparison](docs/from-astra-luna-orchestrator.md).
 
-[0.2.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.2.0
-[0.3.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.3.0
-[0.4.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.4.0
-[0.4.1]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.4.1
-[0.5.0]: https://github.com/metapak/codex-bounded-orchestrator/releases/tag/v0.5.0
+[0.2.0]: https://github.com/metapak/ustam-codex-orchestrator/releases/tag/v0.2.0
+[0.3.0]: https://github.com/metapak/ustam-codex-orchestrator/releases/tag/v0.3.0
+[0.4.0]: https://github.com/metapak/ustam-codex-orchestrator/releases/tag/v0.4.0
+[0.4.1]: https://github.com/metapak/ustam-codex-orchestrator/releases/tag/v0.4.1
+[0.5.0]: https://github.com/metapak/ustam-codex-orchestrator/releases/tag/v0.5.0
 
 ### Publication validation repair / Yayın doğrulama düzeltmesi
 

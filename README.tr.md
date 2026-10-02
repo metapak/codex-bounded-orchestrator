@@ -22,7 +22,7 @@ Ekibi kurun, değişiklikleri kontrol edin ve geçmiş kullanımı görün. Şef
 
 Önce Codex, [Git](https://git-scm.com/downloads) ve [Python 3.11 veya yenisi](https://www.python.org/downloads/) kurulu olsun. Python bu indirmeye **dahil değildir**.
 
-1. **İndirin:** [Güncel ZIP dosyasını alın](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) ve açılan klasöre girin.
+1. **İndirin:** [Güncel ZIP dosyasını alın](https://github.com/metapak/ustam-codex-orchestrator/archive/refs/heads/main.zip) ve açılan klasöre girin.
 2. **Açın:** Mac'te `launchers` klasöründeki **Ustam.app** dosyasına çift tıklayın. Windows'ta aynı klasördeki **Launch Ustam.vbs** dosyasına çift tıklayın. Linux'ta aşağıdaki kısa komutu kullanın.
 3. **Proje seçin:** Mac veya Windows'ta Codex kullandığınız Git proje klasörünü seçin. Linux'ta bu klasörü komutta belirtirsiniz.
 4. **Kurun:** Tarayıcıda önerilen ekibi bırakabilir veya değiştirebilirsiniz. **Değişiklikleri kontrol et**, ardından **Kur** düğmesine basın. Codex'i bu projede yeniden başlatın.
@@ -52,9 +52,9 @@ Sahnede şefi veya bir yardımcıyı seçip modelini ve inceleme düzeyini belir
 
 ## Ustam’ı 40 saniyede tanıyın
 
-[![Ustam Türkçe tanıtımını izleyin](docs/assets/ustam-poster-tr.png)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-tr-40s.mp4)
+[![Ustam Türkçe tanıtımını izleyin](docs/assets/ustam-poster-tr.png)](https://raw.githubusercontent.com/metapak/ustam-codex-orchestrator/main/docs/assets/ustam-promo-tr-40s.mp4)
 
-[Türkçe videoyu oynatın veya indirin (MP4)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-tr-40s.mp4). Türkçe başlıklar ve müzikle Ustam’ın 40 saniyelik tanıtımı. Konsol ve kullanım rakamları örnek veridir. GitHub satır içinde oynatıcı göstermezse orijinal videoyu açmak için postere veya MP4 bağlantısına tıklayın.
+[Türkçe videoyu oynatın veya indirin (MP4)](https://raw.githubusercontent.com/metapak/ustam-codex-orchestrator/main/docs/assets/ustam-promo-tr-40s.mp4). Türkçe başlıklar ve müzikle Ustam’ın 40 saniyelik tanıtımı. Konsol ve kullanım rakamları örnek veridir. GitHub satır içinde oynatıcı göstermezse orijinal videoyu açmak için postere veya MP4 bağlantısına tıklayın.
 
 ![Orkestra sahnesini ve gözlenen yardımcı dağılımını gösteren örnek Ustam Kullanım sayfası](docs/assets/console-tr.png)
 
@@ -66,8 +66,8 @@ Sahnede şefi veya bir yardımcıyı seçip modelini ve inceleme düzeyini belir
 Komut satırı kurucusu otomasyon için kullanılabilir; yardımcıları tek tek oluşturma ekranı tarayıcı konsolundadır.
 
 ```bash
-git clone https://github.com/metapak/codex-bounded-orchestrator.git
-cd codex-bounded-orchestrator
+git clone https://github.com/metapak/ustam-codex-orchestrator.git
+cd ustam-codex-orchestrator
 python3 scripts/install.py /projenin/tam/yolu --preset balanced --dry-run
 python3 scripts/install.py /projenin/tam/yolu --preset balanced
 ```

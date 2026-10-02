@@ -6,15 +6,15 @@ Thanks for helping make bounded multi-agent work more useful and easier to inspe
 
 For a small fix, open a focused pull request. For a material change to routing, authority, installer behavior, role permissions, or review budgets, open an issue first so the safety and compatibility effects can be discussed before implementation.
 
-Security vulnerabilities belong in a [private report](https://github.com/metapak/codex-bounded-orchestrator/security/advisories/new), not a public issue. See [SECURITY.md](SECURITY.md).
+Security vulnerabilities belong in a [private report](https://github.com/metapak/ustam-codex-orchestrator/security/advisories/new), not a public issue. See [SECURITY.md](SECURITY.md).
 
 ## Development setup
 
 The runtime tools use Python's standard library and require Python 3.11 or newer.
 
 ```bash
-git clone https://github.com/metapak/codex-bounded-orchestrator.git
-cd codex-bounded-orchestrator
+git clone https://github.com/metapak/ustam-codex-orchestrator.git
+cd ustam-codex-orchestrator
 python3 scripts/validate.py
 python3 -m unittest discover -s tests -v
 ```

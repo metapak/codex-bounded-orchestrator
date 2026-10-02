@@ -11,7 +11,7 @@ Security fixes are applied to the current release line.
 
 ## Report a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/metapak/codex-bounded-orchestrator/security/advisories/new). Include the affected version, platform, reproduction steps, impact, and any suggested mitigation. Please do not publish exploit details in a public issue before a fix is available.
+Use [GitHub private vulnerability reporting](https://github.com/metapak/ustam-codex-orchestrator/security/advisories/new). Include the affected version, platform, reproduction steps, impact, and any suggested mitigation. Please do not publish exploit details in a public issue before a fix is available.
 
 Do not include live credentials, tokens, private keys, personal data, production data, or secrets in the report. Replace sensitive values with safe examples.
 

@@ -5,9 +5,9 @@
 
 Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed. Python is not included.
 
-1. **Download:** [Get the current ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
+1. **Download:** [Get the current ZIP](https://github.com/metapak/ustam-codex-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
 2. **Open:** Open `launchers` and double-click **Ustam.app**.
-3. **Follow the two folder steps:** If macOS asks for the setup package, read the first dialog and choose the outer folder extracted from the ZIP whose name starts with `codex-bounded-orchestrator`. It contains `launchers` and `scripts`; the picker opens in Downloads. Choose **Try again** if you select a different folder. The second dialog asks for the Git project where you work with Codex; setup will save settings there. Each picker has a short prompt in your system language.
+3. **Follow the two folder steps:** If macOS asks for the setup package, read the first dialog and choose the outer folder extracted from the ZIP whose name starts with `ustam-codex-orchestrator`. It contains `launchers` and `scripts`; the picker opens in Downloads. Choose **Try again** if you select a different folder. The second dialog asks for the Git project where you work with Codex; setup will save settings there. Each picker has a short prompt in your system language.
 4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
 
 For later changes, reopen the app and click **Save**; no uninstall is needed. An already-open Codex session may need to be reopened before it uses the changes. If macOS blocks the unsigned app, Control-click it and choose **Open**. Keep the app inside the extracted folder: it needs the neighboring `launch_dashboard.py` and `scripts` files. If no folder picker appears, check whether macOS is still showing a security prompt for the app. If the browser cannot open, the launcher shows an alert with the local address to open manually. See the [local console guide](docs/local-console.md) for more help.

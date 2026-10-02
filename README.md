@@ -22,7 +22,7 @@ Set up the team, check the changes, and see locally recorded past usage. The set
 
 Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed first. Python is **not included** in this download.
 
-1. **Download:** [Get the current ZIP](https://github.com/metapak/codex-bounded-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
+1. **Download:** [Get the current ZIP](https://github.com/metapak/ustam-codex-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
 2. **Open:** On Mac, open `launchers` and double-click **Ustam.app**. On Windows, double-click **Launch Ustam.vbs** in the same folder. On Linux, use the short command below.
 3. **Choose a project:** On Mac or Windows, pick the Git project folder where you use Codex. On Linux, the command includes that folder instead.
 4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
@@ -52,9 +52,9 @@ Choose a chief or helper on the stage to set their model and reasoning. Each hel
 
 ## Watch Ustam in 40 seconds
 
-[![Watch the English Ustam introduction](docs/assets/ustam-poster-en.png)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-en-40s.mp4)
+[![Watch the English Ustam introduction](docs/assets/ustam-poster-en.png)](https://raw.githubusercontent.com/metapak/ustam-codex-orchestrator/main/docs/assets/ustam-promo-en-40s.mp4)
 
-[Play or download the English video (MP4)](https://raw.githubusercontent.com/metapak/codex-bounded-orchestrator/main/docs/assets/ustam-promo-en-40s.mp4). A 40-second introduction to Ustam, with English titles and music. The console and usage figures are illustrative sample data. If GitHub does not show an inline player, select the poster or MP4 link to open the original video.
+[Play or download the English video (MP4)](https://raw.githubusercontent.com/metapak/ustam-codex-orchestrator/main/docs/assets/ustam-promo-en-40s.mp4). A 40-second introduction to Ustam, with English titles and music. The console and usage figures are illustrative sample data. If GitHub does not show an inline player, select the poster or MP4 link to open the original video.
 
 ![Sample Ustam Usage page with an orchestra stage and observed helper breakdown](docs/assets/console-en.png)
 
@@ -66,8 +66,8 @@ Choose a chief or helper on the stage to set their model and reasoning. Each hel
 The terminal installer remains available for automation, but the per-helper team builder is in the browser console.
 
 ```bash
-git clone https://github.com/metapak/codex-bounded-orchestrator.git
-cd codex-bounded-orchestrator
+git clone https://github.com/metapak/ustam-codex-orchestrator.git
+cd ustam-codex-orchestrator
 python3 scripts/install.py /absolute/path/to/your-project --preset balanced --dry-run
 python3 scripts/install.py /absolute/path/to/your-project --preset balanced
 ```
