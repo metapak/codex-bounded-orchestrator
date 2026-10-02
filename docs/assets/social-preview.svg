@@ -97,14 +97,16 @@
   </ns0:defs>
   
 <rect width="1280" height="640" fill="#201619"/>
+<!-- Essential artwork stays inside the centered 16:9 crop (x=71..1209). -->
 <g font-family="Arial,Helvetica,sans-serif">
-<text x="64" y="92" font-size="20" fill="#E5BE7A" font-weight="700" letter-spacing="3">CODEX EDITION</text>
-<text x="58" y="213" font-size="104" fill="#FFF1D9" font-weight="700">Ustam</text>
-<path d="M64 251h82" stroke="#E5BE7A" stroke-width="3"/>
-<text x="64" y="324" font-size="38" fill="#FFF1D9" font-weight="700">Your project.</text>
-<text x="64" y="375" font-size="38" fill="#FFF1D9" font-weight="700">Your orchestra.</text>
-<text x="64" y="448" font-size="21" fill="#D7BDAB">One conductor.</text>
-<text x="64" y="480" font-size="21" fill="#D7BDAB">A team of specialists.</text>
+<text x="104" y="137" font-size="26" fill="#E5BE7A" font-weight="700" letter-spacing="2">CODEX EDITION</text>
+<text x="98" y="259" font-size="112" fill="#FFF1D9" font-weight="700">Ustam</text>
+<path d="M104 292h82" stroke="#E5BE7A" stroke-width="3"/>
+<text x="104" y="358" font-size="36" fill="#FFF1D9" font-weight="700">Your project.</text>
+<text x="104" y="408" font-size="36" fill="#FFF1D9" font-weight="700">Your orchestra.</text>
+<text x="104" y="473" font-size="24" fill="#D7BDAB">One conductor.</text>
+<text x="104" y="510" font-size="24" fill="#D7BDAB">A team of specialists.</text>
+<g transform="translate(54 26) scale(.92)">
 <rect x="526" y="86" width="690" height="439" rx="24" fill="#302024" stroke="#A87550"/>
 <ellipse cx="875" cy="324" rx="320" ry="200" fill="url(#light)"/>
 <path d="M540 100h662v66q-66 40-132 0-66 40-132 0-66 40-132 0-66 40-132 0-66 40-132 0Z" fill="url(#curtain)"/>
@@ -115,7 +117,5 @@
 <use xlink:href="#musician-implementer" x="880" y="263" width="98" height="155"/>
 <use xlink:href="#musician-verifier" x="984" y="287" width="98" height="155"/>
 <use xlink:href="#musician-reviewer" x="1088" y="263" width="98" height="155"/>
-<text x="656" y="492" font-size="13" fill="#E5BE7A" font-weight="700" text-anchor="middle">CONDUCTOR</text>
-<text x="977" y="492" font-size="13" fill="#E5BE7A" font-weight="700" text-anchor="middle">SPECIALISTS</text>
-<text x="1216" y="583" font-size="17" fill="#AC8B75" text-anchor="end">metapak/ustam-codex-orchestrator</text>
+</g>
 </g></svg>
