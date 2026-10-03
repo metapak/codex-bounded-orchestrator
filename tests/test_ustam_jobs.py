@@ -166,10 +166,37 @@ print(job['id'],flush=True);manager.close()
 
 
 class RuntimeTests(JobsTests):
+    def setUp(self):
+        super().setUp()
+        self.windows_fixture = None
+        self.fixture_popen = None
+        if os.name == 'nt':
+            # Windows cannot execute Unix shebang fixtures. Use an actual native
+            # Python executable and add the private fixture script only in this
+            # test harness, leaving production resolver rules and argv intact.
+            native_popen = subprocess.Popen
+            def fixture_popen(args, *positional, **kwargs):
+                values = list(args)
+                if (self.windows_fixture is not None and len(values) > 1 and
+                    Path(values[0]).resolve() == Path(sys.executable).resolve() and
+                    values[1] in ('exec', 'run', 'serve', '-p')):
+                    values.insert(1, str(self.windows_fixture))
+                return native_popen(values, *positional, **kwargs)
+            self.fixture_popen = patch('ustam.runtime.subprocess.Popen', side_effect=fixture_popen)
+            self.fixture_popen.start()
+    def tearDown(self):
+        try:
+            super().tearDown()
+        finally:
+            if self.fixture_popen:
+                self.fixture_popen.stop()
     def fake(self, body):
-        path = self.root / 'fake-provider'
+        path = self.root / ('fake-provider.py' if os.name == 'nt' else 'fake-provider')
         path.write_text('#!' + sys.executable + '\n' + body)
         path.chmod(0o700)
+        if os.name == 'nt':
+            self.windows_fixture = path
+            return str(Path(sys.executable).resolve())
         return str(path)
     def runtime_job(self, body, **limits):
         job = self.manager.plan(self.payload())
@@ -246,7 +273,7 @@ class RuntimeTests(JobsTests):
             with self.assertRaisesRegex(RuntimeAttention, 'Install codex'):
                 runtime.prepare(job)
         cli = self.fake("print('--json --config --sandbox read-only --output-schema --model')\n")
-        with patch('ustam.runtime.shutil.which', return_value=cli):
+        with patch('ustam.runtime.resolve_cli', return_value=cli):
             runtime.prepare(job)
             runtime.prepare(job, resume=True)
         job['session_id'] = 'session-same'
@@ -287,7 +314,7 @@ else:
         runtime.commands[job['id']] = self.fake(body)
         events = []
         result = runtime.run(job, threading.Event(), events.append)
-        self.assertEqual(result['status'], 'completed')
+        self.assertEqual(result['status'], 'completed', result)
         self.assertEqual([e['role'] for e in events if e['type'] == 'phase'], ['explorer','chief','implementer','verifier','reviewer','chief'])
         self.assertNotIn('OPENCODE_PASSWORD', json.dumps(events))
         phase = dict(job, _role='implementer', _selection=job['plan']['execution_helpers'][1], _ownership=['owned.txt'])
@@ -374,6 +401,46 @@ else:
             self.assertEqual(result['status'],'needs_attention')
             self.assertIn('limitation',result['message'])
 
+    def test_normal_eof_before_process_exit_preserves_success_all_providers(self):
+        for provider in ('codex','claude','opencode'):
+            response={'status':'completed','summary':'clean final response'}
+            if provider=='codex':event={'type':'item.completed','item':{'type':'agent_message','text':json.dumps(response)}}
+            elif provider=='claude':event={'type':'result','structured_output':response}
+            else:event={'type':'text','part':{'text':json.dumps(response)}}
+            body='import os,time\nos.write(1,'+repr((json.dumps(event)+'\n').encode())+')\nos.close(1);os.close(2)\ntime.sleep(.2)\n'
+            runtime,job=self.runtime_job(body,max_seconds=2)
+            job['provider']=provider
+            if provider=='opencode':job.update(_role='chief',_selection={'model':'test/chief','effort':'high'},_ownership=[],_prompt='fixture')
+            with patch.object(runtime,'_opencode_server',return_value=(None,'http://127.0.0.1:12345')):
+                result=runtime._run_one(job,threading.Event(),lambda event:None)
+            self.assertEqual(result['status'],'completed',result)
+
+    def test_eof_shutdown_wait_respects_deadline_cancel_and_own_limit(self):
+        event={'type':'item.completed','item':{'type':'agent_message','text':json.dumps({'status':'completed','summary':'done'})}}
+        body='import os,time\nos.write(1,'+repr((json.dumps(event)+'\n').encode())+')\nos.close(1);os.close(2)\ntime.sleep(10)\n'
+        for seconds,cancel_after,status,phrase in ((.2,None,'needs_attention','Time limit'),(3,.1,'cancelled','Cancelled'),(3,None,'needs_attention','did not exit')):
+            runtime,job=self.runtime_job(body,max_seconds=seconds)
+            cancel=threading.Event()
+            timer=threading.Timer(cancel_after,cancel.set) if cancel_after else None
+            if timer:timer.start()
+            started=time.monotonic()
+            result=runtime.run(job,cancel,lambda event:None)
+            self.assertLess(time.monotonic()-started,2.8)
+            self.assertEqual(result['status'],status,result)
+            self.assertIn(phrase,result['message'])
+            if timer:timer.join()
+
+    def test_normal_eof_still_stops_owned_descendants(self):
+        if os.name=='nt':self.skipTest('POSIX process group assertion')
+        marker=self.root / 'normal-eof-descendant-wrote'
+        child='import time;from pathlib import Path;time.sleep(.7);Path('+repr(str(marker))+').write_text("bad")'
+        event={'type':'item.completed','item':{'type':'agent_message','text':json.dumps({'status':'completed','summary':'done'})}}
+        body='import subprocess,sys,os\nsubprocess.Popen([sys.executable,"-c",'+repr(child)+'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\nos.write(1,'+repr((json.dumps(event)+'\n').encode())+')\nos.close(1);os.close(2)\n'
+        runtime,job=self.runtime_job(body)
+        self.assertEqual(runtime.run(job,threading.Event(),lambda event:None)['status'],'completed')
+        time.sleep(.9)
+        self.assertFalse(marker.exists())
+
 
 class CLIResolverTests(unittest.TestCase):
     def setUp(self):
@@ -393,6 +460,7 @@ class CLIResolverTests(unittest.TestCase):
         path.write_text(source)
         path.chmod(0o700)
         return path
+    @unittest.skipIf(os.name == 'nt', 'POSIX launcher/shebang behavior; native Windows resolver tested separately')
     def test_minimal_desktop_path_resolves_known_installer_directory(self):
         path = self.executable(self.bin / 'claude')
         found = resolve_cli('claude', project=self.project, env={'PATH':'/usr/bin:/bin'})
@@ -402,6 +470,7 @@ class CLIResolverTests(unittest.TestCase):
         result = subprocess.run([found,'--version'],env=cli_environment(found,project=self.project,env={'PATH':'/usr/bin:/bin'}),capture_output=True,text=True)
         self.assertEqual(result.returncode,0)
         self.assertEqual(result.stdout.strip(),'fake CLI')
+    @unittest.skipIf(os.name == 'nt', 'POSIX launcher/shebang behavior; native Windows resolver tested separately')
     def test_project_and_current_directory_traps_are_never_selected(self):
         trap = self.executable(self.project / 'claude')
         trusted = self.executable(self.bin / 'claude')
@@ -430,6 +499,7 @@ class CLIResolverTests(unittest.TestCase):
             self.assertEqual(resolve_cli('codex',project=self.project,env={'PATH':str(self.bin)},platform='nt'),str(native.resolve()))
         with self.assertRaises(RuntimeAttention):
             cli_environment(batch,project=self.project,env={},platform='nt')
+    @unittest.skipIf(os.name == 'nt', 'POSIX launcher/shebang behavior; native Windows resolver tested separately')
     def test_unix_env_node_wrapper_receives_interpreter_path(self):
         interpreter_bin=self.root / 'node-bin';interpreter_bin.mkdir()
         self.executable(interpreter_bin / 'node','#!/bin/sh\nprintf "node interpreter available\\n"\n')

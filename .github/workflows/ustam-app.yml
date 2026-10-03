@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['ustam/**', 'launchers/**', 'scripts/build_ustam*', 'tests/test_ustam*', '.github/workflows/ustam-app.yml']
+    paths: ['.gitattributes', 'ustam/**', 'launchers/**', 'scripts/build_ustam*', 'tests/test_ustam*', '.github/workflows/ustam-app.yml']
   pull_request:
-    paths: ['ustam/**', 'launchers/**', 'scripts/build_ustam*', 'tests/test_ustam*', '.github/workflows/ustam-app.yml']
+    paths: ['.gitattributes', 'ustam/**', 'launchers/**', 'scripts/build_ustam*', 'tests/test_ustam*', '.github/workflows/ustam-app.yml']
 permissions:
   contents: read
 jobs:
@@ -36,9 +36,9 @@ jobs:
           package = next(p for p in pathlib.Path('dist').glob('ustam-*-*') if p.is_dir())
           worker = next(p for p in package.rglob('UstamWorker*') if p.is_file() and p.name in ('UstamWorker', 'UstamWorker.exe'))
           os.environ['USTAM_FROZEN_WORKER'] = str(worker.resolve())
-          launcher = next(p for p in package.rglob('Ustam') if p.is_file()) if os.name != 'nt' else None
-          if launcher:
-              os.environ['USTAM_NATIVE_LAUNCHER'] = str(launcher.resolve())
+          launcher_name = 'Ustam.exe' if os.name == 'nt' else 'Ustam'
+          launcher = next(p for p in package.rglob(launcher_name) if p.is_file())
+          os.environ['USTAM_NATIVE_LAUNCHER'] = str(launcher.resolve())
           result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.discover('tests', pattern='test_ustam_packaging.py'))
           raise SystemExit(not result.wasSuccessful())
           PY

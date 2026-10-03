@@ -82,7 +82,7 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual([call.args[0] for call in load.call_args_list], ['install', 'dashboard'])
 
     def test_adapter_inherits_trusted_cli_environment(self):
-        cli = Path(self.temporary.name).resolve() / 'trusted-bin/codex'
+        cli = Path(self.temporary.name).resolve() / 'trusted-bin' / ('codex.exe' if os.name == 'nt' else 'codex')
         cli.parent.mkdir()
         cli.write_text('#!/bin/sh\nexit 0\n')
         cli.chmod(0o700)

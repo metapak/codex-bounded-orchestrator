@@ -573,7 +573,7 @@ class Runtime:
             reader = threading.Thread(target=read, daemon=True)
             reader.start()
             started, count, buffer, final, response_text = run_started, 0, b'', None, ''
-            reason, attention_message = None, None
+            reason, attention_message, reached_eof = None, None, False
             try:
                 while True:
                     if cancel.is_set():
@@ -587,6 +587,7 @@ class Runtime:
                     except queue.Empty:
                         continue
                     if chunk is None:
+                        reached_eof = True
                         break
                     count += len(chunk)
                     if count > self.max_output:
@@ -660,12 +661,28 @@ class Runtime:
                         break
             finally:
                 reader_stop.set()
+                if reached_eof and reason is None:
+                    # EOF may precede process exit. Preserve the provider's natural
+                    # exit code while keeping shutdown, cancellation and job time bounded.
+                    exit_deadline = min(started + self.max_seconds, time.monotonic() + 2)
+                    while process.poll() is None:
+                        if cancel.is_set():
+                            reason = 'cancelled'
+                            break
+                        remaining = exit_deadline - time.monotonic()
+                        if remaining <= 0:
+                            reason = 'deadline' if time.monotonic() >= started + self.max_seconds else 'shutdown_limit'
+                            break
+                        try:
+                            process.wait(timeout=min(.1, remaining))
+                        except subprocess.TimeoutExpired:
+                            pass
                 self._stop(process)
                 process.stdout.close()
                 reader.join(timeout=1)
             if reason:
                 return {'status': 'cancelled' if reason == 'cancelled' else 'needs_attention',
-                        'message': {'cancelled': 'Cancelled; existing file changes are retained.', 'deadline': 'Time limit reached. Inspect project changes before resuming.', 'output_limit': 'Output limit reached. Inspect project changes before resuming.', 'provider_attention': attention_message}[reason]}
+                        'message': {'cancelled': 'Cancelled; existing file changes are retained.', 'deadline': 'Time limit reached. Inspect project changes before resuming.', 'output_limit': 'Output limit reached. Inspect project changes before resuming.', 'provider_attention': attention_message, 'shutdown_limit': 'Provider did not exit after closing its output. Execution stopped; inspect retained project changes.'}[reason]}
             if job['provider'] == 'opencode' and process.returncode == 0 and final != 'needs_attention':
                 try:
                     response = json.loads(response_text)

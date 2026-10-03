@@ -184,7 +184,7 @@ class PackagingTests(unittest.TestCase):
                 process.terminate()
                 process.communicate(timeout=10)
 
-    @unittest.skipUnless(os.environ.get('USTAM_NATIVE_LAUNCHER') and os.name != 'nt', 'Set USTAM_NATIVE_LAUNCHER for POSIX native launch smoke')
+    @unittest.skipUnless(os.environ.get('USTAM_NATIVE_LAUNCHER'), 'Set USTAM_NATIVE_LAUNCHER for native launch smoke')
     def test_native_app_launches_hub_without_picker(self):
         with tempfile.TemporaryDirectory() as directory:
             with socket.socket() as sock:
@@ -192,7 +192,7 @@ class PackagingTests(unittest.TestCase):
                 port = sock.getsockname()[1]
             env = {**os.environ, 'PATH': '', 'HOME': directory, 'PYTHONHOME':'', 'PYTHONPATH':''}
             process = subprocess.Popen([os.environ['USTAM_NATIVE_LAUNCHER'], '--no-browser', '--port', str(port), '--state-dir', str(Path(directory)/'state')],
-                                       start_new_session=True, env=env, cwd='/', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                       start_new_session=os.name != 'nt', env=env, cwd='/' if os.name != 'nt' else directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
                 deadline = time.monotonic()+20
                 while time.monotonic() < deadline:
@@ -208,7 +208,11 @@ class PackagingTests(unittest.TestCase):
                 else:
                     self.fail('Native launcher never opened hub')
             finally:
-                os.killpg(process.pid, signal.SIGTERM)
+                if os.name == 'nt':
+                    taskkill = Path(os.environ.get('SystemRoot', 'C:/Windows'))/'System32/taskkill.exe'
+                    subprocess.run([str(taskkill), '/PID', str(process.pid), '/T', '/F'], capture_output=True, timeout=10, check=False)
+                else:
+                    os.killpg(process.pid, signal.SIGTERM)
                 process.communicate(timeout=10)
 
 if __name__ == '__main__':
