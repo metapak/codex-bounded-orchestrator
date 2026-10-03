@@ -6,12 +6,12 @@
 
 # Ustam
 
-Ustam’ın Codex sürümü.
+Codex, Claude Code ve OpenCode için tek yerel merkez.
 
 [![Lisans: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**Codex projenizin şefini ve uzman ekibini yerel tarayıcı sayfasından seçin.**
+**Uygulamaları, projeleri, şefi ve uzman ekiplerini tek yerel tarayıcı sayfasından seçin.**
 
 Ekibi kurun, değişiklikleri kontrol edin ve geçmiş kullanımı görün. Şef sizinle konuşur ve işleri dağıtır; verilen işleri uzmanlar yapar. Bu görev ayrımı bir talimat kuralıdır, şefin araçlarını teknik olarak kilitlemez.
 
@@ -20,29 +20,14 @@ Ekibi kurun, değişiklikleri kontrol edin ve geçmiş kullanımı görün. Şef
 
 ## Dört adımda kurulum
 
-Önce Codex, [Git](https://git-scm.com/downloads) ve [Python 3.11 veya yenisi](https://www.python.org/downloads/) kurulu olsun. Python bu indirmeye **dahil değildir**.
+1. **Ustam’ı indirin:** [1.0.0-beta.1 sürümünde](https://github.com/metapak/ustam-codex-orchestrator/releases/tag/ustam-v1.0.0-beta.1) işletim sisteminiz ve işlemciniz için yerel uygulama ZIP’ini seçin ve tamamını çıkarın: [Mac Apple silicon](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-macos-arm64.zip) · [Mac Intel](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-macos-x86_64.zip) · [Windows](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-windows-x86_64.zip) · [Linux](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-linux-x86_64.zip).
+2. **Açın:** Mac’te **Ustam.app**, Windows’ta **Ustam.exe**, Linux’ta **Ustam** dosyasını açın. Yerel paket Python içerir. Mac uygulaması tek başına taşınabilir; Windows/Linux’ta çıkarılan dosyaları birlikte tutun.
+3. **Uygulamaları seçin:** Codex, Claude Code ve OpenCode arasından kullandıklarınızı seçin. Seçtiğiniz komut satırı araçları kurulu ve giriş yapılmış olmalıdır.
+4. **Projeleri ekleyin:** Yerel tarayıcı sayfasında proje klasörlerini ekleyin; değişiklikleri kontrol edip uygulayın.
 
-1. **İndirin:** [Güncel ZIP dosyasını alın](https://github.com/metapak/ustam-codex-orchestrator/archive/refs/heads/main.zip) ve açılan klasöre girin.
-2. **Açın:** Mac'te `launchers` klasöründeki **Ustam.app** dosyasına çift tıklayın. Windows'ta aynı klasördeki **Launch Ustam.vbs** dosyasına çift tıklayın. Linux'ta aşağıdaki kısa komutu kullanın.
-3. **Proje seçin:** Mac veya Windows'ta Codex kullandığınız Git proje klasörünü seçin. Linux'ta bu klasörü komutta belirtirsiniz.
-4. **Kurun:** Tarayıcıda önerilen ekibi bırakabilir veya değiştirebilirsiniz. **Değişiklikleri kontrol et**, ardından **Kur** düğmesine basın. Codex'i bu projede yeniden başlatın.
+Yerel paket imzasızdır; Mac Gatekeeper indirmeyi engelleyebilir. Ayrıntılar ve ileri düzey kaynak/CLI kullanımı: [Ustam yerel merkezi](docs/ustam-hub.tr.md). Kaynak ZIP’ini çalıştırmak ayrıca Python 3.11+ gerektirir. Sağlayıcıların hesap ve model erişimini Ustam sağlamaz.
 
-Tarayıcının üstünde **Seçilen proje** yolunu kontrol edin. Önerilen ekibi kullanmak için **Bu ekiple devam et · değişiklikleri kontrol et**, ardından **Kur** seçin. Ekibi değiştirmek isteğe bağlıdır. Haricî API modelleri **İsteğe bağlı danışmanlar** altında bulunur. İşlem sürerken ayar düğmeleri kapanır; tamamlanınca görünür bir sonuç gösterilir.
-
-<details>
-<summary>Linux: aynı kurulum ekranını açın</summary>
-
-Bu pakette Linux için çift tıklamalı başlatıcı veya klasör seçici yoktur. Açtığınız klasörde terminal açın ve Git projenizin yoluyla şu komutu çalıştırın:
-
-```bash
-python3 scripts/dashboard.py /projenizin/tam/yolu
-```
-
-</details>
-
-Ekibi daha sonra değiştirmek için başlatıcıyı yeniden açıp (Linux'ta komutu yineleyip) **Kaydet** düğmesini kullanın. Ayarlar projeye hemen yazılır; silip yeniden kurmanız gerekmez. Açık Codex oturumunun yeni ayarları kullanması için oturumu yeniden açmanız gerekebilir. Kurulum açılmazsa [Mac](INSTALL-MACOS.md) veya [Windows](INSTALL-WINDOWS.md) rehberine bakın. Codex istemciniz proje ayarlarını ve özel ajanları desteklemeli, seçtiğiniz modellere hesabınızdan erişilebilmelidir.
-
-## Orkestranızı kurun
+## İleri düzey Codex konsolu uyumluluğu
 
 ![Görev ve model seçimini, ardından geçmiş kullanım okumayı anlatan resimli rehber](docs/assets/team-guide-tr.svg)
 

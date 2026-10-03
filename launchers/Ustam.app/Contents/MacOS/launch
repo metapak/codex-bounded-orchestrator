@@ -2,6 +2,17 @@
 
 launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
 launcher="$launcher_dir/launchers/launch_dashboard.py"
+# Unified source hub takes precedence only when actually bundled.
+# Older source distributions retain their project-specific compatibility path.
+if [ -f "$launcher_dir/ustam/__main__.py" ]; then
+    for python in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3; do
+        if command -v "$python" >/dev/null 2>&1 &&
+            "$python" -c 'import sys; sys.exit(sys.version_info < (3, 11))' >/dev/null 2>&1; then
+            cd "$launcher_dir" || exit 1
+            exec "$python" -m ustam
+        fi
+    done
+fi
 
 if [ -z "${BO_LANG:-}" ]; then
     preferred_language=$(defaults read -g AppleLanguages 2>/dev/null | awk -F '"' 'NF >= 2 { print $2; exit }')

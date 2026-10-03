@@ -6,12 +6,12 @@
 
 # Ustam
 
-The Codex edition of Ustam.
+One local hub for Codex, Claude Code, and OpenCode.
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
 
-**Choose a chief and a specialist team for your Codex project in a local browser page.**
+**Choose apps, projects, a chief, and specialist teams in one local browser page.**
 
 Set up the team, check the changes, and see locally recorded past usage. The setup console runs on your computer. The chief coordinates and speaks with you; specialists do the assigned work. This division is an instruction rule, not a technical lock on the chief's tools.
 
@@ -20,29 +20,14 @@ Set up the team, check the changes, and see locally recorded past usage. The set
 
 ## Install in four steps
 
-Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed first. Python is **not included** in this download.
+1. **Download Ustam:** Choose the native application ZIP for your operating system and architecture from the [1.0.0-beta.1 release](https://github.com/metapak/ustam-codex-orchestrator/releases/tag/ustam-v1.0.0-beta.1) and extract it completely: [Mac Apple silicon](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-macos-arm64.zip) · [Mac Intel](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-macos-x86_64.zip) · [Windows](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-windows-x86_64.zip) · [Linux](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-linux-x86_64.zip).
+2. **Open:** Open **Ustam.app** on Mac, **Ustam.exe** on Windows, or **Ustam** on Linux. The native package includes Python. The Mac app can be moved on its own; keep the extracted Windows/Linux files together.
+3. **Select apps:** Choose the apps you use: Codex, Claude Code, and OpenCode. Install and sign in to each selected provider's command-line tool.
+4. **Add projects:** Add project folders in the local browser page, check the changes, then apply them.
 
-1. **Download:** [Get the current ZIP](https://github.com/metapak/ustam-codex-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
-2. **Open:** On Mac, open `launchers` and double-click **Ustam.app**. On Windows, double-click **Launch Ustam.vbs** in the same folder. On Linux, use the short command below.
-3. **Choose a project:** On Mac or Windows, pick the Git project folder where you use Codex. On Linux, the command includes that folder instead.
-4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
+Native builds are unsigned; Mac Gatekeeper may block the download. See [Ustam local hub](docs/ustam-hub.md) for details and advanced source/CLI use. Running the source ZIP requires Python 3.11+. Provider accounts and model access are separate requirements.
 
-Check the **Selected project** path near the top of the browser. To use the suggested team, select **Continue with this team · review changes**, then **Install**. Changing the team is optional. External API models are under **Optional advisers**. Settings controls pause while an operation runs, and a visible result appears when it finishes.
-
-<details>
-<summary>Linux: open the same setup page</summary>
-
-Linux has no double-click launcher or folder picker in this package. Open a terminal in the extracted folder, then run this with your Git project's path:
-
-```bash
-python3 scripts/dashboard.py /absolute/path/to/your-git-project
-```
-
-</details>
-
-To change the team later, open the launcher again (or repeat the Linux command) and use **Save**. It updates the project settings without uninstalling. You may need to reopen an active Codex session before it uses the changes. If setup does not open, see the [Mac](INSTALL-MACOS.md) or [Windows](INSTALL-WINDOWS.md) guide. Your Codex client must support project settings and custom agents, and your account must have access to the selected models.
-
-## Build your orchestra
+## Advanced Codex console compatibility
 
 ![Illustrated guide to choosing duties and models, then reading past usage](docs/assets/team-guide-en.svg)
 

@@ -13,3 +13,10 @@ Thumbs.db
 *.zip
 *.bundle
 .codex/bounded-orchestrator-backups/
+
+# Native packages, local hub state and build intermediates
+dist/
+build/
+*.spec
+.ustam/
+.ustam-state/
