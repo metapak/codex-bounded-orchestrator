@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -74,6 +75,14 @@ def archive_package(package, destination):
                 archive.write(path, relative)
 
 
+def verify_mac_archive(archive, package_name):
+    """Verify the shipped bytes after Apple's extraction, including symlinks."""
+    with tempfile.TemporaryDirectory(prefix='ustam-archive-check-') as directory:
+        subprocess.run(['/usr/bin/ditto', '-x', '-k', str(archive), directory], check=True)
+        subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict',
+                        str(Path(directory) / package_name / 'Ustam.app')], check=True)
+
+
 def build(output_dir, rebuild_engines=True):
     if sys.version_info < (3, 11):
         raise RuntimeError('Ustam native build requires Python 3.11 or newer')
@@ -122,8 +131,18 @@ def build(output_dir, rebuild_engines=True):
                 'signed': False, 'runtime': 'bundled', 'worker': worker.relative_to(package).as_posix(),
                 'engines': {key: value['commit'] for key, value in engines['engines'].items()}}
     (package / 'package-manifest.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    if system == 'macos':
+        # PyInstaller seals nested runtime code. Final plist/worker assembly
+        # changes the outer bundle, so seal it last without re-signing children.
+        # Ad-hoc sealing provides integrity, not Developer ID trust/notarization.
+        subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-',
+                        str(package / 'Ustam.app')], check=True)
+        subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict',
+                        str(package / 'Ustam.app')], check=True)
     archive = Path(str(package) + '.zip')
     archive_package(package, archive)
+    if system == 'macos':
+        verify_mac_archive(archive, package.name)
     metadata.update({'path': str(archive), 'sha256': hashlib.sha256(archive.read_bytes()).hexdigest()})
     (output_dir / (package.name + '.json')).write_text(json.dumps(metadata, indent=2) + '\n')
     return metadata

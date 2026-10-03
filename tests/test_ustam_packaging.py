@@ -34,6 +34,14 @@ syncer = load('ustam_syncer', 'scripts/sync_ustam_distribution.py')
 
 
 class PackagingTests(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get('USTAM_NATIVE_LAUNCHER') and sys.platform == 'darwin', 'Mac archive signature roundtrip')
+    def test_mac_archive_preserves_code_signature(self):
+        app = next(p for p in Path(os.environ['USTAM_NATIVE_LAUNCHER']).resolve().parents if p.suffix == '.app')
+        package = app.parent
+        archive = Path(str(package) + '.zip')
+        self.assertTrue(archive.is_file())
+        builder.verify_mac_archive(archive, package.name)
+
     def test_manifest_closure_hash_and_ui_assets(self):
         manifest = builder.verify_assets()
         self.assertEqual(set(manifest['engines']), {'codex', 'claude', 'opencode'})

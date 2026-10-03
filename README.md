@@ -20,12 +20,14 @@ Set up the team, check the changes, and see locally recorded past usage. The set
 
 ## Install in four steps
 
-1. **Download Ustam:** Choose the native application ZIP for your operating system and architecture from the [1.0.0-beta.1 release](https://github.com/metapak/ustam-codex-orchestrator/releases/tag/ustam-v1.0.0-beta.1) and extract it completely: [Mac Apple silicon](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-macos-arm64.zip) · [Mac Intel](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-macos-x86_64.zip) · [Windows](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-windows-x86_64.zip) · [Linux](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.1/ustam-1.0.0-beta.1-linux-x86_64.zip).
+1. **Download Ustam:** Choose the native application ZIP for your operating system and architecture from the [1.0.0-beta.2 release](https://github.com/metapak/ustam-codex-orchestrator/releases/tag/ustam-v1.0.0-beta.2) and extract it completely: [Mac Apple silicon](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.2/ustam-1.0.0-beta.2-macos-arm64.zip) · [Mac Intel](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.2/ustam-1.0.0-beta.2-macos-x86_64.zip) · [Windows](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.2/ustam-1.0.0-beta.2-windows-x86_64.zip) · [Linux](https://github.com/metapak/ustam-codex-orchestrator/releases/download/ustam-v1.0.0-beta.2/ustam-1.0.0-beta.2-linux-x86_64.zip).
 2. **Open:** Open **Ustam.app** on Mac, **Ustam.exe** on Windows, or **Ustam** on Linux. The native package includes Python. The Mac app can be moved on its own; keep the extracted Windows/Linux files together.
 3. **Select apps:** Choose the apps you use: Codex, Claude Code, and OpenCode. Install and sign in to each selected provider's command-line tool.
 4. **Add projects:** Add project folders in the local browser page, check the changes, then apply them.
 
 Native builds are unsigned; Mac Gatekeeper may block the download. See [Ustam local hub](docs/ustam-hub.md) for details and advanced source/CLI use. Running the source ZIP requires Python 3.11+. Provider accounts and model access are separate requirements.
+
+Mac beta.1 showed a “damaged” warning because of a packaging signature error. Replace only the app with beta.2; project and provider settings do not need reinstalling.
 
 ## Advanced Codex console compatibility
 
