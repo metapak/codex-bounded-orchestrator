@@ -279,13 +279,36 @@ class MacLauncherTests(unittest.TestCase):
             console.assert_called_once_with(entry, project.resolve())
 
     def test_opens_browser_after_server_reports_ready(self) -> None:
+        import time
         with tempfile.TemporaryDirectory() as directory:
             entry = Path(directory) / "server.py"
+            acknowledged = Path(directory) / "browser-opened"
             entry.write_text(
-                "import time\nprint('Ustam yerel konsol: http://127.0.0.1:43210', flush=True)\ntime.sleep(0.2)\n",
+                "import sys, time\nfrom pathlib import Path\n"
+                "ack = Path(sys.argv[1]) / 'browser-opened'\n"
+                "print('Ustam yerel konsol: http://127.0.0.1:43210', flush=True)\n"
+                "deadline = time.monotonic() + 10\n"
+                "while not ack.exists():\n"
+                "    if time.monotonic() >= deadline: raise SystemExit(7)\n"
+                "    time.sleep(0.01)\n",
                 encoding="utf-8",
             )
-            with patch.object(launcher.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as opened:
+            real_popen = launcher.subprocess.Popen
+
+            def delayed_start(*args, **kwargs):
+                process = real_popen(*args, **kwargs)
+                # Exercise a scheduler delay longer than the old 0.2s fixture.
+                time.sleep(0.35)
+                return process
+
+            def acknowledge_open(command, **kwargs):
+                self.assertEqual(command, ["/usr/bin/open", "http://127.0.0.1:43210"])
+                acknowledged.touch()
+                return subprocess.CompletedProcess(command, 0)
+
+            with patch.object(launcher.subprocess, "Popen", side_effect=delayed_start), patch.object(
+                launcher.subprocess, "run", side_effect=acknowledge_open
+            ) as opened:
                 self.assertEqual(launcher.run_mac_console(entry, Path(directory)), 0)
             self.assertEqual(opened.call_args.args[0], ["/usr/bin/open", "http://127.0.0.1:43210"])
 
