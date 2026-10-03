@@ -9,3 +9,6 @@
 *.yaml text eol=lf
 *.ps1 text eol=crlf
 *.cmd text eol=crlf
+
+# Immutable engine snapshots must retain their Git-object bytes on every OS.
+ustam/engines/** -text
