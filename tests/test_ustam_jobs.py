@@ -88,6 +88,55 @@ class JobsTests(unittest.TestCase):
         self.assertEqual(len(job['orchestra']['helpers']), 50)
         self.assertEqual(len(job['plan']['execution_helpers']), 4)
         self.assertIn('Other saved slots', job['plan']['helper_selection'])
+    def test_job_capabilities_match_bundled_roles_and_job_limits(self):
+        import ast
+        engine_root = Path(__file__).resolve().parents[1] / 'ustam' / 'engines'
+        for provider in ('codex', 'claude', 'opencode'):
+            with self.subTest(provider=provider):
+                source = ast.parse((engine_root / provider / 'scripts' / 'install.py').read_text())
+                name = 'ROLE_FILES' if provider == 'codex' else 'ROLES'
+                value = next(node.value for node in source.body if isinstance(node, ast.Assign)
+                             and any(isinstance(target, ast.Name) and target.id == name for target in node.targets))
+                roles = [ast.literal_eval(key) for key in value.keys] if provider == 'codex' else ast.literal_eval(value)
+                expected = {role.replace('_', '-') for role in roles if role != 'owner'}
+                capabilities = Runtime.job_capabilities(provider)
+                self.assertEqual(set(capabilities['supported_roles']), expected)
+                self.assertEqual(capabilities['max_helper_slots'], 50)
+                self.assertEqual(capabilities['helper_concurrency'], 1)
+                self.assertEqual(capabilities['duplicate_role_policy'], 'first')
+                self.assertEqual(capabilities['required_roles'], ['explorer', 'implementer', 'verifier', 'reviewer'])
+                execution = set(capabilities['required_roles']) if provider == 'opencode' else expected
+                self.assertEqual(set(capabilities['execution_roles']), execution)
+        with self.assertRaisesRegex(ValueError, 'Unsupported provider'):
+            Runtime.job_capabilities('copilot')
+
+    def test_opencode_plan_reports_only_actual_workers_and_preserves_saved_slots(self):
+        payload = self.payload('opencode')
+        duplicate = dict(payload['orchestra']['helpers'][1], model='unused-second-implementer')
+        payload['orchestra']['helpers'] = [dict(role='advisor', model='saved-advisor', effort='high'),
+                                          *payload['orchestra']['helpers'], duplicate]
+        job = self.manager.plan(payload)
+        self.assertEqual(job['orchestra']['helpers'], payload['orchestra']['helpers'])
+        self.assertEqual(job['plan']['configured_helper_count'], 6)
+        self.assertEqual(job['plan']['selected_helper_count'], 4)
+        self.assertEqual([helper['role'] for helper in job['plan']['execution_helpers']], list(Runtime.REQUIRED_ROLES))
+        implementer = next(helper for helper in job['plan']['execution_helpers'] if helper['role'] == 'implementer')
+        self.assertEqual(implementer['model'], 'implementer-model')
+        self.assertIn('optional roles are not invoked', job['plan']['helper_selection'])
+        self.assertEqual(job['plan']['job_capabilities'], Runtime.job_capabilities('opencode'))
+
+    def test_codex_nine_roles_and_fifty_slots_are_job_eligible(self):
+        payload = self.payload()
+        payload['orchestra']['helpers'] = [dict(role=role, model=role + '-model', effort='high') for role in Runtime.ROLES]
+        payload['orchestra']['helpers'] += [dict(payload['orchestra']['helpers'][3]) for _ in range(41)]
+        job = self.manager.plan(payload)
+        self.assertEqual(job['plan']['configured_helper_count'], 50)
+        self.assertEqual(job['plan']['selected_helper_count'], 9)
+        self.assertEqual(len(job['plan']['execution_helpers']), 9)
+        payload['orchestra']['helpers'].append(dict(payload['orchestra']['helpers'][3]))
+        with self.assertRaisesRegex(ValueError, 'at most 50'):
+            self.manager.plan(payload)
+
     def test_provider_no_alias_and_arbitrary_executable_not_retained(self):
         with self.assertRaisesRegex(ValueError, 'Unsupported provider'):
             self.manager.plan(self.payload('copilot'))

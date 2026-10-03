@@ -111,6 +111,8 @@ def cli_environment(executable, project=None, env=None, platform=None):
 
 
 class Runtime:
+    MAX_HELPER_SLOTS = 50
+    REQUIRED_ROLES = ('explorer', 'implementer', 'verifier', 'reviewer')
     ROLES = ('fast_lookup', 'explorer', 'researcher', 'implementer', 'verifier', 'reviewer', 'failure_analyst', 'qa_operator', 'advisor')
     CHIEF = ('You are the read-only chief. Never implement, edit files, run shell commands, or inspect files yourself. '
              'Only plan, delegate to fixed registered roles, read their compact summaries, and report. '
@@ -120,6 +122,19 @@ class Runtime:
              'Stop and report needs_attention for authentication, permissions, new approval, missing role, or scope expansion. '
              'Never commit, push, publish, deploy, change permissions or install dependencies. '
              'Final response must be JSON with status (completed or needs_attention) and a compact summary.')
+
+    @staticmethod
+    def job_capabilities(provider):
+        """Report Hub job limits, separately from saved native team settings."""
+        if provider not in ('codex', 'claude', 'opencode'):
+            raise ValueError('Unsupported provider')
+        supported = [role for role in Runtime.ROLES if provider != 'claude' or role != 'fast_lookup']
+        execution = Runtime.REQUIRED_ROLES if provider == 'opencode' else supported
+        return {'max_helper_slots': Runtime.MAX_HELPER_SLOTS,
+                'required_roles': [role.replace('_', '-') for role in Runtime.REQUIRED_ROLES],
+                'supported_roles': [role.replace('_', '-') for role in supported],
+                'execution_roles': [role.replace('_', '-') for role in execution],
+                'duplicate_role_policy': 'first', 'helper_concurrency': 1}
 
     def __init__(self, state_dir, max_seconds=900, max_output=1024 * 1024):
         self.directory = Path(state_dir)
@@ -150,7 +165,7 @@ class Runtime:
             for selection in [job['orchestra']['chief']] + job['plan']['execution_helpers']:
                 if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.:/-]+', selection['model']):
                     raise RuntimeAttention('OpenCode requires an explicit provider/model with effort selected separately.')
-            if not {'explorer', 'implementer', 'verifier', 'reviewer'} <= {h['role'] for h in job['plan']['execution_helpers']}:
+            if not set(self.REQUIRED_ROLES) <= {h['role'] for h in job['plan']['execution_helpers']}:
                 raise RuntimeAttention('Select explorer, implementer, verifier and reviewer helpers before starting.')
             self.commands[job['id']] = executable
             return
@@ -165,7 +180,7 @@ class Runtime:
             raise RuntimeAttention('Installed Codex lacks required read-only and structured-output capabilities; update its CLI.')
         helpers = job['plan']['execution_helpers']
         roles = {h['role'] for h in helpers}
-        if not {'explorer', 'implementer', 'verifier', 'reviewer'} <= roles:
+        if not set(self.REQUIRED_ROLES) <= roles:
             raise RuntimeAttention('Select explorer, implementer, verifier and reviewer helpers before starting.')
         if resume and provider == 'codex':
             # Resume must accept the same security overrides; never fall back to a bare session command.

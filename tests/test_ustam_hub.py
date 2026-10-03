@@ -254,6 +254,44 @@ print(json.dumps(store.read()),flush=True)
         finally:
             server.shutdown(); server.server_close(); thread.join()
 
+    def test_http_bootstrap_exposes_provider_job_limits_without_mutation(self):
+        before=self.hub.store.read()
+        server=UstamServer(('127.0.0.1',0),self.hub)
+        thread=threading.Thread(target=server.serve_forever,daemon=True); thread.start()
+        def bootstrap():
+            conn=http.client.HTTPConnection(*server.server_address,timeout=3)
+            conn.request('GET','/api/bootstrap')
+            response=conn.getresponse(); result=(response.status,json.loads(response.read())); conn.close(); return result
+        try:
+            status,result=bootstrap()
+            self.assertEqual(status,200)
+            self.assertFalse(result['capabilities']['jobs'])
+            self.assertEqual(result['providers'],['codex','claude','opencode'])
+            self.assertEqual(result['capabilities']['native_picker']['endpoint'],'/api/projects/pick')
+            for provider,concurrency in [('codex',10),('claude',20),('opencode',1)]:
+                capability=result['capabilities']['providers'][provider]
+                self.assertEqual(capability['max_concurrency'],concurrency)
+                jobs=capability['jobs']
+                self.assertEqual(jobs['max_helper_slots'],50)
+                self.assertEqual(jobs['required_roles'],['explorer','implementer','verifier','reviewer'])
+                self.assertEqual(jobs['duplicate_role_policy'],'first')
+                self.assertEqual(jobs['helper_concurrency'],1)
+                self.assertTrue(set(jobs['required_roles']).issubset(jobs['supported_roles']))
+                if provider=='opencode':
+                    self.assertEqual(jobs['execution_roles'],jobs['required_roles'])
+                else:
+                    self.assertEqual(jobs['execution_roles'],jobs['supported_roles'])
+            self.hub.jobs=object()
+            status,enabled=bootstrap()
+            self.assertEqual(status,200)
+            self.assertTrue(enabled['capabilities']['jobs'])
+            self.assertEqual(enabled['capabilities']['providers'],result['capabilities']['providers'])
+            self.assertEqual(self.hub.store.read(),before)
+            self.assertEqual(self.adapter.calls,[])
+            self.assertEqual(list(self.target.iterdir()),[])
+        finally:
+            server.shutdown(); server.server_close(); thread.join()
+
     def test_picker_cancel_selection_timeout_and_no_metadata_write(self):
         before = self.hub.bootstrap()
         with patch('ustam.core.pick_directory', return_value=None):

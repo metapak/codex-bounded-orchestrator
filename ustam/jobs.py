@@ -128,17 +128,21 @@ class JobManager:
                 raise ValueError('Provider and orchestra must match')
             # Retain selected role/model/effort fields, never arbitrary configuration.
             chief = self._selection(orchestra.get('chief', {}))
+            capabilities = Runtime.job_capabilities(provider)
             helpers = []
             for item in orchestra.get('helpers', []):
                 role = item.get('role', '').replace('-', '_')
-                if role not in Runtime.ROLES:
+                if role.replace('_', '-') not in capabilities['supported_roles']:
                     raise ValueError('Unsupported helper role')
                 helpers.append(dict(self._selection(item), role=role))
-            if len(helpers) > 50:
+            if len(helpers) > capabilities['max_helper_slots']:
                 raise ValueError('Select at most 50 helper slots')
             chosen = {}
             for helper in helpers:
                 chosen.setdefault(helper['role'], helper)
+            selected = list(chosen.values())
+            if provider == 'opencode':
+                selected = [chosen[role] for role in Runtime.REQUIRED_ROLES if role in chosen]
             identifier = uuid.uuid4().hex
             job = {'id': identifier, 'project_id': target['project_id'], 'path': path,
                    'provider': provider, 'task': task.strip(),
@@ -149,8 +153,10 @@ class JobManager:
                                       'One implementer executes the approved scope.',
                                       'Independent verifier checks the frozen candidate; reviewer reports findings.',
                                       'Stop after two failed attempts or when approval is required.'],
-                            'approval_required': True, 'execution_helpers': list(chosen.values()),
-                            'helper_selection': 'Execution uses the first selected slot per fixed role, sequentially. Other saved slots are not invoked.',
+                            'approval_required': True, 'execution_helpers': selected,
+                            'configured_helper_count': len(helpers), 'selected_helper_count': len(selected),
+                            'job_capabilities': capabilities,
+                            'helper_selection': 'The chief can select the first saved helper per role, one at a time. Other saved slots are not invoked; registered roles may remain unused.',
                             'limitations': ['Chief permissions and model effort must be supported by the installed CLI.',
                                             'Worker file ownership is an instruction; sandbox scope is the project.',
                                             'New approvals stop execution and require attention.']},
@@ -158,6 +164,8 @@ class JobManager:
             if provider == 'claude':
                 job['plan']['limitations'].append('Claude safe mode permits project file tools, but no shell; command tests require attention.')
             if provider == 'opencode':
+                job['plan']['helper_selection'] = ('Execution uses the first saved explorer, implementer, verifier and reviewer, one at a time. '
+                                                   'Other saved slots and optional roles are not invoked.')
                 job['plan']['steps'] = ['Controller runs read-only explorer, then chief returns a bounded JSON plan.',
                                         'Controller dispatches one worker at a time with exact file permissions.',
                                         'Freeze assigned candidate files; independent verifier and reviewer inspect them.',

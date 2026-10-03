@@ -6,6 +6,7 @@ import time
 import uuid
 from .storage import PROVIDERS, StateStore
 from .discovery import canonical, discover, project, pick_directory
+from .runtime import Runtime
 
 class Hub:
     def __init__(self, state_dir=None, adapters=None, jobs=None):
@@ -26,7 +27,7 @@ class Hub:
     def bootstrap(self):
         data = self.store.read()
         data['providers'] = list(PROVIDERS)
-        data['capabilities'] = {'native_picker': {'endpoint': '/api/projects/pick'}, 'jobs': self.jobs is not None, 'providers': {provider: {'max_concurrency': limit} for provider, limit in (('codex', 10), ('claude', 20), ('opencode', 1))}}
+        data['capabilities'] = {'native_picker': {'endpoint': '/api/projects/pick'}, 'jobs': self.jobs is not None, 'providers': {provider: {'max_concurrency': limit, 'jobs': Runtime.job_capabilities(provider)} for provider, limit in (('codex', 10), ('claude', 20), ('opencode', 1))}}
         return data
     def provider(self, value):
         if value not in PROVIDERS:
