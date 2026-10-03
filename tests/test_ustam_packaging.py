@@ -10,9 +10,13 @@ import urllib.request
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+
+if sys.version_info < (3, 11):
+    raise unittest.SkipTest('Ustam native build and source hub require Python 3.11+')
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]

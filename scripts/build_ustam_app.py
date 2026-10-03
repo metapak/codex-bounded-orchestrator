@@ -75,6 +75,8 @@ def archive_package(package, destination):
 
 
 def build(output_dir, rebuild_engines=True):
+    if sys.version_info < (3, 11):
+        raise RuntimeError('Ustam native build requires Python 3.11 or newer')
     if rebuild_engines:
         subprocess.run([sys.executable, str(ROOT / 'scripts/build_ustam_engines.py')], check=True)
     engines = verify_assets()

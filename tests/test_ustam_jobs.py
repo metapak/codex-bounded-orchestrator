@@ -9,6 +9,9 @@ import time
 import unittest
 from unittest.mock import patch
 
+if sys.version_info < (3, 11):
+    raise unittest.SkipTest("Ustam hub requires Python 3.11 or newer")
+
 from ustam.jobs import JobManager
 from ustam.runtime import Runtime, RuntimeAttention, resolve_cli, cli_environment
 
@@ -284,8 +287,17 @@ class RuntimeTests(JobsTests):
 
     def test_opencode_sequential_http_attestation_and_stream(self):
         body = r'''import json,os,sys,threading
-from http.server import BaseHTTPRequestHandler,HTTPServer
 if sys.argv[1] == 'serve':
+ from http.server import BaseHTTPRequestHandler,HTTPServer
+ from socketserver import TCPServer
+ import socket
+ # A loopback fixture must not depend on runner reverse-DNS configuration.
+ def forbid_dns(*args):raise AssertionError('Unexpected DNS lookup in fake server')
+ socket.getfqdn=forbid_dns
+ class LoopbackServer(HTTPServer):
+  def server_bind(self):
+   TCPServer.server_bind(self)
+   self.server_name='localhost';self.server_port=self.server_address[1]
  config=json.loads(os.environ['OPENCODE_CONFIG_CONTENT'])
  agent=config['agents']['ustam-phase']
  provider,selector=agent['model'].split('/',1);model,variant=selector.split('#',1)
@@ -296,7 +308,7 @@ if sys.argv[1] == 'serve':
    assert self.headers['Authorization']=='Basic '+base64.b64encode(('opencode:'+os.environ['OPENCODE_PASSWORD']).encode()).decode()
    self.send_response(200);self.end_headers();self.wfile.write(json.dumps({'data':[loaded]}).encode())
   def log_message(self,*args):pass
- server=HTTPServer(('127.0.0.1',0),Handler)
+ server=LoopbackServer(('127.0.0.1',0),Handler)
  threading.Thread(target=server.serve_forever,daemon=True).start()
  print(json.dumps({'url':'http://127.0.0.1:'+str(server.server_port)}),flush=True)
  sys.stdin.read();server.shutdown()
@@ -314,7 +326,7 @@ else:
         runtime.commands[job['id']] = self.fake(body)
         events = []
         result = runtime.run(job, threading.Event(), events.append)
-        self.assertEqual(result['status'], 'completed', result)
+        self.assertEqual(result['status'], 'completed', (result, [e for e in events if e['type'] == 'phase']))
         self.assertEqual([e['role'] for e in events if e['type'] == 'phase'], ['explorer','chief','implementer','verifier','reviewer','chief'])
         self.assertNotIn('OPENCODE_PASSWORD', json.dumps(events))
         phase = dict(job, _role='implementer', _selection=job['plan']['execution_helpers'][1], _ownership=['owned.txt'])

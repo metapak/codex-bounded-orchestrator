@@ -1,12 +1,18 @@
+import sys
+import unittest
+
+if sys.version_info < (3, 11):
+    raise unittest.SkipTest(
+        "Ustam hub tests require the bundled Python 3.11+ runtime; legacy provider Python 3.10 CI remains supported"
+    )
+
 import http.client
 import json
 from pathlib import Path
 import tempfile
 import threading
-import unittest
 from unittest.mock import patch
 import subprocess
-import sys
 from types import SimpleNamespace
 from ustam.core import Hub
 from ustam.discovery import discover, pick_directory

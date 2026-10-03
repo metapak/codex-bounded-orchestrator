@@ -9,6 +9,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+if sys.version_info < (3, 11):
+    raise unittest.SkipTest('Ustam hub adapters require Python 3.11+; legacy backend tests remain supported on Python 3.10.')
+
 from ustam.adapters import AdapterError, AdapterManager
 from ustam.runtime import RuntimeAttention
 from ustam.adapter_worker import Engine, verify_engine
