@@ -20,3 +20,4 @@ build/
 *.spec
 .ustam/
 .ustam-state/
+.venv-build/

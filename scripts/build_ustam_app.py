@@ -75,12 +75,42 @@ def archive_package(package, destination):
                 archive.write(path, relative)
 
 
+def verify_mac_native_code(bundle):
+    """Check frameworks and every Mach-O, including code stored as resources."""
+    magic = {bytes.fromhex(value) for value in
+             ('feedface', 'cefaedfe', 'feedfacf', 'cffaedfe',
+              'cafebabe', 'bebafeca', 'cafebabf', 'bfbafeca')}
+    frameworks = {path.resolve() for path in bundle.rglob('*.framework') if path.is_dir()}
+    binaries = set()
+    for path in bundle.rglob('*'):
+        if path.is_file():
+            with path.open('rb') as stream:
+                if stream.read(4) in magic:
+                    binaries.add(path.resolve())
+    if not binaries:
+        raise ValueError('Mac bundle contains no native code')
+    for path in sorted(frameworks | binaries):
+        subprocess.run(['/usr/bin/codesign', '--verify', '--strict', str(path)], check=True)
+    subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(bundle)], check=True)
+    return {'frameworks': len(frameworks), 'binaries': len(binaries)}
+
+
+def seal_mac_bundle(bundle, worker):
+    # A console onedir collection can retain a Python framework's Mach-O
+    # signature while omitting its resource seal. Restore framework seals
+    # inside-out, then sign the outer app after all nested changes are complete.
+    frameworks = {path.resolve() for path in worker.rglob('*.framework') if path.is_dir()}
+    for framework in sorted(frameworks, key=lambda path: len(path.parts), reverse=True):
+        subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(framework)], check=True)
+    subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(bundle)], check=True)
+    return verify_mac_native_code(bundle)
+
+
 def verify_mac_archive(archive, package_name):
     """Verify the shipped bytes after Apple's extraction, including symlinks."""
     with tempfile.TemporaryDirectory(prefix='ustam-archive-check-') as directory:
         subprocess.run(['/usr/bin/ditto', '-x', '-k', str(archive), directory], check=True)
-        subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict',
-                        str(Path(directory) / package_name / 'Ustam.app')], check=True)
+        return verify_mac_native_code(Path(directory) / package_name / 'Ustam.app')
 
 
 def build(output_dir, rebuild_engines=True):
@@ -135,10 +165,7 @@ def build(output_dir, rebuild_engines=True):
         # PyInstaller seals nested runtime code. Final plist/worker assembly
         # changes the outer bundle, so seal it last without re-signing children.
         # Ad-hoc sealing provides integrity, not Developer ID trust/notarization.
-        subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-',
-                        str(package / 'Ustam.app')], check=True)
-        subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict',
-                        str(package / 'Ustam.app')], check=True)
+        seal_mac_bundle(package / 'Ustam.app', worker)
     archive = Path(str(package) + '.zip')
     archive_package(package, archive)
     if system == 'macos':

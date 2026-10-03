@@ -34,6 +34,28 @@ syncer = load('ustam_syncer', 'scripts/sync_ustam_distribution.py')
 
 
 class PackagingTests(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get('USTAM_NATIVE_LAUNCHER') and sys.platform == 'darwin', 'Mac nested framework resource seal regression')
+    def test_mac_worker_framework_requires_independent_resource_seal(self):
+        import shutil
+        app = next(p for p in Path(os.environ['USTAM_NATIVE_LAUNCHER']).resolve().parents if p.suffix == '.app')
+        with tempfile.TemporaryDirectory() as directory:
+            copied = Path(directory) / 'Ustam.app'
+            shutil.copytree(app, copied, symlinks=True)
+            worker = copied / 'Contents/Resources/worker'
+            frameworks = [p for p in worker.rglob('*.framework') if p.is_dir() and not p.is_symlink()]
+            self.assertTrue(frameworks, 'Fixture must include the bundled worker Python framework')
+            seals = list(frameworks[0].rglob('_CodeSignature'))
+            self.assertTrue(seals)
+            for seal in seals:
+                shutil.rmtree(seal)
+            # The old outer-only verification passes despite this nested defect.
+            subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(copied)], check=True, capture_output=True)
+            subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(copied)], check=True, capture_output=True)
+            with self.assertRaises(subprocess.CalledProcessError):
+                builder.verify_mac_native_code(copied)
+            counts = builder.seal_mac_bundle(copied, worker)
+            self.assertGreater(counts['binaries'], 0)
+
     @unittest.skipUnless(os.environ.get('USTAM_NATIVE_LAUNCHER') and sys.platform == 'darwin', 'Mac archive signature roundtrip')
     def test_mac_archive_preserves_code_signature(self):
         app = next(p for p in Path(os.environ['USTAM_NATIVE_LAUNCHER']).resolve().parents if p.suffix == '.app')
