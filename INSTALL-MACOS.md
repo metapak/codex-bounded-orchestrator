@@ -1,56 +1,23 @@
-
 # Install on macOS
 
-## Four steps on Mac
+Published Mac beta.1/beta.2 downloads have unresolved first-launch blocks. They are not the recommended installation route. A local source build opened successfully on the development Mac; this does not prove public downloaded apps work. Apple Developer ID signing and notarization are unavailable. Do not remove quarantine or disable Gatekeeper.
 
-Have Codex, [Git](https://git-scm.com/downloads), and [Python 3.11 or newer](https://www.python.org/downloads/) installed. Python is not included.
+The source build requires Python 3.11+ and PyInstaller. Follow the [local source build instructions](docs/ustam-hub.md). A guided Script Editor source installer is being tested; its downloaded-source opening route is not yet accepted. Once locally built, open **Ustam.app**, select apps, then add projects in the browser. The app includes its runtime and can be moved on its own.
 
-1. **Download:** [Get the current ZIP](https://github.com/metapak/ustam-codex-orchestrator/archive/refs/heads/main.zip) and open the extracted folder.
-2. **Open:** Open `launchers` and double-click **Ustam.app**.
-3. **Follow the two folder steps:** If macOS asks for the setup package, read the first dialog and choose the outer folder extracted from the ZIP whose name starts with `ustam-codex-orchestrator`. It contains `launchers` and `scripts`; the picker opens in Downloads. Choose **Try again** if you select a different folder. The second dialog asks for the Git project where you work with Codex; setup will save settings there. Each picker has a short prompt in your system language.
-4. **Install:** In the browser, keep the suggested team or change it. Click **Check changes**, then **Install**. Restart Codex in that project.
+Install and sign in to each selected provider CLI before starting real work. Configuration and previews do not start paid jobs. Review changes before applying project configuration. See the [unified guide](docs/ustam-hub.md).
 
-For later changes, reopen the app and click **Save**; no uninstall is needed. An already-open Codex session may need to be reopened before it uses the changes. If macOS blocks the unsigned app, Control-click it and choose **Open**. Keep the app inside the extracted folder: it needs the neighboring `launch_dashboard.py` and `scripts` files. If no folder picker appears, check whether macOS is still showing a security prompt for the app. If the browser cannot open, the launcher shows an alert with the local address to open manually. See the [local console guide](docs/local-console.md) for more help.
+Removing a project from Ustam removes its registration, not its folder. Restore is a separate operation for supported managed configuration; OpenCode restore is unavailable. Deleting the app does not uninstall project configuration or erase saved Ustam state. The hub has no project uninstall action.
 
-Check the **Selected project** path near the top of the browser. To use the suggested team, select **Continue with this team · review changes**, then **Install**. Changing the team is optional. External API models are under **Optional advisers**. Settings controls pause while an operation runs, and a visible result appears when it finishes.
+[Older provider console installation](docs/legacy-macos.md) is advanced compatibility only.
 
-<details>
-<summary>Terminal alternative</summary>
+# macOS kurulumu
 
-Double-click `setup.command` to use the older guided terminal installer. It does not offer the per-slot browser team builder. It preserves an existing `.codex/config.toml` by default and shows its choices before writing.
+Yayımlanmış Mac beta.1/beta.2 indirmelerinde ilk açılış engeli sürüyor; önerilen kurulum yolu değiller. Geliştirme Mac’inde yerel kaynak derlemesi açıldı; bu, herkese açık indirmelerin çalıştığını kanıtlamaz. Apple Developer ID imzası ve noter onayı mevcut değil. Karantinayı kaldırmayın, Gatekeeper’ı kapatmayın.
 
-```bash
-chmod +x setup.command scripts/install.sh
-./setup.command
-```
+Kaynak derlemesi Python 3.11+ ve PyInstaller gerektirir. [Yerel kaynak derleme yönergelerini](docs/ustam-hub.tr.md) izleyin. Script Editor üzerinden yönlendirmeli kaynak kurucusu test ediliyor; indirilmiş kaynağın açılış yolu henüz kabul edilmedi. Yerel derlemeden sonra **Ustam.app** açın, uygulamaları seçin ve tarayıcıda projeleri ekleyin. Uygulama çalışma zamanını içerir ve tek başına taşınabilir.
 
-If you already know the target path, this also opens the interactive profile, model, and effort selector:
+Gerçek iş başlatmadan önce seçilen sağlayıcı CLI’sini kurup oturum açın. Yapılandırma ve önizleme ücretli görev başlatmaz. Proje ayarlarını uygulamadan önce değişiklikleri inceleyin. [Birleşik rehbere](docs/ustam-hub.tr.md) bakın.
 
-```bash
-./setup.command /absolute/path/to/project
-```
+Projeyi Ustam’dan kaldırmak kaydını kaldırır; klasörünü silmez. Geri yükleme, desteklenen yönetilen ayarlar için ayrı işlemdir; OpenCode geri yüklemesi yoktur. Uygulamayı silmek proje ayarlarını kaldırmaz veya kayıtlı Ustam verisini silmez. Hub’da proje kurulumunu kaldırma işlemi yoktur.
 
-When explicit options are present, `setup.command` passes them through unchanged. For example, the following remains non-interactive:
-
-```bash
-./setup.command /absolute/path/to/project --preset economy --dry-run
-```
-
-Non-interactive:
-
-```bash
-./scripts/install.sh /absolute/path/to/project --preset balanced
-```
-
-Preview:
-
-```bash
-./scripts/install.sh /absolute/path/to/project --preset balanced --dry-run
-```
-
-For Claude proposals, export `ANTHROPIC_API_KEY` and select `anthropic`. For DeepSeek proposals, export `DEEPSEEK_API_KEY` and select `deepseek`. Keys are inherited from the environment and are not written by the installer. See [docs/external-providers.md](docs/external-providers.md).
-
-Python 3.11 or newer is required by the installer, browser console, candidate fingerprint tool, and local task ledger.
-After installation, restart Codex and run the read-only checklist in [docs/runtime-smoke-test.md](docs/runtime-smoke-test.md).
-
-</details>
+[Eski sağlayıcı konsolu kurulumu](docs/legacy-macos.md) yalnız ileri düzey uyumluluk içindir.

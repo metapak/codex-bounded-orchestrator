@@ -34,6 +34,158 @@ syncer = load('ustam_syncer', 'scripts/sync_ustam_distribution.py')
 
 
 class PackagingTests(unittest.TestCase):
+    def test_local_installer_preserves_state_and_managed_backup(self):
+        from unittest.mock import Mock
+        import plistlib
+        installer = load('ustam_install_backup', 'scripts/install_ustam_macos.py')
+        with tempfile.TemporaryDirectory(prefix="ustam path's ") as directory:
+            root = Path(directory)
+            bundle = root / 'built/Ustam.app'
+            (bundle / 'Contents').mkdir(parents=True)
+            (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier': installer.IDENTIFIER}))
+            (bundle / 'new').write_text('new')
+            home = root / 'home'
+            old = home / 'Applications/Ustam.app'
+            (old / 'Contents').mkdir(parents=True)
+            (old / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier': installer.IDENTIFIER}))
+            (old / 'old').write_text('old')
+            state = home / 'Library/Application Support/Ustam/hub.json'
+            state.parent.mkdir(parents=True)
+            state.write_bytes(b'private preserved bytes')
+            check = Mock()
+            installed = installer.install_bundle(bundle, home, check)
+            self.assertEqual((installed / 'new').read_text(), 'new')
+            backups = list(old.parent.glob('Ustam-backup-*.app'))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual((backups[0] / 'old').read_text(), 'old')
+            self.assertEqual(state.read_bytes(), b'private preserved bytes')
+            self.assertEqual(check.verify_mac_native_code.call_count, 2)
+
+    def test_local_installer_rejects_unmanaged_and_cancelled_replace(self):
+        from unittest.mock import Mock
+        installer = load('ustam_install_reject', 'scripts/install_ustam_macos.py')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / 'built.app'
+            bundle.mkdir()
+            home = root / 'home'
+            target = home / 'Applications/Ustam.app'
+            target.mkdir(parents=True)
+            (target / 'sentinel').write_text('keep')
+            with self.assertRaisesRegex(ValueError, 'unmanaged'):
+                installer.install_bundle(bundle, home, Mock())
+            self.assertEqual((target / 'sentinel').read_text(), 'keep')
+            with patch.object(installer, 'managed_app', return_value=True):
+                with self.assertRaises(InterruptedError):
+                    installer.install_bundle(bundle, home, Mock(), cancelled=lambda: True)
+            self.assertEqual((target / 'sentinel').read_text(), 'keep')
+            self.assertFalse(list(target.parent.glob('Ustam-backup-*')))
+
+    def test_local_installer_preflight_and_missing_python(self):
+        installer = load('ustam_install_preflight', 'scripts/install_ustam_macos.py')
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                installer.source_builder(directory)
+        with patch.object(Path, 'is_file', return_value=False), patch.object(Path, 'glob', return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, 'python.org'):
+                installer.trusted_python()
+        with tempfile.TemporaryDirectory() as directory:
+            import shutil
+            source = Path(directory)
+            (source / 'scripts').mkdir()
+            (source / 'launchers').mkdir()
+            (source / 'ustam').mkdir()
+            shutil.copyfile(ROOT / 'scripts/build_ustam_app.py', source / 'scripts/build_ustam_app.py')
+            (source / 'launchers/ustam_worker.py').write_text('')
+            (source / 'ustam/engine-manifest.json').write_text('{"schema":0}')
+            with self.assertRaisesRegex(ValueError, 'Invalid engine manifest'):
+                installer.source_builder(source)
+
+    def test_installer_rejects_source_before_executing_builder(self):
+        installer = load('ustam_install_untrusted', 'scripts/install_ustam_macos.py')
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            (source / 'scripts').mkdir()
+            (source / 'launchers').mkdir()
+            (source / 'ustam').mkdir()
+            marker = source / 'executed'
+            malicious = source / 'scripts/build_ustam_app.py'
+            malicious.write_text('from pathlib import Path; Path(' + repr(str(marker)) + ').touch()')
+            (source / 'launchers/ustam_worker.py').write_text('')
+            (source / 'ustam/engine-manifest.json').write_text('{"schema":0}')
+            with self.assertRaisesRegex(ValueError, 'Invalid engine manifest'):
+                installer.source_builder(source)
+            self.assertFalse(marker.exists())
+            malicious.rename(source / 'outside-builder.py')
+            malicious.symlink_to(source / 'outside-builder.py')
+            with self.assertRaisesRegex(ValueError, 'Source symlink refused'):
+                installer.source_builder(source)
+            self.assertFalse(marker.exists())
+
+    @unittest.skipIf(os.name == 'nt', 'Installer process groups are macOS/POSIX only')
+    def test_local_installer_failure_and_cancel_stop_owned_process(self):
+        installer = load('ustam_install_cancel', 'scripts/install_ustam_macos.py')
+        with tempfile.TemporaryDirectory() as directory:
+            job = Path(directory)
+            with self.assertRaisesRegex(RuntimeError, 'failed'):
+                installer.run_stage([sys.executable, '-c', 'raise SystemExit(7)'], job, ROOT)
+            started = job / 'pid'
+            script = 'import os,time; from pathlib import Path; Path(' + repr(str(started)) + ').write_text(str(os.getpid())); time.sleep(30)'
+            def cancel():
+                for _ in range(100):
+                    if started.exists():
+                        (job / 'cancel').touch()
+                        return
+                    time.sleep(.02)
+            thread = threading.Thread(target=cancel)
+            thread.start()
+            with self.assertRaises(InterruptedError):
+                installer.run_stage([sys.executable, '-c', script], job, ROOT)
+            thread.join(timeout=3)
+            self.assertFalse(thread.is_alive())
+            with self.assertRaises(ProcessLookupError):
+                os.kill(int(started.read_text()), 0)
+
+    def test_browser_failure_notice_preserves_server_start_and_shutdown(self):
+        from ustam import __main__ as entry
+        for failure in (False, RuntimeError('browser unavailable')):
+            with self.subTest(failure=str(failure)):
+                started = threading.Event()
+                received = []
+
+                def notice(origin, stopped):
+                    received.append(origin)
+                    started.set()
+                    stopped.wait(2)
+
+                def serve():
+                    self.assertTrue(started.wait(1))
+                    raise KeyboardInterrupt
+
+                from unittest.mock import Mock
+                server = Mock(origin='http://127.0.0.1:43210')
+                server.serve_forever.side_effect = serve
+                with patch('ustam.core.Hub'), patch('ustam.jobs.JobManager'), patch('ustam.server.UstamServer', return_value=server), patch.object(entry, 'browser_notice', side_effect=notice), patch.object(entry.webbrowser, 'open', side_effect=failure if isinstance(failure, Exception) else None, return_value=failure):
+                    self.assertEqual(entry.main(['--state-dir', '/unused-mock-state']), 0)
+                self.assertEqual(received, [server.origin])
+                server.serve_forever.assert_called_once()
+                server.server_close.assert_called_once()
+
+    def test_mac_browser_notice_stops_its_dialog_process(self):
+        from ustam import __main__ as entry
+        from unittest.mock import Mock
+        process = Mock()
+        process.poll.return_value = None
+        stopped = Mock()
+        stopped.wait.return_value = True
+        stopped.is_set.return_value = False
+        with patch.object(entry.sys, 'platform', 'darwin'), patch.object(entry.subprocess, 'Popen', return_value=process) as popen:
+            entry.browser_notice('http://127.0.0.1:43210', stopped)
+        self.assertIn('http://127.0.0.1:43210', popen.call_args.args[0][-1])
+        process.terminate.assert_called_once()
+        process.wait.assert_called_once_with(timeout=1)
+        process.kill.assert_not_called()
+
     @unittest.skipUnless(os.environ.get('USTAM_NATIVE_LAUNCHER') and sys.platform == 'darwin', 'Mac nested framework resource seal regression')
     def test_mac_worker_framework_requires_independent_resource_seal(self):
         import shutil

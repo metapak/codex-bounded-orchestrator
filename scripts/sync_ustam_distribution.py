@@ -12,7 +12,8 @@ import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = '.ustam-distribution.json'
-FILES = ('scripts/build_ustam_app.py', 'scripts/build_ustam_engines.py', 'scripts/sync_ustam_distribution.py',
+FILES = ('scripts/build_ustam_app.py', 'scripts/build_ustam_engines.py', 'scripts/sync_ustam_distribution.py', 'scripts/install_ustam_macos.py',
+         'launchers/Install Ustam.applescript',
          'launchers/launch_ustam.py', 'launchers/ustam_worker.py', '.github/workflows/ustam-app.yml',
          'docs/ustam-hub.md', 'docs/ustam-hub.tr.md', 'tests/test_ustam_packaging.py',
          'tests/test_ustam_adapters.py', 'tests/test_ustam_hub.py', 'tests/test_ustam_jobs.py')

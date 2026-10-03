@@ -1,27 +1,39 @@
-# Ustam yerel merkezi
+# Ustam yerel hub
 
-Ustam’ı indir → Aç → Uygulamaları seç → Projeleri ekle.
+Ustam’ı aç → Uygulamaları seç → Projeleri ekle → Değişiklikleri incele.
 
-Windows/Linux için sürüm dosyalarından sisteminize uygun yerel ZIP paketini indirin, tamamını çıkarın; Windows’ta Ustam.exe, Linux’ta Ustam dosyasını açın. Yayımlanan Mac indirmelerinin ilk açılış sorunu sürüyor; aşağıdaki kaynak derleme yolunu kullanın. Yerel indirme Python çalışma ortamını içerir. Windows/Linux çalıştırılabilir dosyasını çıkarılan diğer dosyalarla birlikte tutun. Mac uygulaması worker ve varlıklarını içerir; önce paket veya proje klasörü seçtirmeden merkezi doğrudan açar.
+Ustam, Codex, Claude Code ve OpenCode için tek yerel tarayıcı hub’ıdır. Kullanacağınız uygulamaları seçin, proje klasörlerini ekleyin; projenin ayar alanında orkestra seçin veya oluşturun. Orkestra kaydetmek yeniden kullanılabilir ayarları kaydeder; sağlayıcı görevi başlatmaz. Proje ayarlarını uygulamadan önce önerilen değişiklikleri kontrol edin.
 
-Codex, Claude Code, OpenCode veya birkaçını birlikte seçin. Proje klasörlerini yerel tarayıcı sayfasında ekleyin. Projeleri seçin, önerilen değişiklikleri inceleyin ve ardından uygulayın. Sağlayıcıların komut satırı araçları, giriş ve model erişimi ayrıca gereklidir. Ustam bu araçları veya hesapları sağlamaz. API modelleri kendi kimlik bilgilerini gerektirebilir; gerçekten kullanıldığında ücret oluşturabilir. Çevrimdışı kurulum ve önizleme ücretli model çağrısı gerektirmez.
+## Yerel paket kurulumu
 
-Merkez tercihleri ve kayıtlı projeleri kullanıcının yerel durum klasöründe saklar. Projelere yalnızca açıkça uyguladığınızda yapılandırma yazılır. Her sağlayıcı kendi paketlenmiş, sabitlenmiş motoruyla çalışır; motor manifesti tam dosya kümesini ve SHA-256 özetlerini doğrular. Kullanım, yerelde kaydedilmiş geçmişi gösterir; fatura bakiyesi değildir.
+Windows/Linux: beta.2 sürümündeki yerel ZIP’i tamamen çıkarın, **Ustam.exe** veya **Ustam** açın. Çıkarılan dosyaları birlikte tutun. Çalışma zamanı pakete dahildir; yerel paket için ayrıca Python gerekmez. Yerel derlenen Mac uygulaması tek başına taşınabilir.
 
-Bu derlemeler imzasızdır ve notarize edilmemiştir: imzalama kimlik bilgileri mevcut değildir. macOS Gatekeeper indirilen uygulamayı engelleyebilir; bu paketi imzalı veya notarize edilmiş bir sürüm olarak değerlendirmeyin. İmzasız derlemeyi kullanmadan önce sürümün yayımlanmış özetini ve kaynağını kontrol edin. Güvenmeye karar verdiğiniz yazılımlar için macOS güvenlik ayarlarını izleyin. Yönetilen bilgisayarlarda yönetici onayı gerekebilir. Yerel testlerin geçmesi indirilen uygulamanın Gatekeeper’dan geçeceğini kanıtlamaz.
+**Herkese açık Mac indirmesi hazır değil:** yayımlanmış beta.1/beta.2 Mac uygulamalarında ilk açılış sorunu sürüyor. Yayımlanmamış beta.3 kaynak adayı paket bütünlüğünü düzeltir; bu, indirilen uygulamanın açılabildiğini kanıtlamaz. Geliştirme Mac’inde yerel kaynak derlemesi açıldı ve kullanıcı sayfayı gördüğünü doğruladı. Bu kopyada karantina özniteliği doğal olarak yoktu; güvenlik korumaları değiştirilmedi. Karantinalı indirme test kopyası engellenmeye devam etti ve macOS Yine de Aç seçeneğini sunmadı. Karantinayı kaldırmayın, Gatekeeper’ı kapatmayın.
 
-İleri düzey kaynak kullanımı Python 3.11+ gerektirir: `python -m ustam` çalıştırın. Önceki sağlayıcıya özel konsollar ve terminal kurucuları uyumluluk için korunur. Yerel uygulama indirmeleri ek sürüm dosyalarıdır; kaynak CLI dağıtımlarının yerini almaz.
+Apple Developer ID imzası ve noter onayı mevcut değil. Ad-hoc kod mührü paket bütünlüğünü doğrular; Apple’ın güvenilir dağıtım onayını sağlamaz. Yönetilen bilgisayarlarda ek kısıtlamalar olabilir.
 
-Yerel derleme için ayrı bir Python ortamına PyInstaller kurun; sabitlenmiş kardeş depolar mevcutken `python scripts/build_ustam_engines.py`, ardından `python scripts/build_ustam_app.py` çalıştırın. CI, depoya eklenmiş değişmez motor kümesini doğrulamak ve paketlemek için `--skip-engine-build` kullanır. Her hedef işletim sistemi/işlemci için orada derleme yapın. Pencereli başlatıcı ayrı konsol worker’ını açar; adaptörler JSON stdio bağlantısını koruyarak aynı worker’ı `--adapter` ile yeniden başlatır. Windows alt süreçleri gizlenir.
+## Mac’te yerel kaynak kurulumu
 
-Yerel uygulama sürümü `ustam/VERSION` dosyasında tutulur; sabitlenmiş sağlayıcı motorlarının sürümleri ve önceki kaynak CLI sürümü ayrıdır. Bu beta pakette yalnızca Mac arm64 gerçek yerel çalışma testi yapılmıştır. Windows, Linux ve Mac Intel derlemeleri CI tarafından üretilip doğrulanmalıdır.
+Bu deponun kaynak ZIP’ini indirip çıkarın. Kaynak derlemesi Python 3.11+ ve sabitlenmiş PyInstaller aracını kurmak için internet gerektirir. Sağlayıcı CLI’leri ayrıca kurulur.
 
-İmzalı dağıtım için haricî ön koşullar: Developer ID Application kimliği, güvenli secret olarak saklanan dışa aktarılmış P12 sertifikası ve parolası; notarizasyon için Apple hesabı, uygulamaya özel parola ve takım kimliği. Mevcut CI bu bilgileri istemez veya kullanmaz ve imzasız paket üretir. Sertifika ya da kimlik bilgilerini depoya eklemeyin.
+Yönlendirmeli kaynak kurucusu **kabul testi aşamasında**. İndirilmiş kaynağın kullanıcı tarafından açılma yolu henüz doğrulanmadı. Test etmeyi seçerseniz `launchers/Install Ustam.applescript` dosyasını Apple Script Editor’da kaynak olarak açın, kaynağı okuyun ve **Run / Çalıştır** düğmesine kendiniz basın. `scripts`, `launchers`, `ustam` içeren çıkarılmış kaynak klasörünü seçin. Kurucu bilinen Python kurulum yollarını kontrol eder; Python yoksa resmi indirme sayfasını sunar. Ayrı geçici ortamda derler, sabitlenmiş motorları ve Mac’teki bütün yerel kodu doğrular, `~/Applications/Ustam.app` konumuna kurar. Mevcut kopya yalnız Ustam kimliğiyle tanınırsa değiştirilir ve yedeği saklanır. Kurmadan önce çalışan Ustam’ı kapatın. Kayıtlı Ustam verisi ve proje ayarları değiştirilmez. Değiştirme öncesi iptal, önceki kurulumu korur. Derleme günlükleri sorun incelemek için geçici kurucu klasöründe kalır.
 
-macOS beta.1 paketinde uygulama oluşturulduktan sonra Info.plist değiştirildiği için bütünlük imzası geçersizdi; “hasar görmüş” uyarısı bu paketleme hatasından kaynaklanıyordu. beta.2 uygulama birleştirildikten sonra ad-hoc bütünlük mührünü yeniler ve ZIP’ten çıkarılan uygulamayı doğrular. İndirilen beta.2 uygulamasının açılış sorunu da çözülmüş değildir; ona geçmek çalışan Mac kurulumunu kanıtlamaz. Ad-hoc mühür Apple Developer ID imzası veya notarizasyon değildir; Gatekeeper güven değerlendirmesi ayrı kalır ve uygulamayı yine engelleyebilir.
+İleri düzey manuel kaynak derlemesi için çıkarılmış depo içinde:
 
-Yayımlanmamış macOS beta.3 adayı ayrıca worker içindeki Python framework’ünün eksik kaynak mührünü düzeltir. Paket denetimi her framework kökünü ve her yerel Mach-O dosyasını ayrı ayrı ZIP öncesinde ve ZIP’ten çıkarıldıktan sonra doğrular; yalnızca dış uygulamanın imzasına güvenmez. Apple Developer ID imzası ve notarizasyon hâlâ yoktur. macOS izin veriyorsa ilk açılışta Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç üzerinden onayınızı vermeniz gerekebilir. Sistem bu seçeneği sunmuyorsa bunu güvenlik ayarlarını kapatarak veya karantina bayrağını silerek aşmayın.
+```sh
+python3 -m venv .venv-build
+.venv-build/bin/python -m pip install pyinstaller==6.22.3
+.venv-build/bin/python scripts/build_ustam_app.py --skip-engine-build
+```
 
-Yerel kaynak derlemesi geliştirme Mac’inde açıldı ve kullanıcı sayfayı gördüğünü doğruladı. Bu yerel kopyada doğal olarak karantina bayrağı yoktu; hiçbir bayrak silinmedi. İndirilmiş uygulamanın karantina bayrağını taşıyan test kopyası engellenmeye devam etti ve macOS Yine de Aç seçeneğini sunmadı. Bu sonuç o Mac’te yerel kurulumu doğrular; hazır Mac paketinin dağıtımının başarılı olduğunu göstermez.
+Oluşan `dist/ustam-*/Ustam.app` dosyasını açın. Depoya dahil değişmez motor dosyaları doğrulanır; bu derleme için kardeş depolar gerekmez. Kaynağı doğrudan çalıştırmak için Python 3.11+ ile `python3 -m ustam` kullanın. Her hedef işletim sistemi ve mimari için ayrı derleme gerekir.
 
-Yerel Mac derlemesi için bu kaynak deposunda Python 3.11+ ve ayrı bir derleme ortamı kullanın: `python3 -m venv .venv-build`, `.venv-build/bin/python -m pip install pyinstaller==6.22.3`, ardından `.venv-build/bin/python scripts/build_ustam_app.py --skip-engine-build`. Oluşan `dist/ustam-*/Ustam.app` uygulamasını açın. Derleme, sabitlenmiş motorları ve tüm yerel kodları arşiv öncesi/sonrası doğrular. Derlenen uygulama Python içerir. Kaynak sürümü 1.0.0-beta.3 geliştirme adayıdır; beta.3 için yayımlanmış sürüm veya hazır indirme yoktur.
+## Hesaplar, kayıtlar ve kaldırma
+
+Ayarlar ve önizlemeler çevrimdışı çalışabilir. İş başlatmak seçilen sağlayıcının kurulu CLI’sini, oturumunu ve model erişimini gerektirir; API modelleri sağlayıcı ücreti doğurabilir. Ustam hesap, kimlik bilgisi veya fatura bakiyesi sağlamaz. Geçmiş yerel işleri kaydeder; orkestra animasyonu görseldir.
+
+Tercihler, kayıtlı projeler ve orkestralar Ustam’ın kullanıcı veri klasöründe tutulur. Projeye yalnız açık uygulama işlemiyle ayar yazılır. Projeyi kaldırmak Ustam kaydını kaldırır; klasörünü silmez. Geri yükleme ayrıdır ve yalnız desteklenen yönetilen ayarlara uygulanır; OpenCode geri yüklemesi yoktur. Hub’da proje kurulumunu kaldırma işlemi yoktur. Ustam.app silmek proje ayarlarını kaldırmaz veya kayıtlı Ustam verisini silmez.
+
+Sağlayıcı çalışma sınırları ekip ayarlarından ayrı gösterilir. Her sağlayıcı, tam dosya listesi ve SHA-256 doğrulaması olan paketlenmiş sabit motor kullanır. Yerel `ustam/VERSION`, eski motor sürümlerinden ayrıdır. Arayüz başlatıcısı konsol worker kullanır; dondurulmuş adaptörlerin JSON stdio iletişimi korunur. Windows worker’ları gizlidir. Tarayıcı otomatik açılamazsa Ustam elle açılacak yerel adresi gösterir; sunucu çalışmaya devam eder.
+
+[Eski sağlayıcı konsolu](legacy-console.tr.md), ekran görüntüleri, on görev şablonları ve önce proje seçen başlatıcılar ileri düzey uyumluluk referansıdır. Güncel birleşik hub’dan ayrıdır.

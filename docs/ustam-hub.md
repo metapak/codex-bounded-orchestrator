@@ -1,27 +1,39 @@
 # Ustam local hub
 
-Download Ustam → Open → Select apps → Add projects.
+Open Ustam → Select apps → Add projects → Review changes.
 
-For Windows/Linux, choose the native ZIP for your system from the release assets, extract it completely, and open Ustam.exe on Windows or Ustam on Linux. Published Mac downloads still have unresolved first-launch issues; use the source build route below. The native download includes its Python runtime. Keep the Windows/Linux executable with the other extracted files. The Mac app contains its worker and assets; it opens the hub directly without choosing a package or project folder first.
+Ustam is one local browser hub for Codex, Claude Code and OpenCode. Select the apps you use, add project folders, then choose or create an orchestra in that project's setup area. Saving an orchestra saves reusable configuration; it does not start a provider job. Check the proposed project changes before applying them.
 
-Select Codex, Claude Code, OpenCode, or any combination. Add your project folders inside the local browser page. Select projects, review the proposed changes, then apply them. Installed provider command-line tools and their login/model access are separate requirements. Ustam does not bundle those tools or provide an account. API-backed models may require their own credentials and incur charges when actually used. Offline setup and preview do not require a paid model call.
+## Native installation
 
-The hub keeps local preferences and registered projects in your user state directory. Projects receive configuration only after an explicit apply. Each provider runs through its own bundled, pinned engine; the engine manifest verifies the exact assets and SHA-256 hashes. Usage is locally recorded history and is not a billing balance.
+Windows/Linux: extract the complete native ZIP from the beta.2 release, then open **Ustam.exe** or **Ustam**. Keep the extracted files together. The runtime is bundled; Python is not a separate requirement for native packages. The native Mac app is self-contained when built locally.
 
-These builds are unsigned and are not notarized: signing credentials are unavailable. macOS Gatekeeper may block a downloaded app; do not treat this package as a signed or notarized release. Check the release's published checksum and source before using an unsigned build. Follow macOS's security settings for software you decide to trust. Managed computers may require administrator approval. A local build passing tests does not prove a downloaded app will pass Gatekeeper.
+**Mac public download is not ready:** published beta.1/beta.2 Mac apps have unresolved first-launch problems. The unpublished beta.3 source candidate repairs package integrity, but this does not establish that a downloaded app opens. A local source build opened on the development Mac and the user confirmed seeing the page. Its quarantine attribute was naturally absent; no security protections were changed. The quarantine-marked downloaded test copy remained blocked, and macOS did not offer Open Anyway. Do not remove quarantine or disable Gatekeeper.
 
-For advanced source use, Python 3.11+ is required: run `python -m ustam`. The older provider-specific console and terminal installers remain available for compatibility. Native downloads are additional assets and do not replace the source CLI distributions.
+Apple Developer ID signing and notarization are unavailable. An ad-hoc code seal verifies package integrity; it does not confer Apple's trusted-distribution approval. Managed computers can impose additional restrictions.
 
-To build locally, install PyInstaller in a separate Python environment, run `python scripts/build_ustam_engines.py` with the pinned sibling repositories available, then `python scripts/build_ustam_app.py`. CI uses `--skip-engine-build` to verify and package the checked-in immutable engine closure; it cannot silently replace it from an unrelated checkout. Build on each target OS/architecture. The windowed launcher starts a separate console worker; adapters relaunch that worker with `--adapter`, preserving JSON stdio. Windows subprocesses are hidden.
+## Local source installation on Mac
 
-The native app version lives in `ustam/VERSION`; pinned provider engine versions and the existing source CLI release version are separate. This beta has actual local runtime evidence on Mac arm64. Windows, Linux, and Mac Intel builds still require CI build and runtime verification.
+Download and extract the source ZIP from this repository. Source builds require Python 3.11+ and internet access to install the pinned PyInstaller build tool. Provider CLIs remain separate requirements.
 
-External prerequisites for a signed distribution: a Developer ID Application identity, an exported P12 certificate and password stored as protected secrets; notarization also requires an Apple account, app-specific password, and team ID. The current CI neither requests nor uses these credentials and produces unsigned packages. Never add certificates or credentials to the repository.
+The guided source installer is **under acceptance testing**. Its downloaded-source opening route has not yet been confirmed by a user. If you choose to test it, open `launchers/Install Ustam.applescript` as source in Apple's Script Editor, read the source, then click **Run** yourself. Select the extracted source folder containing `scripts`, `launchers` and `ustam`. The installer checks known Python installation paths; if Python is missing it offers the official Python download page. It builds in an isolated temporary environment, verifies pinned engines and all Mac native code, and installs into `~/Applications/Ustam.app`. An existing app is replaced only when identified as Ustam and is kept as a backup. Close a running Ustam copy before installing. Saved Ustam state and project configuration are not modified. Cancellation before replacement preserves the previous installed copy. Build logs remain in the temporary installer folder for troubleshooting.
 
-The macOS beta.1 package changed Info.plist after the app was sealed, invalidating its integrity signature and causing the “damaged” warning. beta.2 seals the fully assembled app and verifies its signature after ZIP extraction. The beta.2 downloaded app still has unresolved launch issues; updating to it does not establish a working Mac installation. An ad-hoc integrity seal is not Apple Developer ID signing or notarization; Gatekeeper trust assessment remains separate and may still block the app.
+For an advanced manual source build from the extracted repository:
 
-The unpublished macOS beta.3 candidate repairs the missing resource seal in the worker Python framework. Package checks verify each framework root and every native Mach-O individually before ZIP creation and after extraction, rather than relying only on the outer app signature. Apple Developer ID signing and notarization are still absent. If macOS permits it, first launch may require your approval through System Settings → Privacy & Security → Open Anyway. If that option is unavailable, do not bypass the block by disabling security settings or removing quarantine.
+```sh
+python3 -m venv .venv-build
+.venv-build/bin/python -m pip install pyinstaller==6.22.3
+.venv-build/bin/python scripts/build_ustam_app.py --skip-engine-build
+```
 
-A local source build was opened successfully on the development Mac, and the user confirmed seeing the page. This local copy had no quarantine attribute naturally; none was removed. The downloaded quarantine-marked test copy remained blocked and macOS did not offer Open Anyway. This is evidence for local installation on that Mac, not successful distribution of a prebuilt Mac package.
+Open the resulting `dist/ustam-*/Ustam.app`. The checked-in immutable engine assets are verified; sibling repositories are unnecessary for this build. To run source directly instead, use `python3 -m ustam` with Python 3.11+. Each target OS and architecture needs its own build.
 
-For a local Mac build, use Python 3.11+ and an isolated build environment from this source checkout: `python3 -m venv .venv-build`, `.venv-build/bin/python -m pip install pyinstaller==6.22.3`, then `.venv-build/bin/python scripts/build_ustam_app.py --skip-engine-build`. Open the resulting `dist/ustam-*/Ustam.app`. The build verifies pinned engines and all native code before and after archiving. Once built, the app includes Python. The source version 1.0.0-beta.3 is a development candidate; no beta.3 public release or native download is available.
+## Accounts, state and removal
+
+Setup and previews can work offline. Starting work requires each selected provider's installed CLI, login and model access; API models can incur provider charges. Ustam does not supply accounts, credentials or a billing balance. History records local work; the orchestra animation is decorative.
+
+Preferences, registered projects and orchestras live in Ustam's user state directory. Projects receive configuration only after explicit apply. Removing a project removes its Ustam registration, not its folder. Restore is separate and applies only to supported managed configuration; OpenCode restore is unavailable. The hub has no project uninstall action. Deleting Ustam.app does not uninstall project configuration or erase saved Ustam state.
+
+Provider execution limits are reported separately from team configuration. Each provider uses a bundled pinned engine with exact file closure and SHA-256 verification. Native `ustam/VERSION` is separate from legacy engine versions. The UI launcher uses a console worker so frozen adapters retain JSON stdio; Windows workers are hidden. If automatic browser opening fails, Ustam shows the local address to open manually while the server continues running.
+
+The [older provider console](legacy-console.md), screenshots, ten-task presets and project-first launchers are advanced compatibility references. They are separate from the current unified hub.
